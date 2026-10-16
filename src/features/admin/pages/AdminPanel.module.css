@@ -33,6 +33,7 @@
 
 .grid_table_one {
   display: grid;
-  grid-template-columns: minmax(20%, 50%) minmax(20%, 25%) minmax(20%, 25%);
+
+  grid-template-columns: minmax(20%, 50%) minmax(10%, 15%);
   gap: 30px;
 }

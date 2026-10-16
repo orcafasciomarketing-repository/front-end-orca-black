@@ -1,7 +1,9 @@
-.widget {
-  min-height: 0;
+.list {
+  padding: 16px 20px;
+}
+
+.list_item {
   display: flex;
-  flex-direction: column;
-  border-radius: 16px;
-  background: #fff;
+  gap: 5px;
+  font-size: 1rem;
 }
