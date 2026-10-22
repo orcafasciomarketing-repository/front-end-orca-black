@@ -24,3 +24,6 @@ dist-ssr
 *.sw?
 .env
 
+
+# Relatório do Vitest lido pelo admin (gerado pelo npm test)
+public/test-report.json

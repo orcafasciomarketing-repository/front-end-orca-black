@@ -5,8 +5,11 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 import AuthContextProvider from "./features/auth/context/AuthContext";
 import router from "./app/Router";
+import { installGlobalErrorHandlers } from "./shared/errorLogger";
 
 import "./shared/styles/global.css";
+
+installGlobalErrorHandlers();
 
 const queryClient = new QueryClient();
 

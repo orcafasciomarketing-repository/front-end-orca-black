@@ -1,0 +1,32 @@
+.dashboard {
+  --color-background: #040a18;
+  --fade-duration: 1.2s;
+
+  position: relative;
+  background: var(--color-background);
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+  background: var(--color-background) url("/slide-background.webp") center / cover no-repeat;
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 0s linear var(--fade-duration),
+    visibility 0s linear var(--fade-duration);
+  will-change: opacity;
+}
+
+.active {
+  z-index: 1;
+  opacity: 1;
+  visibility: visible;
+  transition: opacity var(--fade-duration) ease-in-out;
+}
+
+.popupError {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+}

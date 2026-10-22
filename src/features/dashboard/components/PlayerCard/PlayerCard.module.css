@@ -1,0 +1,69 @@
+.card {
+  --color-card: #070d1c;
+  --color-border: #1e3a8a;
+  --color-highlight: #0a4fd6;
+  --color-highlight-dark: #062a7a;
+  --color-highlight-border: #2f7bff;
+  --color-glow: rgba(10, 108, 255, 0.45);
+  --color-text: #ffffff;
+  --color-badge: #facc15;
+  --color-badge-text: #040a18;
+
+  width: clamp(200px, 23.44vw, 450px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(8px, 0.83vw, 16px);
+  padding: clamp(24px, 2.6vw, 50px);
+  border: 1px solid var(--color-border);
+  border-radius: clamp(8px, 0.6vw, 14px);
+  background: var(--color-card);
+  color: var(--color-text);
+  text-align: center;
+}
+
+.highlighted {
+  border-color: var(--color-highlight-border);
+  background: linear-gradient(180deg, var(--color-highlight) 0%, var(--color-highlight-dark) 100%);
+  box-shadow: 0 0 clamp(12px, 1.2vw, 28px) var(--color-glow);
+}
+
+.position {
+  width: clamp(28px, 2.4vw, 46px);
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-badge);
+  color: var(--color-badge-text);
+  font-size: clamp(12px, 0.94vw, 18px);
+  font-weight: 800;
+}
+
+.name {
+  max-width: 100%;
+  font-size: clamp(20px, 2.08vw, 40px);
+  font-weight: 700;
+  line-height: 1.1;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.points {
+  font-size: clamp(56px, 6.04vw, 116px);
+  font-weight: 800;
+}
+
+.pointsLabel {
+  font-size: clamp(24px, 2.5vw, 48px);
+  font-weight: 700;
+  text-transform: uppercase;
+}

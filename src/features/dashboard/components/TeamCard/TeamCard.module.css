@@ -1,0 +1,98 @@
+.card {
+  --color-card: #070d1c;
+  --color-card-top: #0b1324;
+  --color-border: #1f2a44;
+  --color-highlight: #0a4fd6;
+  --color-highlight-dark: #062a7a;
+  --color-highlight-border: #2f7bff;
+  --color-glow: rgba(10, 108, 255, 0.45);
+  --color-text: #ffffff;
+  --color-value: #facc15;
+  --card-padding: clamp(24px, 2.6vw, 50px);
+  --shirt-height: clamp(64px, 6.77vw, 130px);
+
+  width: clamp(200px, 23.44vw, 450px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: clamp(8px, 0.6vw, 14px);
+  background: var(--color-card);
+  color: var(--color-text);
+  overflow: hidden;
+}
+
+.highlighted {
+  border-color: var(--color-highlight-border);
+  box-shadow: 0 0 clamp(12px, 1.2vw, 28px) var(--color-glow);
+}
+
+.shirt {
+  height: calc(var(--shirt-height) + 2 * var(--card-padding));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--card-padding);
+  background: var(--color-card-top);
+}
+
+.shirtImage {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(10px, 1vw, 24px);
+  padding: var(--card-padding);
+}
+
+.highlighted .body {
+  background: linear-gradient(180deg, var(--color-highlight) 0%, var(--color-highlight-dark) 100%);
+}
+
+.score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1;
+}
+
+.points {
+  font-size: clamp(56px, 6.04vw, 116px);
+  font-weight: 800;
+}
+
+.pointsLabel {
+  font-size: clamp(24px, 2.5vw, 48px);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.45vw, 10px);
+  text-transform: uppercase;
+}
+
+.detailRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.detailLabel {
+  font-size: clamp(11px, 0.94vw, 18px);
+  font-weight: 400;
+}
+
+.detailValue {
+  color: var(--color-value);
+  font-size: clamp(13px, 1.09vw, 21px);
+  font-weight: 700;
+}

@@ -37,3 +37,11 @@
   grid-template-columns: minmax(20%, 50%) minmax(10%, 15%);
   gap: 30px;
 }
+
+.grid_table_two {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}

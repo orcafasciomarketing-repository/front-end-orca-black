@@ -1,0 +1,51 @@
+.screen {
+  --color-text: #ffffff;
+  --color-accent: #facc15;
+  --color-muted: #9ca3af;
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(20px, 2.4vw, 56px);
+  padding: clamp(24px, 3vw, 64px);
+  color: var(--color-text);
+  font-family: system-ui, sans-serif;
+}
+
+.header {
+  text-align: center;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+
+.title {
+  font-size: clamp(24px, 2.6vw, 60px);
+  font-weight: 800;
+}
+
+.subtitle {
+  font-size: clamp(14px, 1.3vw, 30px);
+  font-weight: 500;
+}
+
+.subtitleAccent {
+  color: var(--color-accent);
+  font-weight: 700;
+}
+
+.logo {
+  position: absolute;
+  top: clamp(16px, 2vw, 48px);
+  right: clamp(16px, 2.4vw, 56px);
+  width: clamp(80px, 7.97vw, 153px);
+  height: auto;
+}
+
+.loading {
+  color: var(--color-muted);
+  font-size: clamp(16px, 1.4vw, 32px);
+}
