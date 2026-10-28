@@ -51,12 +51,12 @@ O app abre em `http://localhost:5173`:
 
 | Variável | Arquivo | Descrição |
 |---|---|---|
-| `VITE_API_URL` | `.env` (dev) e `.env.production` (build) | URL base da API. No dev, `http://localhost:3000`; no build, o backend no Render |
+| `VITE_API_URL` | `.env.local` (dev) e painel do Cloudflare (build) | URL base da API. No dev, `http://localhost:3000`; no Cloudflare, o backend no Render |
 | `VITE_USE_MOCKS` | `.env.local` | `true` faz o dashboard e o admin usarem dados falsos. Qualquer outro valor usa o backend |
 
 O Vite só lê essas variáveis quando sobe. Depois de mudar alguma, reinicie o `npm run dev`.
 
-O `.env` e o `.env.local` estão no `.gitignore`.
+Nenhum `.env` vai para o repositório. Para rodar localmente, crie o `.env.local` com a `VITE_API_URL`.
 
 ### Ver o dashboard sem backend
 
@@ -81,7 +81,7 @@ Coloque um vídeo em **`public/sale-video.mp4`** para ele rodar antes do outdoor
 | Comando | O que faz |
 |---|---|
 | `npm run dev` | Sobe o servidor de desenvolvimento |
-| `npm run build` | Gera o build de produção em `dist/`, apontando para o backend do `.env.production` |
+| `npm run build` | Gera o build de produção em `dist/`, apontando para o backend da `VITE_API_URL` |
 | `npm run build:pages` | Roda os testes e, se passarem, gera o build. É o comando de build do Cloudflare Pages |
 | `npm run preview` | Serve o build de produção localmente |
 | `npm test` | Roda os testes uma vez e grava o resultado em `public/test-report.json`, que o admin mostra em "Logs de teste" |

@@ -12,13 +12,14 @@ TVs e admin (navegador)
 
 ## 1. Endereço do backend
 
-| Arquivo | `VITE_API_URL` | Usado por |
-|---|---|---|
-| `.env` | `http://localhost:3000` | `npm run dev` (backend rodando na sua máquina) |
-| `.env.production` | `https://back-end-orca-black.onrender.com` | `npm run build` e `npm run build:pages` (o Cloudflare) |
-| `.env.local` | (não define) | Só `VITE_USE_MOCKS`, para ligar ou desligar os dados falsos |
+Nenhum `.env` vai para o repositório. A `VITE_API_URL` vem de lugares diferentes em cada ambiente:
 
-O Vite escolhe o arquivo sozinho: `vite build` usa o `.env.production`, e `vite` (dev) usa o `.env`. O `.env.production` vai para o git, porque o endereço da API não é segredo, então o Cloudflare usa a URL certa sem nenhuma configuração no painel. Para trocar o backend, mude esse arquivo e faça um novo deploy.
+| Onde | `VITE_API_URL` | Usado por |
+|---|---|---|
+| Painel do Cloudflare Pages (Environment variables) | `https://back-end-orca-black.onrender.com` | O build do Cloudflare (`npm run build:pages`) |
+| `.env.local` na sua máquina | `http://localhost:3000` (ou a URL do Render) | `npm run dev`, junto com o `VITE_USE_MOCKS` |
+
+O Vite lê as variáveis `VITE_` do ambiente na hora do build e as grava no JavaScript gerado. Por isso, **depois de mudar a variável no painel, é preciso fazer um novo deploy** (Deployments → Retry deployment). Sem a variável, o front chama a API no próprio endereço do Pages e nada carrega.
 
 `getApiUrl()` ([src/shared/utils/apiUrl.js](src/shared/utils/apiUrl.js)) lê a `VITE_API_URL` e tira as barras do final. Ela é usada pelo axios (`apiClient`) e pelo SSE (`/sales/events`). Assim, uma URL salva com `/` no final não vira `...onrender.com//sales/events` (404).
 
@@ -39,6 +40,7 @@ Em **Settings → Variables and Secrets (Environment variables)**, adicione:
 
 | Variável | Valor | Por quê |
 |---|---|---|
+| `VITE_API_URL` | `https://back-end-orca-black.onrender.com` | Endereço do backend usado pelo build. Sem barra no final |
 | `NODE_VERSION` | `22` | O Vitest exige Node 22.12 ou mais novo, e o `build:pages` roda os testes |
 
 **`npm run build:pages`** é `npm test && vite build`:
@@ -46,22 +48,6 @@ Em **Settings → Variables and Secrets (Environment variables)**, adicione:
 - gera o `public/test-report.json`, que vai para o `dist/` e aparece no admin, em **Erros → Logs de teste**.
 
 Para publicar sem rodar os testes, use `npm run build` como comando. Nesse caso o admin mostra "Nenhum relatório encontrado".
-
-### Pelo fluxo de Workers ("Create an app")
-
-Se o painel abrir o fluxo de **Workers** em vez do de Pages, o site também funciona, como Worker de arquivos estáticos. A configuração fica no [wrangler.jsonc](wrangler.jsonc), na raiz do repositório:
-- `name`: precisa ser igual ao **Project name** do painel (`front-end-orca-black`);
-- `assets.directory`: `./dist`, a pasta gerada pelo build;
-- `assets.not_found_handling`: `single-page-application`, para `/admin`, `/admin/erros` e `/login` abrirem direto e ao recarregar.
-
-| Campo | Valor |
-|---|---|
-| Build command | `npm run build:pages` |
-| Deploy command | `npx wrangler deploy` |
-| Preview builds | Desligado (os endereços de preview são bloqueados pelo CORS do backend) |
-| Build variables (em Advanced settings) | `NODE_VERSION` = `22` |
-
-O endereço fica `https://front-end-orca-black.<sua-conta>.workers.dev`, e é esse que vai no `FRONT_URL` do Render.
 
 **Rotas do SPA (`/admin`, `/admin/erros`, `/login`):** o Cloudflare Pages trata o projeto como SPA quando o build não tem `404.html` na raiz, que é o nosso caso, e devolve o `index.html` para qualquer endereço. Não precisa de `_redirects`. Dá para abrir `/admin/erros` direto ou recarregar a página.
 
