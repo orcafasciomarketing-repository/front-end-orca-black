@@ -1,42 +1,46 @@
 import styles from "./AdminPanel.module.css";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
-import Header from "../components/Header/Header";
-import SaleWidget from "../components/SaleWidget/SaleWidget";
+import PageHeader from "../components/PageHeader/PageHeader";
 import RankWidget from "../components/RankWidget/RankWidget";
-import ErrorLogWidget from "../components/ErrorLogWidget/ErrorLogWidget";
-import TestReportWidget from "../components/TestReportWidget/TestReportWidget";
+import SaleWidget from "../components/SaleWidget/SaleWidget";
+import SalesFilters from "../components/SalesFilters/SalesFilters";
+import SdrRankWidget from "../components/SdrRankWidget/SdrRankWidget";
+import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
 
 export default function AdminPanel() {
+  const [selectedVendorId, setSelectedVendorId] = useState("");
+  const [selectedWeek, setSelectedWeek] = useState("");
+
   return (
-    <section className={`container ${styles.dashboard}`}>
-      <Header />
-      <div className={styles.grid_table_one}>
-        <ErrorBoundary location="Admin › vendas cadastradas">
-          <Suspense fallback={<p>Carregando dados...</p>}>
-            <SaleWidget />
-          </Suspense>
-        </ErrorBoundary>
+    <div className={styles.page}>
+      <PageHeader title="Dashboard" description="Vendas e rankings da Black Friday">
+        <SalesFilters
+          selectedVendorId={selectedVendorId}
+          onVendorChange={setSelectedVendorId}
+          selectedWeek={selectedWeek}
+          onWeekChange={setSelectedWeek}
+        />
+      </PageHeader>
+      <div className={styles.grid}>
+        <div className={styles.salesArea}>
+          <ErrorBoundary location="Admin › vendas cadastradas">
+            <Suspense fallback={<WidgetFallback title="Vendas cadastradas" />}>
+              <SaleWidget vendorId={selectedVendorId} weekKey={selectedWeek} />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
         <ErrorBoundary location="Admin › rank dos vendedores">
-          <Suspense fallback={<p>Carregando dados...</p>}>
-            <RankWidget />
+          <RankWidget />
+        </ErrorBoundary>
+        <ErrorBoundary location="Admin › rank das passagens">
+          <Suspense fallback={<WidgetFallback title="Rank das passagens" />}>
+            <SdrRankWidget />
           </Suspense>
         </ErrorBoundary>
       </div>
-      <div className={styles.grid_table_two}>
-        <ErrorBoundary location="Admin › logs de erro">
-          <Suspense fallback={<p>Carregando logs...</p>}>
-            <ErrorLogWidget />
-          </Suspense>
-        </ErrorBoundary>
-        <ErrorBoundary location="Admin › logs de teste">
-          <Suspense fallback={<p>Carregando relatório...</p>}>
-            <TestReportWidget />
-          </Suspense>
-        </ErrorBoundary>
-      </div>
-    </section>
+    </div>
   );
 }

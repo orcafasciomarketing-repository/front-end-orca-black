@@ -39,7 +39,7 @@ vi.mock("../../../shared/errorLogger", () => ({
   reportError: vi.fn(),
 }));
 
-const makeSale = (id, name) => ({ id, type: "sales", seller: { name }, assist: null });
+const makeSale = (id, name) => ({ id, type: "sales", seller: { name }, assists: [] });
 
 const advance = (ms) =>
   act(() => {

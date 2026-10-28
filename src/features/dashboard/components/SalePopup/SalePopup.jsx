@@ -74,7 +74,7 @@ function SaleSequence({ sale, videoUrl, active, onFinish }) {
 }
 
 function SaleBillboard({ sale }) {
-  const { seller, assist } = sale;
+  const { seller, assists } = sale;
 
   return (
     <div className={styles.billboardStage}>
@@ -86,25 +86,40 @@ function SaleBillboard({ sale }) {
             {seller.job && <span className={styles.job}>({seller.job})</span>}
           </p>
           <p className={styles.headline}>{HEADLINES[sale.type] ?? HEADLINES.sales}</p>
-          {assist && (
-            <div className={styles.assist}>
-              {assist.imageUrl ? (
-                <img className={styles.avatar} src={assist.imageUrl} alt={assist.name} />
-              ) : (
-                <span className={styles.avatar} />
-              )}
-              <div>
-                <span className={styles.assistLabel}>Assistência</span>
-                <p className={styles.person}>
-                  <strong className={styles.assistName}>{assist.name}</strong>
-                  {assist.job && <span className={styles.job}>({assist.job})</span>}
-                </p>
-              </div>
-            </div>
-          )}
+          {assists.length > 0 && <AssistList assists={assists} />}
         </div>
         {seller.imageUrl && <img className={styles.photo} src={seller.imageUrl} alt={seller.name} />}
       </div>
+    </div>
+  );
+}
+
+const COMPACT_FROM = 3;
+
+function AssistList({ assists }) {
+  const single = assists.length === 1;
+
+  return (
+    <div className={styles.assists}>
+      {!single && <span className={styles.assistLabel}>Assistências</span>}
+      <ul className={`${styles.assistList} ${assists.length >= COMPACT_FROM ? styles.assistListCompact : ""}`}>
+        {assists.map((assist, index) => (
+          <li key={`${assist.name}-${index}`} className={styles.assist}>
+            {assist.imageUrl ? (
+              <img className={styles.avatar} src={assist.imageUrl} alt={assist.name} />
+            ) : (
+              <span className={styles.avatar} />
+            )}
+            <div>
+              {single && <span className={styles.assistLabel}>Assistência</span>}
+              <p className={styles.person}>
+                <strong className={styles.assistName}>{assist.name}</strong>
+                {assist.job && <span className={styles.job}>({assist.job})</span>}
+              </p>
+            </div>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

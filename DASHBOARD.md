@@ -48,7 +48,7 @@ Os dados chegam por dois caminhos:
 - **SSE** (`/sales/events`): quando entra ou cai uma venda, todas as telas buscam os dados de novo e os rankings se reorganizam na hora.
 - **Refetch a cada 60s**: funciona como garantia caso algum evento do SSE se perca.
 
-Quando o evento é de **venda nova**, um popup em tela cheia mostra a venda. Primeiro roda o vídeo `public/sale-video.mp4`, se ele existir. Depois aparece o outdoor com o vendedor, "+1 VENDA" (ou "+1 RENOVAÇÃO" para farmer) e, se houve passagem, a assistência, por 10 segundos. Vendas que chegam juntas entram numa fila e aparecem uma de cada vez, na ordem de chegada. O carrossel fica pausado enquanto o popup está na tela.
+Quando o evento é de **venda nova**, um popup em tela cheia mostra a venda. Primeiro roda o vídeo `public/sale-video.mp4`, se ele existir. Depois aparece o outdoor com o vendedor, "+1 VENDA" (ou "+1 RENOVAÇÃO" para farmer) e, se houve passagem, as assistências (uma ou mais pessoas), por 10 segundos. Vendas que chegam juntas entram numa fila e aparecem uma de cada vez, na ordem de chegada. O carrossel fica pausado enquanto o popup está na tela.
 
 Se uma tela quebrar, só ela mostra "Ops, algo deu errado", com o erro e o local, e o erro aparece no admin. Detalhes em [ERROS_E_LOGS.md](ERROS_E_LOGS.md).
 
@@ -82,8 +82,7 @@ src/
 │   └── PrivateRoute.jsx                redireciona para "/login" quando não há sessão
 ├── features/dashboard/
 │   ├── api/
-│   │   ├── dashboardApi.js             requisições HTTP e SSE (sem React)
-│   │   └── dashboardMocks.js           dados falsos e SSE falso
+│   │   └── dashboardApi.js             requisições HTTP e SSE (sem React)
 │   ├── hooks/
 │   │   ├── dashboardKeys.js            query keys e intervalo de refetch
 │   │   ├── useGoal.js
@@ -268,11 +267,13 @@ Traduz um evento do SSE para o formato que o popup usa:
   id,                                  // sale._id
   type: "sales" | "farm",              // sale.funnelType
   seller: { name, job, imageUrl },     // vendor.vendorName, vendor.job, vendor.imageUrl
-  assist: { name, job, imageUrl } | null, // sdr.name, sdr.job, sdr.imageUrl
+  assists: [{ name, job, imageUrl }],  // sdrs[].name, sdrs[].job, sdrs[].imageUrl
 }
 ```
 - Devolve `null` quando o evento não traz `sale` e `vendor`, ou seja, quando não é uma venda nova (por exemplo, um cancelamento).
-- `assist` é `null` quando o evento não traz `sdr`, ou seja, quando a venda não teve passagem.
+- **`assists` é uma lista**, porque uma venda pode ter 0, 1 ou mais passagens. Vem de `sdrs`, a lista que o backend manda no evento, na ordem da RD. Sem passagem, é `[]`.
+- Se o evento vier no formato antigo, só com `sdr` (uma pessoa), vira uma lista com essa pessoa (`getEventAssists`). O backend ainda manda `sdr` junto com `sdrs` por compatibilidade, e pode tirar o `sdr` quando quiser: o front já usa a lista.
+- `toPerson(pessoa)` pega só `name`, `job` e `imageUrl` de cada pessoa.
 - `type` é `"farm"` quando `funnelType` é `"farm"` (renovação) e `"sales"` em qualquer outro caso.
 
 ### `SALE_VIDEO_URL` e `checkSaleVideo()`
@@ -297,41 +298,9 @@ Abre um `EventSource` em `${VITE_API_URL}/sales/events`. A cada mensagem, conver
 
 ## 7. Mocks
 
-[src/features/dashboard/api/dashboardMocks.js](src/features/dashboard/api/dashboardMocks.js)
+Os dados falsos (as mesmas rotas e o mesmo formato do backend, com vendas em 4 semanas) ficam em `shared/mocks` e servem o dashboard e o admin. Tudo sobre eles está em [MOCKS.md](MOCKS.md).
 
-### Como ligar e desligar
-No `.env.local`, na raiz do projeto:
-```
-VITE_USE_MOCKS=true
-```
-Use `false` para voltar ao backend. **Depois de mudar o valor, reinicie o `npm run dev`**, porque o Vite só lê o `.env` ao subir. O `.env.local` está no `.gitignore` (regra `*.local`) e não vai para o repositório.
-
-**Por que o mock fica na camada de API:** os hooks, as telas e os componentes não sabem que existe mock. O caminho de execução é idêntico ao real, só muda a origem dos dados. Desligar o mock não exige mudar nada além do `.env.local`.
-
-### Dados
-
-| Exportação | O que é |
-|---|---|
-| `goalMock` | Meta de R$ 3.999.495,33 com R$ 1.500.299,20 vendidos (37,51%), os valores do Figma |
-| `scoreboardMock` | Os 3 times da semana, **fora de ordem de propósito**, para provar que quem ordena é o front |
-| `MOCK_PREVIOUS_WEEKS` | Pontos de "semanas anteriores" somados à semana no período `all`, para o acumulado ter números e ordem diferentes do semanal |
-| `vendorRankingMock` | Vendedores por tipo (`sales`/`farm`) e período (`week`/`all`), também fora de ordem |
-| `sdrRankingMock` | Ranking de passagens, fora de ordem |
-
-### Funções
-
-| Função | O que faz |
-|---|---|
-| `withMockDelay(data)` | Devolve os dados depois de 400 ms, para simular a rede e mostrar o "Carregando..." |
-| `getMockScoreboard(period)` | Com `week`, devolve uma cópia do placar atual. Com `all`, soma `MOCK_PREVIOUS_WEEKS` a cada time e recalcula o `total` |
-| `getMockVendorRanking(period, department)` | Devolve uma cópia da lista do tipo e período pedidos |
-| `getMockSdrRanking()` | Devolve uma cópia do ranking de passagens |
-| `pickRandom(items)` | Sorteia um item da lista |
-| `changeMockTeamPoints(points)` | Soma (ou subtrai) pontos de venda de um time sorteado no placar falso |
-| `createMockSaleEvent()` | Monta um evento de venda nova no mesmo formato do backend (`{ sale, vendor, sdr? }`), com vendedor sorteado de `MOCK_SELLERS` e, em 50% das vezes, uma assistência sorteada de `MOCK_ASSISTS`. Também dá 20 pontos a um time |
-| `subscribeToMockSalesEvents(onEvent)` | Imita o SSE (as vendas sorteiam `funnelType` entre `sales` e `farm`, para mostrar "+1 Venda" e "+1 Renovação"): a cada 25s, em 30% das vezes cancela uma venda (um time perde 20 pontos e o evento não abre popup); senão envia uma venda nova, ou duas de uma vez em 30% das vezes, para mostrar a fila do popup. Devolve a função que para o timer |
-
-**Por que as funções devolvem cópias:** o React Query guarda o que recebe em cache. Se a função devolvesse o próprio array do mock, uma alteração em um lugar mudaria o outro sem passar pelo fluxo normal.
+Com `VITE_USE_MOCKS=true`, as funções da API do dashboard chamam o servidor falso pelo `http.get` (`shared/httpClient.js`), e o SSE não envia nada: nenhuma venda nova aparece com o tempo e o popup não abre sozinho.
 
 ---
 
@@ -475,7 +444,7 @@ Cada venda passa por **duas etapas**:
 | Etapa | O que aparece | Quando termina |
 |---|---|---|
 | 1. Vídeo | `SALE_VIDEO_URL` em tela cheia | Quando o vídeo acaba (`onEnded`) ou falha (`onError`) |
-| 2. Outdoor | Fundo do outdoor com vendedor, "+1 VENDA" ou "+1 RENOVAÇÃO" e a assistência | Depois de `SALE_BILLBOARD_DURATION` (10s), chama `onFinish` |
+| 2. Outdoor | Fundo do outdoor com vendedor, "+1 VENDA" ou "+1 RENOVAÇÃO" e as assistências | Depois de `SALE_BILLBOARD_DURATION` (10s), chama `onFinish` |
 
 Sem vídeo (`videoUrl` nulo), a venda já começa no outdoor.
 
@@ -492,8 +461,14 @@ Sem vídeo (`videoUrl` nulo), a venda já começa no outdoor.
 
 **`SaleBillboard({ sale })`:** o conteúdo do outdoor.
 - `HEADLINES` faz `sales` virar "+1 Venda" e `farm` virar "+1 Renovação".
-- O bloco da **assistência** só é renderizado quando `sale.assist` existe, ou seja, quando a venda teve passagem.
-- Sem `imageUrl`, a foto do vendedor não aparece e o avatar da assistência vira um círculo vazio com a borda amarela.
+- O bloco das **assistências** (`AssistList`) só é renderizado quando `sale.assists` tem alguém, ou seja, quando a venda teve passagem.
+- Sem `imageUrl`, a foto do vendedor não aparece e o avatar da pessoa da passagem vira um círculo vazio com a borda amarela.
+
+**`AssistList({ assists })`:** as pessoas da passagem.
+- **Uma pessoa:** igual ao Figma, com o avatar e, ao lado, "Assistência" em cima do nome e cargo.
+- **Duas ou mais:** "Assistências" (no plural) uma vez em cima, e as pessoas lado a lado, cada uma com avatar, nome e cargo. Se não couberem na largura do painel, quebram para a linha de baixo.
+- **Três ou mais** (`COMPACT_FROM`): a lista ganha `.assistListCompact`, com avatar de 60px e nome de 28px (em vez de 88px e 40px), para todo mundo caber no painel do outdoor.
+- A `key` de cada pessoa usa o nome e a posição, porque o evento não manda id das pessoas.
 - O cargo (`job`) aparece entre parênteses ao lado do nome.
 
 `aria-hidden` marca o popup escondido para leitores de tela. Os testes usam esse atributo.
@@ -505,6 +480,8 @@ Sem vídeo (`videoUrl` nulo), a venda já começa no outdoor.
 - `.billboardStage`: a etapa do outdoor, com o fundo `sale-popup-background.webp`. Entra com a animação `stageEnter` (fade de 0.6s), tanto depois do vídeo quanto na troca entre duas vendas sem vídeo.
 - `.billboard`: posicionado em porcentagem sobre o painel do outdoor da imagem de fundo. O painel vai de x=322 a 1597 e de y=155 a 700 numa imagem de 1920×1080, o que dá `left: 16.77%`, `top: 14.35%`, `width: 66.41%` e `height: 50.46%`. Em qualquer tela 16:9 o conteúdo fica dentro do painel. Em telas com outra proporção, o `cover` corta as bordas da imagem e o conteúdo pode sair um pouco do lugar.
 - `.headline`: "+1 VENDA" ou "+1 RENOVAÇÃO" em amarelo, 92px.
+- `.assists`: o bloco das assistências, em coluna (rótulo no plural em cima, lista embaixo).
+- `.assistList`: as pessoas lado a lado, com quebra de linha. `.assist`: uma pessoa (avatar + nome).
 - `.avatar`: círculo com borda amarela, `object-fit: cover`.
 - `.photo`: foto do vendedor alinhada à base do painel, à direita, com `object-fit: contain`.
 
@@ -729,10 +706,10 @@ As medidas que o Figma não informou (nome, medalha e subtítulo, por exemplo) f
 |---|---|
 | `formatCurrency.test.js` | Formato `R$ 1.500.299,20`; `undefined` vira R$ 0,00 |
 | `sortDescBy.test.js` | Ordena do maior para o menor; não altera o array original |
-| `dashboardApi.test.js` | Tira o envelope; envia os parâmetros certos para cada rota; tira a lista de dentro de `vendor`; acrescenta o `id`; com mocks ligados não chama o backend; `toNewSale` traduz a venda, marca farmer como renovação, deixa a assistência vazia sem passagem e devolve `null` para outros eventos; `checkSaleVideo` devolve a URL só quando o arquivo é um vídeo e `null` quando não existe ou a rede falha; o SSE monta a URL certa, repassa o evento traduzido e fecha a conexão |
+| `dashboardApi.test.js` | Tira o envelope; envia os parâmetros certos para cada rota; tira a lista de dentro de `vendor`; acrescenta o `id`; com mocks ligados não chama o backend; `toNewSale` traduz a venda com a lista de passagens, aceita o formato antigo só com `sdr`, marca farmer como renovação, devolve lista vazia sem passagem e devolve `null` para outros eventos; `checkSaleVideo` devolve a URL só quando o arquivo é um vídeo e `null` quando não existe ou a rede falha; o SSE monta a URL certa, repassa o evento traduzido e fecha a conexão |
 | `useSalesEvents.test.jsx` | Abre uma conexão só; cada evento invalida placares, rankings e meta; repassa só venda nova ao callback; usa o callback mais recente sem reabrir a conexão; fecha a conexão ao desmontar |
 | `useSaleQueue.test.js` | Começa vazia; a primeira que entra é a da tela; sai na ordem de chegada (FIFO); venda nova não muda a da tela; cada entrada tem `key` própria, mesmo com a mesma venda |
-| `SalePopup.test.jsx` | Escondido sem venda; sem vídeo vai direto ao outdoor; "+1 Renovação" para farmer; assistência só com passagem; `onFinish` só depois de 10s de outdoor; com vídeo, o outdoor só aparece quando o vídeo acaba; vídeo com erro pula para o outdoor; cada venda da fila recomeça pelo vídeo; ao sair mantém a última venda no fade sem chamar `onFinish` de novo |
+| `SalePopup.test.jsx` | Escondido sem venda; sem vídeo vai direto ao outdoor; "+1 Renovação" para farmer; assistência só com passagem; duas passagens mostram "Assistências" e as duas pessoas; três ou mais ficam em tamanho menor; `onFinish` só depois de 10s de outdoor; com vídeo, o outdoor só aparece quando o vídeo acaba; vídeo com erro pula para o outdoor; cada venda da fila recomeça pelo vídeo; ao sair mantém a última venda no fade sem chamar `onFinish` de novo |
 | `GoalProgress.test.jsx` | Valores em R$; largura da barra igual ao percent; limite em 100% |
 | `TeamCard.test.jsx` | Total; as 3 linhas com singular e plural; campo ausente vira 0; camiseta com `alt`; time sem camiseta não quebra |
 | `PlayerCard.test.jsx` | Posição, nome e pontos; "Ponto" no singular |
@@ -756,7 +733,7 @@ As medidas que o Figma não informou (nome, medalha e subtítulo, por exemplo) f
 
 1. Se a tela precisa de dados novos:
    - crie a função em `api/dashboardApi.js`, devolvendo a lista com `id` em cada item;
-   - crie o mock correspondente em `api/dashboardMocks.js`;
+   - responda a rota nova em `shared/mocks/mockApi.js` (ver [MOCKS.md](MOCKS.md));
    - crie a chave em `hooks/dashboardKeys.js`, de preferência sob um prefixo que o `useSalesEvents` já invalida;
    - crie o hook em `hooks/`.
 2. Crie a tela em `screens/NomeDaTela/NomeDaTela.jsx`. Se for um ranking, use `RankingLayout` + `Podium` + o card adequado.
@@ -772,11 +749,7 @@ O fundo padrão, o fade, o SSE e o refetch funcionam sem nenhuma configuração 
 
 | Item | Onde | Situação |
 |---|---|---|
-| `broadcast` comentado | Backend, `features/sale/service/salesService.js` | Sem ele nenhum evento SSE chega e o popup nunca aparece. O refetch de 60s continua funcionando |
-| `sdr` no evento de venda nova | Backend, mesmo `broadcast` | Hoje o evento seria `{ sale, vendor }`, e a venda só tem o `sdrId`. Para a assistência aparecer, o evento precisa ser `{ sale, vendor, sdr }`, com o SDR encontrado (`name`, `job`, `imageUrl`) |
 | Vídeo do popup | `public/sale-video.mp4` | Coloque o vídeo com esse nome e recarregue a TV. Sem o arquivo, o popup mostra só o outdoor |
 | Som do vídeo | `SalePopup` | O vídeo toca mudo, porque é a única forma de tocar sozinho no navegador. Para ter som, a TV precisa abrir o navegador com o autoplay liberado |
-| `broadcast` no cancelamento, reativação e correção | Backend | Hoje só existiria para venda nova, então cancelamento não reorganiza o ranking na hora |
-| Rotas `/logs` | Backend | O front envia e lê os logs de erro por `POST /logs` e `GET /logs`. Contrato em [ERROS_E_LOGS.md](ERROS_E_LOGS.md) |
 | Fonte do Figma | `font-family: system-ui` nas telas | Trocar quando a fonte for definida |
 | Animação de troca de posição | `Podium` | Hoje os cards trocam de lugar na hora, sem deslizar |

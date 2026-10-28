@@ -1,11 +1,13 @@
-import { getAllSlides } from "../api/slidesApi";
+import { useCallback } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-export function useAdminSales() {
-  const { data } = useSuspenseQuery({
-    queryKey: ["admin-sales"],
-    queryFn: getAllSlides,
-  });
+import { filterSalesByWeek } from "../utils/weeks";
+import { adminSalesQuery } from "./adminQueries";
 
-  return { sales: data.data };
+export function useAdminSales(vendorId, weekKey) {
+  const selectWeek = useCallback(({ sales }) => filterSalesByWeek(sales, weekKey), [weekKey]);
+
+  const { data: sales } = useSuspenseQuery({ ...adminSalesQuery(vendorId), select: selectWeek });
+
+  return { sales, total: sales.length };
 }

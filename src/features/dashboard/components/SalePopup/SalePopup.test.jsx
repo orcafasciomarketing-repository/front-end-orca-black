@@ -9,7 +9,7 @@ const makeItem = (key, sale = {}) => ({
     id: `sale-${key}`,
     type: "sales",
     seller: { name: "Bruno", job: "Vendedor", imageUrl: "http://localhost/bruno.png" },
-    assist: { name: "Juliana", job: "SDR", imageUrl: "http://localhost/juliana.png" },
+    assists: [{ name: "Juliana", job: "SDR", imageUrl: "http://localhost/juliana.png" }],
     ...sale,
   },
 });
@@ -61,9 +61,38 @@ describe("SalePopup", () => {
     expect(screen.getByText("Juliana")).toBeInTheDocument();
     expect(screen.getByText("(SDR)")).toBeInTheDocument();
 
-    rerender(<SalePopup item={makeItem(2, { assist: null })} videoUrl={null} onFinish={vi.fn()} />);
+    rerender(<SalePopup item={makeItem(2, { assists: [] })} videoUrl={null} onFinish={vi.fn()} />);
 
     expect(screen.queryByText("Assistência")).not.toBeInTheDocument();
+    expect(screen.queryByText("Assistências")).not.toBeInTheDocument();
+  });
+
+  it("com duas passagens mostra 'Assistências' e as duas pessoas, com foto", () => {
+    const assists = [
+      { name: "Juliana", job: "SDR", imageUrl: "http://localhost/juliana.png" },
+      { name: "Rafael", job: "Suporte", imageUrl: null },
+    ];
+
+    render(<SalePopup item={makeItem(1, { assists })} videoUrl={null} onFinish={vi.fn()} />);
+
+    expect(screen.getByText("Assistências")).toBeInTheDocument();
+    expect(screen.queryByText("Assistência")).not.toBeInTheDocument();
+    expect(screen.getByText("Juliana")).toBeInTheDocument();
+    expect(screen.getByText("(SDR)")).toBeInTheDocument();
+    expect(screen.getByText("Rafael")).toBeInTheDocument();
+    expect(screen.getByText("(Suporte)")).toBeInTheDocument();
+    expect(screen.getByAltText("Juliana")).toBeInTheDocument();
+    expect(screen.queryByAltText("Rafael")).not.toBeInTheDocument();
+  });
+
+  it("com três ou mais passagens mostra todas, em tamanho menor", () => {
+    const assists = ["Ana", "Bia", "Caio"].map((name) => ({ name, job: "SDR", imageUrl: null }));
+
+    render(<SalePopup item={makeItem(1, { assists })} videoUrl={null} onFinish={vi.fn()} />);
+
+    const list = screen.getByText("Ana").closest("ul");
+    expect(list.querySelectorAll("li")).toHaveLength(3);
+    expect(list.className).toMatch(/assistListCompact/);
   });
 
   it("avisa que terminou 10 segundos depois de o outdoor aparecer", () => {

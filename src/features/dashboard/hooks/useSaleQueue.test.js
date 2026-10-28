@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { useSaleQueue } from "./useSaleQueue";
 
-const sale = (id) => ({ id, seller: { name: id }, assist: null });
+const sale = (id) => ({ id, seller: { name: id }, assists: [] });
 
 describe("useSaleQueue", () => {
   it("começa vazia", () => {

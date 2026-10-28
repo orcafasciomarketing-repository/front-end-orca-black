@@ -9,7 +9,7 @@ vi.mock("../api/dashboardApi", () => ({
   subscribeToSalesEvents: vi.fn(),
 }));
 
-const newSale = { id: "sale-1", seller: { name: "Bruno" }, assist: null };
+const newSale = { id: "sale-1", seller: { name: "Bruno" }, assists: [] };
 
 function renderUseSalesEvents(onNewSale = vi.fn()) {
   const queryClient = new QueryClient();

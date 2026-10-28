@@ -195,13 +195,13 @@ Recomendações:
 { "success": true, "data": [ { "_id": "...", "message": "...", "location": "...", "occurredAt": "...", "...": "..." } ] }
 ```
 
-Enquanto as rotas não existirem, o `POST` falha e os logs ficam no `localStorage` de cada TV. O widget do admin mostra a tela de erro com `Request failed with status code 404`.
+As duas rotas já existem no backend (`features/logs`), com limite de requisições por IP no `POST`. Se o `POST` falhar (backend fora do ar, por exemplo), o log fica no `localStorage` da TV.
 
 ---
 
 ## 6. Admin
 
-[src/features/admin/pages/AdminPanel.jsx](src/features/admin/pages/AdminPanel.jsx) ganhou uma segunda linha (`.grid_table_two`, duas colunas iguais) com os dois widgets. Todos os widgets do admin, os novos e os que já existiam, agora ficam dentro de um `ErrorBoundary`.
+Os dois widgets ficam na aba **Erros** do admin ([ErrorsPage.jsx](src/features/admin/pages/ErrorsPage.jsx), rota `/admin/erros`), lado a lado. Todos os widgets do admin ficam dentro de um `ErrorBoundary`. O layout do admin está em [ADMIN.md](ADMIN.md).
 
 ### Logs de erro
 
@@ -254,5 +254,5 @@ Os testes que provocam erro silenciam o `console.error` durante o teste, porque 
 ## 8. Como testar na mão
 
 1. **Tela de erro numa TV:** com o backend desligado e `VITE_USE_MOCKS=false`, abra `/`. Cada tela mostra "Ops, algo deu errado" com `Network Error` e o local da tela.
-2. **Logs no admin com mocks:** com `VITE_USE_MOCKS=true`, provoque um erro (por exemplo, rode no console do navegador `Promise.reject(new Error("teste"))`) e abra `/admin` no mesmo navegador. O erro aparece em "Logs de erro".
-3. **Logs de teste:** rode `npm test` e abra `/admin`. O widget "Logs de teste" mostra o resultado.
+2. **Logs no admin:** provoque um erro (por exemplo, rode no console do navegador `Promise.reject(new Error("teste"))`) e abra `/admin/erros`. O erro aparece em "Logs de erro".
+3. **Logs de teste:** rode `npm test` e abra `/admin/erros`. O widget "Logs de teste" mostra o resultado.

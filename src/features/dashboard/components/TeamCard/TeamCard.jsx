@@ -10,7 +10,7 @@ const DETAIL_ROWS = [
 
 export default function TeamCard({ team, highlighted = false }) {
   return (
-    <article className={`${styles.card} ${highlighted ? styles.highlighted : ""}`}>
+    <article className={`${styles.card} ${highlighted ? styles.highlighted : ""}`} aria-label={team.teamName}>
       <div className={styles.shirt}>
         {team.teamShirt && <img className={styles.shirtImage} src={team.teamShirt} alt={team.teamName} />}
       </div>

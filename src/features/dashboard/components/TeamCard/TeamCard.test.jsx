@@ -42,6 +42,12 @@ describe("TeamCard", () => {
     expect(screen.getByAltText("Sem freio")).toHaveAttribute("src", team.teamShirt);
   });
 
+  it("o card tem o nome do time como rótulo, mesmo sem camiseta", () => {
+    render(<TeamCard team={{ ...team, teamShirt: undefined }} />);
+
+    expect(screen.getByRole("article", { name: "Sem freio" })).toBeInTheDocument();
+  });
+
   it("não quebra quando o time não tem camiseta", () => {
     render(<TeamCard team={{ ...team, teamShirt: null }} />);
 

@@ -101,10 +101,30 @@
   text-transform: uppercase;
 }
 
+.assists {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(6px, 0.63vw, 12px);
+}
+
+.assistList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: clamp(10px, 1.04vw, 20px) clamp(20px, 2.08vw, 40px);
+}
+
 .assist {
   display: flex;
   align-items: center;
   gap: clamp(10px, 1.04vw, 20px);
+}
+
+.assistListCompact .avatar {
+  width: clamp(32px, 3.13vw, 60px);
+}
+
+.assistListCompact .assistName {
+  font-size: clamp(14px, 1.46vw, 28px);
 }
 
 .avatar {

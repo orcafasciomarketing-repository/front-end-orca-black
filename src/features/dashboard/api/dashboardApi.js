@@ -1,48 +1,42 @@
-import api from "../../../shared/apiClient.js";
+import { http } from "../../../shared/httpClient.js";
+import { subscribeToMockSalesEvents } from "../../../shared/mocks/mockApi";
+import { getApiUrl } from "../../../shared/utils/apiUrl";
 import { isMockEnabled } from "../../../shared/utils/isMockEnabled";
-
-import {
-  getMockScoreboard,
-  getMockSdrRanking,
-  getMockVendorRanking,
-  goalMock,
-  subscribeToMockSalesEvents,
-  withMockDelay,
-} from "./dashboardMocks";
 
 export const SALE_VIDEO_URL = "/sale-video.mp4";
 
 export const getGoal = async () => {
-  if (isMockEnabled()) {
-    return withMockDelay(goalMock);
-  }
-
-  const response = await api.get("/analytics/goal");
+  const response = await http.get("/analytics/goal");
   return response.data.data;
 };
 
 export const getScoreboard = async (period) => {
-  const teams = isMockEnabled()
-    ? await withMockDelay(getMockScoreboard(period))
-    : (await api.get("/analytics/scoreboard", { params: { period } })).data.data;
-
-  return teams.map((team) => ({ ...team, id: team.teamId }));
+  const response = await http.get("/analytics/scoreboard", { params: { period } });
+  return response.data.data.map((team) => ({ ...team, id: team.teamId }));
 };
 
 export const getVendorRanking = async (period, department) => {
-  const vendors = isMockEnabled()
-    ? await withMockDelay(getMockVendorRanking(period, department))
-    : (await api.get("/analytics/ranking", { params: { period, vendorDepartment: department } })).data.data.vendor;
-
-  return vendors.map((vendor) => ({ ...vendor, id: vendor.vendorId }));
+  const response = await http.get("/analytics/ranking", { params: { period, vendorDepartment: department } });
+  return response.data.data.vendor.map((vendor) => ({ ...vendor, id: vendor.vendorId }));
 };
 
 export const getSdrRanking = async (period) => {
-  const sdrs = isMockEnabled()
-    ? await withMockDelay(getMockSdrRanking(period))
-    : (await api.get("/analytics/sdr-ranking", { params: { period } })).data.data;
+  const response = await http.get("/analytics/sdr-ranking", { params: { period } });
+  return response.data.data.map((sdr) => ({ ...sdr, id: sdr.sdrId }));
+};
 
-  return sdrs.map((sdr) => ({ ...sdr, id: sdr.sdrId }));
+const toPerson = (person) => ({
+  name: person.name,
+  job: person.job,
+  imageUrl: person.imageUrl,
+});
+
+const getEventAssists = (event) => {
+  if (Array.isArray(event.sdrs)) {
+    return event.sdrs;
+  }
+
+  return event.sdr ? [event.sdr] : [];
 };
 
 export const toNewSale = (event) => {
@@ -58,13 +52,7 @@ export const toNewSale = (event) => {
       job: event.vendor.job,
       imageUrl: event.vendor.imageUrl,
     },
-    assist: event.sdr
-      ? {
-          name: event.sdr.name,
-          job: event.sdr.job,
-          imageUrl: event.sdr.imageUrl,
-        }
-      : null,
+    assists: getEventAssists(event).map(toPerson),
   };
 };
 
@@ -86,7 +74,7 @@ export const subscribeToSalesEvents = (onEvent) => {
     return subscribeToMockSalesEvents(handleEvent);
   }
 
-  const eventSource = new EventSource(`${import.meta.env.VITE_API_URL}/sales/events`);
+  const eventSource = new EventSource(`${getApiUrl()}/sales/events`);
   eventSource.onmessage = (message) => handleEvent(JSON.parse(message.data));
 
   return () => eventSource.close();

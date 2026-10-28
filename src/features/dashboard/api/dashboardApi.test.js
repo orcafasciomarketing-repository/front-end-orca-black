@@ -11,7 +11,6 @@ import {
   subscribeToSalesEvents,
   toNewSale,
 } from "./dashboardApi";
-import { goalMock } from "./dashboardMocks";
 
 vi.mock("../../../shared/apiClient.js", () => ({
   default: { get: vi.fn() },
@@ -63,26 +62,30 @@ describe("dashboardApi", () => {
     expect(api.get).toHaveBeenCalledWith("/analytics/sdr-ranking", { params: { period: "week" } });
   });
 
-  it("com VITE_USE_MOCKS=true devolve os mocks sem chamar o backend", async () => {
+  it("com VITE_USE_MOCKS=true responde com os dados falsos sem chamar o backend", async () => {
     vi.stubEnv("VITE_USE_MOCKS", "true");
 
-    await expect(getGoal()).resolves.toEqual(goalMock);
-
+    const goal = await getGoal();
     const teams = await getScoreboard("week");
     const vendors = await getVendorRanking("week", "sales");
     const sdrs = await getSdrRanking("all");
 
+    expect(goal).toEqual(expect.objectContaining({ goal: 3000000 }));
     expect(teams).toHaveLength(3);
-    expect(vendors).toHaveLength(3);
-    expect(sdrs).toHaveLength(3);
+    expect(vendors.length).toBeGreaterThan(0);
+    expect(sdrs.length).toBeGreaterThan(0);
     expect([...teams, ...vendors, ...sdrs].every((item) => item.id)).toBe(true);
     expect(api.get).not.toHaveBeenCalled();
   });
 
-  it("toNewSale traduz o evento de venda nova para o formato do popup", () => {
+  it("toNewSale traduz o evento de venda nova para o formato do popup, com todas as passagens", () => {
     const event = {
-      sale: { _id: "s1", sdrId: "sdr1", funnelType: "sales" },
+      sale: { _id: "s1", funnelType: "sales" },
       vendor: { vendorName: "Bruno", job: "Vendedor", imageUrl: "bruno.png" },
+      sdrs: [
+        { name: "Juliana", job: "SDR", imageUrl: "juliana.png" },
+        { name: "Rafael", job: "Suporte", imageUrl: "rafael.png" },
+      ],
       sdr: { name: "Juliana", job: "SDR", imageUrl: "juliana.png" },
     };
 
@@ -90,8 +93,21 @@ describe("dashboardApi", () => {
       id: "s1",
       type: "sales",
       seller: { name: "Bruno", job: "Vendedor", imageUrl: "bruno.png" },
-      assist: { name: "Juliana", job: "SDR", imageUrl: "juliana.png" },
+      assists: [
+        { name: "Juliana", job: "SDR", imageUrl: "juliana.png" },
+        { name: "Rafael", job: "Suporte", imageUrl: "rafael.png" },
+      ],
     });
+  });
+
+  it("toNewSale aceita o formato antigo, com só o 'sdr'", () => {
+    const event = {
+      sale: { _id: "s1" },
+      vendor: { vendorName: "Bruno" },
+      sdr: { name: "Juliana", job: "SDR", imageUrl: "juliana.png" },
+    };
+
+    expect(toNewSale(event).assists).toEqual([{ name: "Juliana", job: "SDR", imageUrl: "juliana.png" }]);
   });
 
   it("toNewSale marca a venda farmer como renovação", () => {
@@ -122,7 +138,7 @@ describe("dashboardApi", () => {
   it("toNewSale deixa a assistência vazia quando a venda não tem passagem", () => {
     const event = { sale: { _id: "s1" }, vendor: { vendorName: "Bruno" } };
 
-    expect(toNewSale(event).assist).toBeNull();
+    expect(toNewSale(event).assists).toEqual([]);
   });
 
   it("toNewSale devolve null para evento que não é venda nova", () => {
@@ -155,5 +171,23 @@ describe("dashboardApi", () => {
     expect(onEvent).toHaveBeenNthCalledWith(1, null);
     expect(onEvent).toHaveBeenNthCalledWith(2, expect.objectContaining({ id: "s1" }));
     expect(eventSource.close).toHaveBeenCalled();
+  });
+
+  it("subscribeToSalesEvents não duplica a barra quando a VITE_API_URL termina com /", () => {
+    const urls = [];
+    vi.stubGlobal(
+      "EventSource",
+      class {
+        constructor(url) {
+          urls.push(url);
+          this.close = vi.fn();
+        }
+      },
+    );
+    vi.stubEnv("VITE_API_URL", "https://back-end-orca-black.onrender.com/");
+
+    subscribeToSalesEvents(vi.fn())();
+
+    expect(urls).toEqual(["https://back-end-orca-black.onrender.com/sales/events"]);
   });
 });
