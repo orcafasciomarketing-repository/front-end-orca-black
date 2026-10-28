@@ -47,6 +47,22 @@ Em **Settings → Variables and Secrets (Environment variables)**, adicione:
 
 Para publicar sem rodar os testes, use `npm run build` como comando. Nesse caso o admin mostra "Nenhum relatório encontrado".
 
+### Pelo fluxo de Workers ("Create an app")
+
+Se o painel abrir o fluxo de **Workers** em vez do de Pages, o site também funciona, como Worker de arquivos estáticos. A configuração fica no [wrangler.jsonc](wrangler.jsonc), na raiz do repositório:
+- `name`: precisa ser igual ao **Project name** do painel (`front-end-orca-black`);
+- `assets.directory`: `./dist`, a pasta gerada pelo build;
+- `assets.not_found_handling`: `single-page-application`, para `/admin`, `/admin/erros` e `/login` abrirem direto e ao recarregar.
+
+| Campo | Valor |
+|---|---|
+| Build command | `npm run build:pages` |
+| Deploy command | `npx wrangler deploy` |
+| Preview builds | Desligado (os endereços de preview são bloqueados pelo CORS do backend) |
+| Build variables (em Advanced settings) | `NODE_VERSION` = `22` |
+
+O endereço fica `https://front-end-orca-black.<sua-conta>.workers.dev`, e é esse que vai no `FRONT_URL` do Render.
+
 **Rotas do SPA (`/admin`, `/admin/erros`, `/login`):** o Cloudflare Pages trata o projeto como SPA quando o build não tem `404.html` na raiz, que é o nosso caso, e devolve o `index.html` para qualquer endereço. Não precisa de `_redirects`. Dá para abrir `/admin/erros` direto ou recarregar a página.
 
 ---
