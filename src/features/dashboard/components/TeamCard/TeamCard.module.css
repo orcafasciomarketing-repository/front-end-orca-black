@@ -9,7 +9,6 @@
   --color-text: #ffffff;
   --color-value: #facc15;
   --card-padding: clamp(24px, 2.6vw, 50px);
-  --shirt-height: clamp(64px, 6.77vw, 130px);
 
   width: clamp(200px, 23.44vw, 450px);
   display: flex;
@@ -27,15 +26,13 @@
 }
 
 .shirt {
-  height: calc(var(--shirt-height) + 2 * var(--card-padding));
   background: var(--color-card-top);
 }
 
 .shirtImage {
   display: block;
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  height: auto;
 }
 
 .body {
