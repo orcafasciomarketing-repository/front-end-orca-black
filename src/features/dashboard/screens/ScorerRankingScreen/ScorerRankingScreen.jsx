@@ -16,10 +16,10 @@ const PERIOD_LABELS = {
 export default function ScorerRankingScreen({ period, department }) {
   return (
     <RankingLayout
-      title="Ranking de artilheiros"
+      title="Ranking de vendedores"
       subtitle={`${DEPARTMENT_LABELS[department]} ${PERIOD_LABELS[period]}`}
       accent
-      loadingText="Carregando artilheiros..."
+      loadingText="Carregando vendedores..."
     >
       <ScorerPodium period={period} department={department} />
     </RankingLayout>
@@ -33,7 +33,13 @@ function ScorerPodium({ period, department }) {
     <Podium
       items={vendors}
       emptyText="Nenhuma venda no período"
-      renderItem={(vendor, index) => <PlayerCard player={vendor} position={index + 1} highlighted={index === 0} />}
+      renderItem={(vendor, index) => (
+        <PlayerCard
+          player={vendor}
+          position={index + 1}
+          highlighted={index === 0}
+        />
+      )}
     />
   );
 }
