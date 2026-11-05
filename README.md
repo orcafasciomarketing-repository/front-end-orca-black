@@ -2,7 +2,7 @@
 
 Front-end da campanha **Orça Black**. São duas partes:
 
-- **Dashboard das TVs** (`/`): página pública que roda em loop nas TVs com a meta de faturamento e os rankings de equipes, artilheiros e assistências. Atualiza em tempo real a cada venda e mostra um popup em tela cheia para cada venda nova.
+- **Dashboard das TVs** (`/`): página pública que roda em loop nas TVs com a meta de faturamento e os rankings de equipes, vendedores e passagens. Atualiza em tempo real a cada venda e mostra um popup em tela cheia para cada venda nova.
 - **Painel admin** (`/admin`): área com login para acompanhar as vendas (com filtros por semana e por vendedor e exportação em CSV), os logs de erro das TVs e o resultado dos testes.
 
 Os dados vêm do backend [`back-end-black-friday`](../back-end-black-friday), publicado no Render em `https://back-end-orca-black.onrender.com`. As vendas entram por uma planilha (Apps Script) e o front só lê. O front é publicado no Cloudflare Pages: ver [DEPLOY.md](DEPLOY.md).

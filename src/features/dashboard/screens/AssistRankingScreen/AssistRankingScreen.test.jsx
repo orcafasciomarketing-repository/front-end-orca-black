@@ -34,7 +34,7 @@ describe("AssistRankingScreen", () => {
 
     renderWithQuery(<AssistRankingScreen period="all" />);
 
-    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ranking deassistências");
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent("Ranking de passagens");
     expect(screen.queryByText(/semanal|geral/i)).not.toBeInTheDocument();
   });
 

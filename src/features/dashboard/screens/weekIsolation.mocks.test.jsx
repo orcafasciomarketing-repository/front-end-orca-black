@@ -46,7 +46,7 @@ describe("Telas das TVs com os dados falsos (quarta, 21/10/2026)", () => {
     });
   });
 
-  describe("Ranking de artilheiros", () => {
+  describe("Ranking de vendedores", () => {
     it("vendas semanal: Brenda e Gustavo, sem quem só vendeu na semana passada", async () => {
       renderWithQuery(<ScorerRankingScreen period="week" department="sales" />);
 
@@ -88,7 +88,7 @@ describe("Telas das TVs com os dados falsos (quarta, 21/10/2026)", () => {
     });
   });
 
-  describe("Ranking de assistências", () => {
+  describe("Ranking de passagens", () => {
     it("geral: Caio lidera com 3 passagens", async () => {
       renderWithQuery(<AssistRankingScreen period="all" />);
 

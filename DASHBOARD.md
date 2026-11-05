@@ -36,11 +36,11 @@ O dashboard é a página principal do app (`/`). Ele não exige login e mostra 8
 | 1 | Meta Black | `GET /analytics/goal` |
 | 2 | Ranking de equipes · Semanal | `GET /analytics/scoreboard?period=week` |
 | 3 | Ranking de equipes · Geral acumulado | `GET /analytics/scoreboard?period=all` |
-| 4 | Ranking de artilheiros · Farmer semanal | `GET /analytics/ranking?period=week&vendorDepartment=farm` |
-| 5 | Ranking de artilheiros · Vendas semanal | `GET /analytics/ranking?period=week&vendorDepartment=sales` |
-| 6 | Ranking de artilheiros · Farmer geral | `GET /analytics/ranking?period=all&vendorDepartment=farm` |
-| 7 | Ranking de artilheiros · Vendas geral | `GET /analytics/ranking?period=all&vendorDepartment=sales` |
-| 8 | Ranking de assistências | `GET /analytics/sdr-ranking?period=all` |
+| 4 | Ranking de vendedores · Farmer semanal | `GET /analytics/ranking?period=week&vendorDepartment=farm` |
+| 5 | Ranking de vendedores · Vendas semanal | `GET /analytics/ranking?period=week&vendorDepartment=sales` |
+| 6 | Ranking de vendedores · Farmer geral | `GET /analytics/ranking?period=all&vendorDepartment=farm` |
+| 7 | Ranking de vendedores · Vendas geral | `GET /analytics/ranking?period=all&vendorDepartment=sales` |
+| 8 | Ranking de passagens | `GET /analytics/sdr-ranking?period=all` |
 
 A volta completa leva 2 minutos (8 × 15s).
 
@@ -507,7 +507,7 @@ Desenha a barra de progresso com o total à esquerda e a meta à direita.
 [components/RankingLayout/RankingLayout.jsx](src/features/dashboard/components/RankingLayout/RankingLayout.jsx)
 
 É a moldura comum das telas de ranking: título, subtítulo opcional, logo no canto superior direito e o `<Suspense>` em volta do conteúdo.
-- `title` aceita texto ou JSX. A tela de assistências usa isso para quebrar o título em duas linhas com `<br />`, como no Figma.
+- `title` aceita texto ou JSX.
 - `subtitle` é opcional. Sem ele, a linha não é renderizada.
 - `accent` deixa o subtítulo amarelo e em negrito.
 - `loadingText` é o texto mostrado enquanto os dados carregam.
@@ -585,7 +585,7 @@ Mostra "RANKING DE EQUIPES" com o pódio de times.
 
 [screens/ScorerRankingScreen/ScorerRankingScreen.jsx](src/features/dashboard/screens/ScorerRankingScreen/ScorerRankingScreen.jsx)
 
-Mostra "RANKING DE ARTILHEIROS" com o pódio de vendedores.
+Mostra "RANKING DE VENDEDORES" com o pódio de vendedores.
 - O subtítulo junta `DEPARTMENT_LABELS` (`sales` → "Vendas", `farm` → "Farmer") e `PERIOD_LABELS` (`week` → "Semanal", `all` → "Geral"). Por exemplo: "Farmer Semanal".
 - O subtítulo é sempre amarelo (`accent`), como no Figma.
 - `ScorerPodium({ period, department })` busca com `useVendorRanking` e desenha um `PlayerCard` por vendedor.
@@ -596,7 +596,7 @@ Mostra "RANKING DE ARTILHEIROS" com o pódio de vendedores.
 
 [screens/AssistRankingScreen/AssistRankingScreen.jsx](src/features/dashboard/screens/AssistRankingScreen/AssistRankingScreen.jsx)
 
-Mostra "RANKING DE ASSISTÊNCIAS", em duas linhas e sem subtítulo, com o pódio de passagens.
+Mostra "RANKING DE PASSAGENS", em uma linha e sem subtítulo, com o pódio de passagens.
 - `AssistPodium({ period })` busca com `useSdrRanking` e desenha um `PlayerCard` por pessoa.
 - No carrossel ela usa `period: "all"`, a campanha inteira, porque o Figma não indica período. Para a semana, troque para `"week"` no `SCREENS`.
 

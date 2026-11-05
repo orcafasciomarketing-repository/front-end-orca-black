@@ -22,12 +22,12 @@ vi.mock("../screens/TeamRankingScreen/TeamRankingScreen", () => ({
 vi.mock("../screens/ScorerRankingScreen/ScorerRankingScreen", () => ({
   default: ({ period, department }) => (
     <p>
-      Tela artilheiros {department} {period}
+      Tela vendedores {department} {period}
     </p>
   ),
 }));
 vi.mock("../screens/AssistRankingScreen/AssistRankingScreen", () => ({
-  default: ({ period }) => <p>Tela assistências {period}</p>,
+  default: ({ period }) => <p>Tela passagens {period}</p>,
 }));
 vi.mock("../hooks/useSalesEvents", () => ({
   useSalesEvents: vi.fn(),
@@ -84,11 +84,11 @@ describe("DashboardPage", () => {
     expect(screen.getByText("Tela meta")).toBeInTheDocument();
     expect(screen.getByText("Tela ranking week")).toBeInTheDocument();
     expect(screen.getByText("Tela ranking all")).toBeInTheDocument();
-    expect(screen.getByText("Tela artilheiros farm week")).toBeInTheDocument();
-    expect(screen.getByText("Tela artilheiros sales week")).toBeInTheDocument();
-    expect(screen.getByText("Tela artilheiros farm all")).toBeInTheDocument();
-    expect(screen.getByText("Tela artilheiros sales all")).toBeInTheDocument();
-    expect(screen.getByText("Tela assistências all")).toBeInTheDocument();
+    expect(screen.getByText("Tela vendedores farm week")).toBeInTheDocument();
+    expect(screen.getByText("Tela vendedores sales week")).toBeInTheDocument();
+    expect(screen.getByText("Tela vendedores farm all")).toBeInTheDocument();
+    expect(screen.getByText("Tela vendedores sales all")).toBeInTheDocument();
+    expect(screen.getByText("Tela passagens all")).toBeInTheDocument();
     expect(visibleSlides()).toEqual(["goal"]);
   });
 
