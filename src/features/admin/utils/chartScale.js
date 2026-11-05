@@ -17,15 +17,20 @@ export function niceTicks(maxValue, count = 4) {
   return ticks;
 }
 
-const compactCurrency = new Intl.NumberFormat("pt-BR", {
-  style: "currency",
-  currency: "BRL",
-  notation: "compact",
-  maximumFractionDigits: 1,
-});
+const decimalFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
+
+const COMPACT_UNITS = [
+  { size: 1e9, suffix: " bi" },
+  { size: 1e6, suffix: " mi" },
+  { size: 1e3, suffix: " mil" },
+];
 
 export function formatCompactCurrency(value) {
-  return compactCurrency.format(value ?? 0);
+  const amount = value ?? 0;
+  const unit = COMPACT_UNITS.find(({ size }) => Math.abs(amount) >= size);
+  const number = unit ? decimalFormatter.format(amount / unit.size) + unit.suffix : decimalFormatter.format(amount);
+
+  return `R$ ${number}`;
 }
 
 export function formatPassages(value) {
