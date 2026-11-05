@@ -1,5 +1,6 @@
 import { getPassagePeople } from "./passages";
-import { addDays, filterSalesByWeek, getDayKey } from "./weeks";
+import { filterSalesByPeriod } from "./periods";
+import { addDays, getDayKey } from "./weeks";
 
 const NO_SECTOR = "Sem setor";
 const NO_NAME = "Sem nome";
@@ -13,15 +14,15 @@ export const funnelOf = (sale) => (sale.funnelType === "farm" ? "renewals" : "sa
 
 const byValueDesc = (a, b) => b.value - a.value || a.label.localeCompare(b.label, "pt-BR");
 
-export function listDays(sales, weekKey, now = new Date()) {
+export function listDays(sales, period, now = new Date()) {
   const today = getDayKey(now);
-  const first = weekKey || sales.map((sale) => getDayKey(sale.realizedAt)).sort()[0];
+  const first = period?.start || sales.map((sale) => getDayKey(sale.realizedAt)).sort()[0];
 
   if (!first) {
     return [];
   }
 
-  const last = weekKey ? addDays(weekKey, 6) : today;
+  const last = period ? period.end : today;
   const end = last < today ? last : today;
 
   const days = [];
@@ -124,11 +125,11 @@ export function passagesByPerson(sales) {
   return [...counts.values()].sort(byValueDesc);
 }
 
-export function buildSalesCharts(sales, weekKey, now = new Date()) {
+export function buildSalesCharts(sales, period, now = new Date()) {
   const campaignSales = sales.filter(isActiveSale);
   const campaignDays = listDays(campaignSales, "", now);
-  const activeSales = filterSalesByWeek(campaignSales, weekKey);
-  const days = listDays(activeSales, weekKey, now);
+  const activeSales = filterSalesByPeriod(campaignSales, period);
+  const days = listDays(activeSales, period, now);
 
   return {
     days,

@@ -11,6 +11,12 @@
   --heat-3: #6da7ec;
   --heat-4: #3987e5;
   --heat-5: #1c5cab;
+  --heat-text-0: #6b7280;
+  --heat-text-1: #111827;
+  --heat-text-2: #111827;
+  --heat-text-3: #111827;
+  --heat-text-4: #ffffff;
+  --heat-text-5: #ffffff;
 
   min-height: 100%;
   display: flex;
@@ -43,6 +49,12 @@
   --heat-3: #256abf;
   --heat-4: #3987e5;
   --heat-5: #86b6ef;
+  --heat-text-0: #a3a29a;
+  --heat-text-1: #f0efec;
+  --heat-text-2: #f0efec;
+  --heat-text-3: #ffffff;
+  --heat-text-4: #ffffff;
+  --heat-text-5: #0d0d0d;
 
   color-scheme: dark;
 }

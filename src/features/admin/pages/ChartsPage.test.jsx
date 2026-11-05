@@ -164,7 +164,7 @@ describe("ChartsPage", () => {
       "Participação por setor",
       "Concentração",
       "Cancelamentos",
-      "Quando as vendas fecham",
+      "Calendário de vendas",
     ]);
     expect(selectAll).toBeChecked();
     expect(within(dialog).getByText("15 de 15")).toBeInTheDocument();
@@ -181,7 +181,7 @@ describe("ChartsPage", () => {
     expect(print).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(screen.getByText("Relatório de vendas · Black Friday")).toBeInTheDocument();
-    expect(screen.getByText(/Semana: Todas as semanas · Setor: Todos · Gerado em/)).toBeInTheDocument();
+    expect(screen.getByText(/Período: Todo o período · Setor: Todos · Gerado em/)).toBeInTheDocument();
 
     const printed = (title) => !screen.getByRole("region", { name: title }).closest("div[class*='notPrinted']");
     expect(printed("Vendas por pessoa")).toBe(true);

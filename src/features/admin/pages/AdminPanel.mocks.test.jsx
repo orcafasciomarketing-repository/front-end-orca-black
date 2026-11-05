@@ -52,7 +52,7 @@ const renderPanel = () =>
 
 const sectionOf = (title) => screen.getByRole("heading", { name: title }).closest("section");
 const salesWidget = () => sectionOf("Vendas cadastradas");
-const weekSelect = () => screen.getByRole("combobox", { name: "Filtrar por semana" });
+const weekSelect = () => screen.getByRole("combobox", { name: "Filtrar por período" });
 const vendorSelect = () => screen.getByRole("combobox", { name: "Filtrar por vendedor" });
 
 const visibleDeals = () => ALL_DEALS.filter((deal) => within(salesWidget()).queryByText(deal));
@@ -97,10 +97,16 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
 
     expect(within(weekSelect()).getAllByRole("option").map((option) => option.value)).toEqual([
       "",
+      "last-3",
+      "last-7",
+      "last-15",
+      "last-30",
+      "month",
       WEEK_KEYS.current,
       WEEK_KEYS.last,
       WEEK_KEYS.twoAgo,
       WEEK_KEYS.threeAgo,
+      "custom",
     ]);
   });
 
@@ -253,19 +259,19 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
         .getAllByRole("listitem")
         .map((item) => item.textContent);
     await waitFor(() =>
-      expect(vendorRank()).toEqual(["1ºGustavo RochaB2G Sales6 pontos", "2ºFernanda MeloB2G Sales2 pontos"]),
+      expect(vendorRank()).toEqual(["1ºGustavo RochaB2G Sales9 pontos", "2ºFernanda MeloB2G Sales3 pontos"]),
     );
     const passageRank = within(sectionOf("Rank das passagens"))
       .getAllByRole("listitem")
       .map((item) => item.textContent);
     expect(passageRank).toEqual([
-      "1ºCaio MartinsCS1 ponto",
-      "2ºJulia TomazSuporte1 ponto",
-      "3ºLucas DanielSDR1 ponto",
+      "1ºJulia TomazSuporte2 pontos",
+      "2ºCaio MartinsCS1 ponto",
+      "3ºLucas DanielSDR0 pontos",
     ]);
 
     fireEvent.click(within(sectionOf("Rank dos vendedores")).getByRole("tab", { name: "Renovação" }));
-    await waitFor(() => expect(vendorRank()).toEqual(["1ºJoice PereiraB2G Farmer1 ponto"]));
+    await waitFor(() => expect(vendorRank()).toEqual(["1ºJoice PereiraB2G Farmer2 pontos"]));
 
     const { fileName, rows } = await exportReport();
     expect(fileName).toBe("vendas-todos-b2g-2026-10-21.csv");

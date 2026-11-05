@@ -15,9 +15,9 @@ import BarChart from "../charts/BarChart";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 import { DownloadIcon } from "../Icons/Icons";
 
-export function ChartCard({ title, description, csvRows, weekKey, segment, children }) {
+export function ChartCard({ title, description, csvRows, period, segment, children }) {
   const exportCsv = () =>
-    downloadFile(tableToCsv(csvRows), buildChartFileName({ title, weekKey, segment }), "text/csv;charset=utf-8");
+    downloadFile(tableToCsv(csvRows), buildChartFileName({ title, period, segment }), "text/csv;charset=utf-8");
 
   return (
     <section className="widget" aria-label={title}>
@@ -52,8 +52,8 @@ const NO_SALES = "Nenhuma venda no período";
 
 const dayRows = (days, series) => timeSeriesRows(days, series, { formatLabel: formatDay });
 
-export function TotalSalesChart({ weekKey, segment }) {
-  const { days, activeSales, total } = useSalesCharts(weekKey, segment);
+export function TotalSalesChart({ period, segment }) {
+  const { days, activeSales, total } = useSalesCharts(period, segment);
   const title = "Vendas acumuladas";
   const series = [{ key: "total", label: "Vendido", color: CHART_COLORS.blue, values: total }];
 
@@ -62,7 +62,7 @@ export function TotalSalesChart({ weekKey, segment }) {
       title={title}
       description="Valor vendido somado dia a dia, vendas e renovações"
       csvRows={dayRows(days, series)}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {activeSales.length === 0 ? (
@@ -74,8 +74,8 @@ export function TotalSalesChart({ weekKey, segment }) {
   );
 }
 
-export function SegmentSalesChart({ weekKey, segment }) {
-  const { days, activeSales, bySegment } = useSalesCharts(weekKey, segment);
+export function SegmentSalesChart({ period, segment }) {
+  const { days, activeSales, bySegment } = useSalesCharts(period, segment);
   const title = "Vendas acumuladas por setor";
   const series = bySegment.map((item) => ({
     ...item,
@@ -87,7 +87,7 @@ export function SegmentSalesChart({ weekKey, segment }) {
       title={title}
       description="Valor vendido somado dia a dia, por segmento"
       csvRows={dayRows(days, series)}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {activeSales.length === 0 ? (
@@ -132,8 +132,8 @@ export function GoalTrackChart({ segment }) {
       title={title}
       description={
         segment
-          ? `${segment} contra a meta total, até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de semana`
-          : `Campanha inteira até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de semana`
+          ? `${segment} contra a meta total, até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
+          : `Campanha inteira até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
       }
       csvRows={dayRows(track.days, series)}
       segment={segment}
@@ -156,8 +156,8 @@ export function GoalTrackChart({ segment }) {
   );
 }
 
-export function FunnelSalesChart({ weekKey, segment }) {
-  const { days, activeSales, byFunnel } = useSalesCharts(weekKey, segment);
+export function FunnelSalesChart({ period, segment }) {
+  const { days, activeSales, byFunnel } = useSalesCharts(period, segment);
   const title = "Vendas x renovações por dia";
   const series = [
     {
@@ -179,7 +179,7 @@ export function FunnelSalesChart({ weekKey, segment }) {
       title={title}
       description="Valor vendido em cada dia"
       csvRows={dayRows(days, series)}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {activeSales.length === 0 ? (
@@ -191,8 +191,8 @@ export function FunnelSalesChart({ weekKey, segment }) {
   );
 }
 
-export function VendorSalesChart({ weekKey, segment }) {
-  const { byVendor } = useSalesCharts(weekKey, segment);
+export function VendorSalesChart({ period, segment }) {
+  const { byVendor } = useSalesCharts(period, segment);
   const title = "Vendas por pessoa";
 
   return (
@@ -200,7 +200,7 @@ export function VendorSalesChart({ weekKey, segment }) {
       title={title}
       description="Valor vendido por vendedor, vendas e renovações"
       csvRows={barRows(byVendor, { column: "Vendedor" })}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {byVendor.length === 0 ? (
@@ -212,8 +212,8 @@ export function VendorSalesChart({ weekKey, segment }) {
   );
 }
 
-export function TeamSalesChart({ weekKey, segment }) {
-  const { activeSales } = useSalesCharts(weekKey, segment);
+export function TeamSalesChart({ period, segment }) {
+  const { activeSales } = useSalesCharts(period, segment);
   const { teams } = useTeams();
   const items = totalsByTeam(activeSales, teams);
   const title = "Vendas por equipe";
@@ -223,7 +223,7 @@ export function TeamSalesChart({ weekKey, segment }) {
       title={title}
       description="Valor vendido por equipe, vendas e renovações"
       csvRows={barRows(items, { column: "Equipe" })}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {items.length === 0 ? (
@@ -235,8 +235,8 @@ export function TeamSalesChart({ weekKey, segment }) {
   );
 }
 
-export function PassageChart({ weekKey, segment }) {
-  const { passages } = useSalesCharts(weekKey, segment);
+export function PassageChart({ period, segment }) {
+  const { passages } = useSalesCharts(period, segment);
   const title = "Passagens por pessoa";
 
   return (
@@ -249,7 +249,7 @@ export function PassageChart({ weekKey, segment }) {
         value: "Passagens",
         digits: 0,
       })}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {passages.length === 0 ? (

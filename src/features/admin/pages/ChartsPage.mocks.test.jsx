@@ -68,7 +68,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "Participação por setor",
       "Concentração",
       "Cancelamentos",
-      "Quando as vendas fecham",
+      "Calendário de vendas",
     ]);
   });
 
@@ -110,7 +110,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     renderPage();
     await ready();
 
-    fireEvent.change(screen.getByRole("combobox", { name: "Filtrar gráficos por semana" }), {
+    fireEvent.change(screen.getByRole("combobox", { name: "Filtrar gráficos por período" }), {
       target: { value: "2026-10-19" },
     });
 
@@ -170,11 +170,11 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     ]);
     expect(barsOf("Participação por setor")).toEqual(["B2B43,4%R$ 92.000,00", "B2G56,6%R$ 120.000,00"]);
     expect(textOf(widget("Concentração"))).toContain("64,9%do total vem dos 3 maiores vendedores");
-    expect(barsOf("Concentração")).toEqual([
+    expect(barsOf("Concentração").slice(0, 4)).toEqual([
       "1º Gustavo Rocha42,5%R$ 90.000,00",
       "2º Brenda Lima12%R$ 25.500,00",
       "3º Fernanda Melo10,4%R$ 22.000,00",
-      "Demais (8)35,1%R$ 74.500,00",
+      "Demais (8)35,1%R$ 74.500,00▾",
     ]);
     expect(textOf(widget("Cancelamentos"))).toContain(
       "Taxa de cancelamento11,1%Canceladas2 de 18Valor perdidoR$ 27.000,00",
@@ -183,12 +183,23 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "Heitor Alves1 canceladaR$ 20.000,00",
       "Marcelo Dias1 canceladaR$ 7.000,00",
     ]);
-    expect(rowOf("Quando as vendas fecham", "Ter").length).toBe(3);
+    expect(rowOf("Calendário de vendas", "19/10")).toEqual(["19/10", "192", "203", "211", "", "", "", "", "6"]);
+    expect(rowOf("Calendário de vendas", "Total")).toEqual(["Total", "3", "5", "3", "2", "1", "1", "1", "16"]);
     expect(
-      within(widget("Quando as vendas fecham"))
-        .getAllByRole("row")
-        .map((row) => textOf(row)),
-    ).toContain("Ter10h1 venda, R$ 30.000,00");
+      within(widget("Calendário de vendas")).getByRole("cell", { name: /Ter, 20\/10: 3 vendas/ }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(within(widget("Concentração")).getByRole("button", { name: /Demais \(8\)/ }));
+    expect(barsOf("Concentração", "Detalhes: Demais (8)")).toEqual([
+      "4º Danne Costa8,5%R$ 18.000,00",
+      "5º Karine Souza7,1%R$ 15.000,00",
+      "6º Gabriel Nunes5,2%R$ 11.000,00",
+      "7º Heitor Alves4,2%R$ 9.000,00",
+      "8º Joice Pereira3,8%R$ 8.000,00",
+      "9º Letícia Prado2,8%R$ 6.000,00",
+      "10º Giovana Evaristo1,9%R$ 4.000,00",
+      "11º Marcelo Dias1,7%R$ 3.500,00",
+    ]);
   });
 
   it("filtrando o setor B2B, todos os gráficos e indicadores mostram só B2B", async () => {
@@ -219,6 +230,19 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     const kpis = screen.getByRole("region", { name: "Indicadores" });
     expect(textOf(kpis)).toContain("Total vendidoR$ 92.000,00");
     expect(textOf(kpis)).toContain("B2B na meta da campanha3,1%");
+  });
+
+  it("com os últimos 7 dias, os indicadores comparam com os 7 dias anteriores", async () => {
+    renderPage();
+    await ready();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Filtrar gráficos por período" }), {
+      target: { value: "last-7" },
+    });
+
+    await waitFor(() => expect(lastRowOf("Vendas acumuladas")[0]).toBe("21/10"));
+    expect(within(widget("Vendas acumuladas")).getAllByRole("row")).toHaveLength(8);
+    expect(textOf(screen.getByRole("region", { name: "Indicadores" }))).toContain("vs período anterior");
   });
 });
 

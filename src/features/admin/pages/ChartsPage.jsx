@@ -1,19 +1,20 @@
 import styles from "./ChartsPage.module.css";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
 import {
   CancellationChart,
   ConcentrationChart,
   ForecastCard,
-  HeatmapChart,
+  SalesCalendarChart,
   SalesKpis,
   SegmentShareChart,
   TicketChart,
   WeeklySalesChart,
 } from "../components/InsightWidgets/InsightWidgets";
 import PageHeader from "../components/PageHeader/PageHeader";
+import PeriodFilter from "../components/PeriodFilter/PeriodFilter";
 import PrintDialog from "../components/PrintDialog/PrintDialog";
 import {
   FunnelSalesChart,
@@ -26,7 +27,7 @@ import {
 } from "../components/SalesChartWidgets/SalesChartWidgets";
 import { DownloadIcon } from "../components/Icons/Icons";
 import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
-import { useWeekOptions } from "../hooks/useWeekOptions";
+import { ALL_PERIODS, resolvePeriod } from "../utils/periods";
 import { SEGMENT_OPTIONS } from "../utils/segments";
 
 const THEME_KEY = "admin-charts-theme";
@@ -46,7 +47,7 @@ const CHARTS = [
   { title: "Participação por setor", Chart: SegmentShareChart },
   { title: "Concentração", Chart: ConcentrationChart },
   { title: "Cancelamentos", Chart: CancellationChart },
-  { title: "Quando as vendas fecham", Chart: HeatmapChart },
+  { title: "Calendário de vendas", Chart: SalesCalendarChart },
 ];
 
 const PRINT_ITEMS = [KPIS_TITLE, ...CHARTS.map((chart) => chart.title)];
@@ -70,12 +71,12 @@ function saveTheme(isDark) {
 }
 
 export default function ChartsPage() {
-  const [selectedWeek, setSelectedWeek] = useState("");
+  const [periodSelection, setPeriodSelection] = useState(ALL_PERIODS);
   const [selectedSegment, setSelectedSegment] = useState("");
   const [isDark, setIsDark] = useState(readTheme);
   const [isChoosing, setIsChoosing] = useState(false);
   const [printItems, setPrintItems] = useState(null);
-  const { weeks } = useWeekOptions();
+  const period = useMemo(() => resolvePeriod(periodSelection), [periodSelection]);
 
   useEffect(() => {
     if (!printItems) {
@@ -101,7 +102,7 @@ export default function ChartsPage() {
 
   const printClass = (title) => (printItems && !printItems.titles.has(title) ? styles.notPrinted : "");
 
-  const weekLabel = weeks.find((week) => week.key === selectedWeek)?.label ?? "Todas as semanas";
+  const periodLabel = period?.label ?? "Todo o período";
   const segmentLabel = SEGMENT_OPTIONS.find((option) => option.value === selectedSegment)?.label;
 
   return (
@@ -110,7 +111,8 @@ export default function ChartsPage() {
         <div className={styles.printHeader}>
           <p className={styles.printTitle}>Relatório de vendas · Black Friday</p>
           <p className={styles.printDetails}>
-            Semana: {weekLabel} · Setor: {segmentLabel} · Gerado em {printDateFormatter.format(printItems.generatedAt)}
+            Período: {periodLabel} · Setor: {segmentLabel} · Gerado em{" "}
+            {printDateFormatter.format(printItems.generatedAt)}
           </p>
         </div>
       )}
@@ -124,22 +126,11 @@ export default function ChartsPage() {
             <span aria-hidden="true">{isDark ? "☀" : "☾"}</span>
             Modo escuro
           </button>
-          <label className={styles.field}>
-            <span className={styles.label}>Semana</span>
-            <select
-              className={styles.select}
-              aria-label="Filtrar gráficos por semana"
-              value={selectedWeek}
-              onChange={(event) => setSelectedWeek(event.target.value)}
-            >
-              <option value="">Todas as semanas</option>
-              {weeks.map((week) => (
-                <option key={week.key} value={week.key}>
-                  {week.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          <PeriodFilter
+            selection={periodSelection}
+            onChange={setPeriodSelection}
+            ariaLabel="Filtrar gráficos por período"
+          />
           <label className={styles.field}>
             <span className={styles.label}>Setor</span>
             <select
@@ -160,7 +151,7 @@ export default function ChartsPage() {
       <div className={printClass(KPIS_TITLE)}>
         <ErrorBoundary location="Admin › gráficos › indicadores">
           <Suspense fallback={<WidgetFallback title={KPIS_TITLE} />}>
-            <SalesKpis weekKey={selectedWeek} segment={selectedSegment} />
+            <SalesKpis period={period} segment={selectedSegment} />
           </Suspense>
         </ErrorBoundary>
       </div>
@@ -169,7 +160,7 @@ export default function ChartsPage() {
           <div key={title} className={`${className ? styles[className] : ""} ${printClass(title)}`}>
             <ErrorBoundary location={`Admin › gráficos › ${title.toLowerCase()}`}>
               <Suspense fallback={<WidgetFallback title={title} />}>
-                <Chart weekKey={selectedWeek} segment={selectedSegment} />
+                <Chart period={period} segment={selectedSegment} />
               </Suspense>
             </ErrorBoundary>
           </div>

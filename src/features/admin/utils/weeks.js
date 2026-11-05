@@ -91,9 +91,3 @@ export function addDays(dayKey, days) {
 export function daysBetween(fromDayKey, toDayKey) {
   return Math.round((mondayOf(toDayKey).getTime() - mondayOf(fromDayKey).getTime()) / DAY_MS);
 }
-
-export function getWeekdayAndHour(date) {
-  const clock = toSaoPauloClock(date);
-
-  return { weekday: (clock.getUTCDay() + 6) % 7, hour: clock.getUTCHours() };
-}

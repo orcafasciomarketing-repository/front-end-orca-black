@@ -2,42 +2,27 @@ import styles from "./SalesFilters.module.css";
 
 import { useExportSales } from "../../hooks/useExportSales";
 import { getVendorLabel, useVendors } from "../../hooks/useVendors";
-import { useWeekOptions } from "../../hooks/useWeekOptions";
 import { SEGMENT_OPTIONS } from "../../utils/segments";
 import { DownloadIcon } from "../Icons/Icons";
+import PeriodFilter from "../PeriodFilter/PeriodFilter";
 
 export default function SalesFilters({
   selectedVendorId,
   onVendorChange,
-  selectedWeek,
-  onWeekChange,
+  periodSelection,
+  onPeriodChange,
+  period = null,
   selectedSegment = "",
   onSegmentChange,
 }) {
   const { vendors, vendorsFailed } = useVendors();
-  const { weeks } = useWeekOptions();
   const { exportSales, isExporting, exportFailed } = useExportSales();
 
   const selectedVendor = vendors.find((vendor) => vendor._id === selectedVendorId) ?? null;
 
   return (
     <div className={styles.filters}>
-      <label className={styles.field}>
-        <span className={styles.label}>Semana</span>
-        <select
-          className={styles.select}
-          aria-label="Filtrar por semana"
-          value={selectedWeek}
-          onChange={(event) => onWeekChange(event.target.value)}
-        >
-          <option value="">Todas as semanas</option>
-          {weeks.map((week) => (
-            <option key={week.key} value={week.key}>
-              {week.label}
-            </option>
-          ))}
-        </select>
-      </label>
+      <PeriodFilter selection={periodSelection} onChange={onPeriodChange} ariaLabel="Filtrar por período" />
       <label className={styles.field}>
         <span className={styles.label}>Vendedor</span>
         <select
@@ -80,7 +65,7 @@ export default function SalesFilters({
           className={styles.exportButton}
           type="button"
           disabled={isExporting}
-          onClick={() => exportSales({ vendor: selectedVendor, weekKey: selectedWeek, segment: selectedSegment })}
+          onClick={() => exportSales({ vendor: selectedVendor, period, segment: selectedSegment })}
         >
           <DownloadIcon />
           {isExporting ? "Exportando..." : "Exportar"}

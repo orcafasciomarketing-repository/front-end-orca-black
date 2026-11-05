@@ -8,10 +8,11 @@ import { CAMPAIGN_END_DAY } from "../../utils/campaign";
 import { CHART_COLORS, segmentColor } from "../../utils/chartColors";
 import { formatDay } from "../../utils/chartData";
 import { formatPercent, formatSalesCount, formatVariation } from "../../utils/chartScale";
+import { comparisonLabel } from "../../utils/periods";
 import { WEEKDAYS, forecast, variation } from "../../utils/salesInsights";
 import { barRows, formatCsvNumber, timeSeriesRows } from "../../utils/tableCsv";
 import BarChart from "../charts/BarChart";
-import Heatmap from "../charts/Heatmap";
+import SalesCalendar from "../charts/SalesCalendar";
 import ShareBar from "../charts/ShareBar";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 import { ChartCard } from "../SalesChartWidgets/SalesChartWidgets";
@@ -22,28 +23,32 @@ function Empty({ text = NO_SALES }) {
   return <p className={styles.empty}>{text}</p>;
 }
 
-function Delta({ current, previous }) {
-  if (previous === null) {
+function Delta({ current, previous, period }) {
+  if (!period) {
     return <span className={styles.deltaNeutral}>Campanha inteira</span>;
   }
 
   const change = variation(current, previous);
 
   if (change === null) {
-    return <span className={styles.deltaNeutral}>Sem vendas na semana anterior</span>;
+    return (
+      <span className={styles.deltaNeutral}>
+        Sem vendas {period.type === "week" ? "na" : "no"} {comparisonLabel(period)}
+      </span>
+    );
   }
 
   const isUp = change >= 0;
 
   return (
     <span className={isUp ? styles.deltaUp : styles.deltaDown}>
-      <span aria-hidden="true">{isUp ? "▲" : "▼"}</span> {formatVariation(change)} vs semana anterior
+      <span aria-hidden="true">{isUp ? "▲" : "▼"}</span> {formatVariation(change)} vs {comparisonLabel(period)}
     </span>
   );
 }
 
-export function SalesKpis({ weekKey, segment }) {
-  const { kpis, campaignTotal } = useSalesInsights(weekKey, segment);
+export function SalesKpis({ period, segment }) {
+  const { kpis, campaignTotal } = useSalesInsights(period, segment);
   const { goal } = useGoal();
   const { current, previous } = kpis;
 
@@ -75,7 +80,7 @@ export function SalesKpis({ weekKey, segment }) {
           <dt className={styles.tileLabel}>{tile.label}</dt>
           <dd className={styles.tileValue}>{tile.value}</dd>
           <dd className={styles.tileDelta}>
-            <Delta current={tile.now} previous={previous ? tile.before : null} />
+            <Delta current={tile.now} previous={tile.before} period={period} />
           </dd>
         </dl>
       ))}
@@ -94,7 +99,7 @@ export function SalesKpis({ weekKey, segment }) {
 
 export function ForecastCard({ segment }) {
   const { goal } = useGoal();
-  const { campaign } = useSalesCharts("", segment);
+  const { campaign } = useSalesCharts(null, segment);
   const plan = forecast(campaign, goal.goal, CAMPAIGN_END_DAY);
   const title = "Previsão de fechamento";
   const endLabel = formatDay(CAMPAIGN_END_DAY);
@@ -150,10 +155,10 @@ export function ForecastCard({ segment }) {
   );
 }
 
-const formatWeek = (weekKey) => `Semana de ${formatDay(weekKey)}`;
+const formatWeek = (week) => `Semana de ${formatDay(week)}`;
 
 export function WeeklySalesChart({ segment }) {
-  const { weekly } = useSalesInsights("", segment);
+  const { weekly } = useSalesInsights(null, segment);
   const title = "Vendas por semana";
   const series = [
     {
@@ -173,7 +178,7 @@ export function WeeklySalesChart({ segment }) {
   return (
     <ChartCard
       title={title}
-      description="Comparativo semana a semana, sem o filtro de semana"
+      description="Comparativo semana a semana, sem o filtro de período"
       segment={segment}
       csvRows={timeSeriesRows(weekly.weeks, series, {
         column: "Semana",
@@ -197,8 +202,8 @@ export function WeeklySalesChart({ segment }) {
   );
 }
 
-export function TicketChart({ weekKey, segment }) {
-  const { ticket } = useSalesInsights(weekKey, segment);
+export function TicketChart({ period, segment }) {
+  const { ticket } = useSalesInsights(period, segment);
   const title = "Ticket médio";
 
   return (
@@ -217,7 +222,7 @@ export function TicketChart({ weekKey, segment }) {
           value: "Ticket médio (R$)",
         }),
       ]}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {ticket.byVendor.length === 0 ? (
@@ -248,8 +253,8 @@ export function TicketChart({ weekKey, segment }) {
   );
 }
 
-export function SegmentShareChart({ weekKey, segment }) {
-  const { segments } = useSalesInsights(weekKey, segment);
+export function SegmentShareChart({ period, segment }) {
+  const { segments } = useSalesInsights(period, segment);
   const title = "Participação por setor";
   const items = segments.map((item) => ({
     ...item,
@@ -264,7 +269,7 @@ export function SegmentShareChart({ weekKey, segment }) {
         ["Setor", "Valor (R$)", "Participação (%)"],
         ...items.map((item) => [item.label, formatCsvNumber(item.value), formatCsvNumber(item.share * 100, 1)]),
       ]}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {items.length === 0 ? <Empty /> : <ShareBar title={title} items={items} formatValue={formatCurrency} />}
@@ -272,8 +277,8 @@ export function SegmentShareChart({ weekKey, segment }) {
   );
 }
 
-export function ConcentrationChart({ weekKey, segment }) {
-  const { concentration } = useSalesInsights(weekKey, segment);
+export function ConcentrationChart({ period, segment }) {
+  const { concentration } = useSalesInsights(period, segment);
   const { top, topShare, rest } = concentration;
   const title = "Concentração";
   const items = [
@@ -290,6 +295,10 @@ export function ConcentrationChart({ weekKey, segment }) {
             value: rest.value,
             share: rest.share,
             color: CHART_COLORS.rest,
+            details: rest.items.map((item, index) => ({
+              ...item,
+              label: `${top.length + index + 1}º ${item.label}`,
+            })),
           },
         ]
       : []),
@@ -303,7 +312,7 @@ export function ConcentrationChart({ weekKey, segment }) {
         ["Vendedor", "Valor (R$)", "Participação (%)"],
         ...items.map((item) => [item.label, formatCsvNumber(item.value), formatCsvNumber(item.share * 100, 1)]),
       ]}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {top.length === 0 ? (
@@ -321,8 +330,8 @@ export function ConcentrationChart({ weekKey, segment }) {
   );
 }
 
-export function CancellationChart({ weekKey, segment }) {
-  const { cancellations } = useSalesInsights(weekKey, segment);
+export function CancellationChart({ period, segment }) {
+  const { cancellations } = useSalesInsights(period, segment);
   const title = "Cancelamentos";
 
   return (
@@ -339,7 +348,7 @@ export function CancellationChart({ weekKey, segment }) {
           value: "Valor perdido (R$)",
         }),
       ]}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {cancellations.closed === 0 ? (
@@ -378,31 +387,40 @@ export function CancellationChart({ weekKey, segment }) {
   );
 }
 
-export function HeatmapChart({ weekKey, segment }) {
-  const { heatmap, activeSales } = useSalesInsights(weekKey, segment);
-  const title = "Quando as vendas fecham";
-  const formatCell = (cell) => `${formatSalesCount(cell.count)}, ${formatCurrency(cell.value)}`;
+export function SalesCalendarChart({ period, segment }) {
+  const { calendar, activeSales } = useSalesInsights(period, segment);
+  const title = "Calendário de vendas";
 
   return (
     <ChartCard
       title={title}
-      description="Quantidade de vendas por dia da semana e hora, no horário de Brasília"
+      description="Vendas de cada dia, organizadas por semana, com o total de cada dia da semana"
       csvRows={[
-        ["Dia", "Hora", "Vendas", "Valor (R$)"],
-        ...WEEKDAYS.flatMap((day, row) =>
-          heatmap.cells[row]
-            .map((cell, hour) => ({ cell, hour }))
-            .filter(({ cell }) => cell.count > 0)
-            .map(({ cell, hour }) => [day, `${hour}h`, String(cell.count), formatCsvNumber(cell.value)]),
+        ["Data", "Dia da semana", "Vendas", "Valor (R$)"],
+        ...calendar.weeks.flatMap((week) =>
+          week.cells
+            .map((cell, index) => ({ cell, weekday: WEEKDAYS[index] }))
+            .filter(({ cell }) => cell.inRange)
+            .map(({ cell, weekday }) => [
+              formatDay(cell.day),
+              weekday,
+              String(cell.count),
+              formatCsvNumber(cell.value),
+            ]),
         ),
       ]}
-      weekKey={weekKey}
+      period={period}
       segment={segment}
     >
       {activeSales.length === 0 ? (
         <Empty />
       ) : (
-        <Heatmap title={title} rows={WEEKDAYS} cells={heatmap.cells} max={heatmap.max} formatCell={formatCell} />
+        <SalesCalendar
+          title={title}
+          weekdays={WEEKDAYS}
+          calendar={calendar}
+          formatDetail={(cell) => `${formatSalesCount(cell.count)}, ${formatCurrency(cell.value)}`}
+        />
       )}
     </ChartCard>
   );

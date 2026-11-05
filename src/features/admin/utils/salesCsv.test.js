@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { resolvePeriod } from "./periods";
 import { buildExportFileName, escapeCsvCell, salesToCsv } from "./salesCsv";
 
 const sale = {
@@ -16,6 +17,8 @@ const sale = {
 };
 
 const rowsOf = (csv) => csv.replace("\uFEFF", "").split("\r\n");
+
+const week = (key) => resolvePeriod({ value: key });
 
 describe("salesCsv", () => {
   it("começa com BOM e usa ; como separador, para o Excel em português abrir certo", () => {
@@ -73,8 +76,8 @@ describe("salesCsv", () => {
   it("inclui a semana filtrada no nome do arquivo", () => {
     const date = new Date(2026, 9, 22, 12);
 
-    expect(buildExportFileName({ weekKey: "2026-10-12" }, date)).toBe("vendas-todos-semana-2026-10-12-2026-10-22.csv");
-    expect(buildExportFileName({ vendor: { vendorName: "Carla" }, weekKey: "2026-10-19" }, date)).toBe(
+    expect(buildExportFileName({ period: week("2026-10-12") }, date)).toBe("vendas-todos-semana-2026-10-12-2026-10-22.csv");
+    expect(buildExportFileName({ vendor: { vendorName: "Carla" }, period: week("2026-10-19") }, date)).toBe(
       "vendas-carla-semana-2026-10-19-2026-10-22.csv",
     );
   });

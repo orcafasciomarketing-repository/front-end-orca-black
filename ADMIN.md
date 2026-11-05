@@ -34,7 +34,13 @@ As três páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Tro
 ### Filtros
 
 - A barra de filtros do Dashboard tem três seletores: **semana**, **vendedor** e **setor**. Semana e vendedor se combinam e valem para a lista de vendas **e** para a exportação. O setor vale para todos os widgets (veja "Filtro de setor" abaixo).
-- **Semana:** "Todas as semanas" ou uma semana específica. A lista tem **todas as semanas do mês, da semana do dia 1º até a atual**, mesmo as que ainda não têm venda (e volta mais, se houver venda antes do mês). A atual e a passada aparecem com nome ("Semana atual", "Semana passada").
+- **Período** (substituiu o antigo filtro de semana, no Dashboard e nos Gráficos): componente [PeriodFilter](src/features/admin/components/PeriodFilter/PeriodFilter.jsx), um seletor com:
+  - "Todo o período" (padrão, não filtra nada);
+  - **Atalhos:** Últimos 3, 7, 15 e 30 dias (sempre terminando hoje e contando hoje) e Este mês (do dia 1º até hoje);
+  - **Semanas:** as mesmas de antes, de `useWeekOptions` (todas as semanas do mês até a atual, "Semana atual" e "Semana passada" com nome);
+  - **Período específico...:** mostra dois campos de data, "De" e "Até". Sem "Até", vai até hoje; datas trocadas são invertidas; sem "De", nada é filtrado.
+  - O estado da tela guarda a escolha (`{ value, from, to }`, começando em `ALL_PERIODS`) e `resolvePeriod` ([utils/periods.js](src/features/admin/utils/periods.js)) transforma em `{ type, key, start, end, label }` (ou `null` para todo o período). `filterSalesByPeriod` filtra pelo dia da venda no horário de São Paulo, incluindo o primeiro e o último dia; `previousPeriod` dá o período anterior do mesmo tamanho (a semana anterior, ou os 7 dias antes dos últimos 7), usado na comparação dos indicadores ("vs semana anterior" ou "vs período anterior"). Os widgets e hooks recebem esse `period` no lugar da antiga `weekKey`.
+  - Nome dos arquivos: semana continua `-semana-2026-10-19`; os outros períodos viram `-2026-10-20-a-2026-10-22`.
 - **Vendedor:** "Todos" ou um vendedor.
 - Exemplos:
 
@@ -58,24 +64,27 @@ Seletor **Setor** com "Todos" (padrão), "B2B" e "B2G". As opções ficam em `SE
 |---|---|
 | Vendas cadastradas e exportação | Só as vendas do setor. O arquivo ganha o setor no nome: `vendas-todos-b2g-2026-10-22.csv` |
 | Meta da Black Friday | Mostra a **contribuição do setor**: a etiqueta do setor, quanto ele vendeu contra a meta total ("de R$ 3.000.000,00 (meta total)"), o percentual disso na barra e "B2G representa 56,6% do total vendido" no lugar de "Faltam". As listas de vendas, passagens e renovações contam só as vendas do setor |
-| Rank dos vendedores | **Calculado no front** a partir das vendas ativas do setor: venda = 2 pontos, renovação = 1 (`RANK_POINTS`, as mesmas regras do backend), top 3. Com "Todos" continua vindo do backend |
-| Rank das passagens | Também calculado no front: cada pessoa da passagem ganha 1 ponto por venda ativa do setor, top 3 |
+| Rank dos vendedores | **Calculado no front** a partir das vendas ativas do setor, com a mesma tabela de pontos do backend (`SALE_POINTS`): venda B2G = 3, renovação B2G = 2, venda B2B = 2, renovação B2B = 1. Top 3. Com "Todos" continua vindo do backend |
+| Rank das passagens | Também calculado no front: cada pessoa da passagem ganha, por venda ativa do setor, os pontos do **cargo dela** (`PASSAGE_POINTS`): B2G SDR = 2, B2B SDR = 1, CS = 1, Suporte = 2; cargo fora da tabela vale 0 (e a pessoa aparece com 0, como no backend). Top 3 |
 | Todos os gráficos e indicadores | Só as vendas do setor. "Acumulado x meta", "Previsão de fechamento" e o cartão de meta comparam o setor com a **meta total** e dizem isso na descrição ("B2B contra a meta total"). O CSV de cada gráfico também leva o setor no nome |
 
-Os rankings por setor usam [utils/segmentRanking.js](src/features/admin/utils/segmentRanking.js) (`rankVendorsFromSales(vendas, tipo)` e `rankSdrsFromSales(vendas)`) pelos hooks `useSegmentRankVendors` e `useSegmentRankSdrs` ([hooks/useSegmentRanks.js](src/features/admin/hooks/useSegmentRanks.js)). A meta do setor usa `useSegmentTotal(setor)` ([hooks/useSegmentTotal.js](src/features/admin/hooks/useSegmentTotal.js)), que devolve `{ total, allSegments }`. Todos leem o mesmo cache de `/sales/admin`, então trocar de setor não faz requisição nova. **Atenção:** se o backend mudar a pontuação, `RANK_POINTS` precisa acompanhar.
+Os rankings por setor usam [utils/segmentRanking.js](src/features/admin/utils/segmentRanking.js) (`rankVendorsFromSales(vendas, tipo)` e `rankSdrsFromSales(vendas)`) pelos hooks `useSegmentRankVendors` e `useSegmentRankSdrs` ([hooks/useSegmentRanks.js](src/features/admin/hooks/useSegmentRanks.js)). A meta do setor usa `useSegmentTotal(setor)` ([hooks/useSegmentTotal.js](src/features/admin/hooks/useSegmentTotal.js)), que devolve `{ total, allSegments }`. Todos leem o mesmo cache de `/sales/admin`, então trocar de setor não faz requisição nova. **Atenção:** o backend não tem rota de ranking por setor nem rota que devolva a tabela de pontos (ela vem das variáveis `POINTS_*` do `.env` do backend). Por isso `SALE_POINTS` e `PASSAGE_POINTS` copiam os valores documentados no `ROTAS.md` do backend, e o cargo é comparado do mesmo jeito (sem acento, sem diferença de maiúscula, espaços juntados). **Se mudar a pontuação no backend, mude também esses dois objetos.** O backend falso (`src/shared/mocks`) usa uma pontuação simplificada (venda 2, renovação 1, passagem 1), então em modo mock os pontos de "Todos" e os de um setor não somam igual; no backend real eles batem.
+
+**Data das vendas:** a "Data da venda" vem da planilha pelo Apps Script como data à meia-noite no fuso da planilha, e o backend espera meia-noite de São Paulo (`2026-10-03T03:00:00.000Z`, nos testes e no `ROTAS.md`), com semanas no fuso de São Paulo (RN-29 do `projeto.md`). O front usa a mesma regra (`getDayKey` converte para São Paulo), então dia, semana e período batem com os rankings do backend. Isso depende de a planilha estar no fuso **(GMT-03:00) São Paulo** (Arquivo → Configurações); se estiver em outro fuso, o front e o backend erram o dia do mesmo jeito.
 
 `useAdminSales`, `useSectorCounts`, `useSalesCharts` e `useSalesInsights` ganharam o parâmetro `segment` (padrão `""`), e `useExportSales` recebe `segment` junto com vendedor e semana.
 
 ```
 AdminPanel
   ├── selectedVendorId (useState, "" = Todos)
-  ├── selectedWeek     (useState, "" = Todas as semanas, ou "2026-10-12" = segunda da semana)
-  ├── SalesFilters(selectedVendorId, onVendorChange, selectedWeek, onWeekChange)
+  ├── periodSelection  (useState, ALL_PERIODS) → period = resolvePeriod(periodSelection)
+  ├── selectedSegment  (useState, "" = Todos)
+  ├── SalesFilters(vendedor, período, setor)
   │     ├── useVendors      → GET /vendor/list                       (opções de vendedor)
-  │     ├── useWeekOptions  → GET /sales/admin → listWeeks           (opções de semana)
-  │     └── useExportSales  → fetchQuery(vendedor) → filterSalesByWeek(semana) → salesToCsv → downloadFile
-  ├── SaleWidget(vendorId, weekKey)
-  │     └── useAdminSales   → GET /sales/admin ou /sales/get/:vendorId → filterSalesByWeek(semana)
+  │     ├── PeriodFilter    → useWeekOptions → GET /sales/admin      (atalhos, semanas e período específico)
+  │     └── useExportSales  → fetchQuery(vendedor) → filterSalesByPeriod → filterSalesBySegment → salesToCsv → downloadFile
+  ├── SaleWidget(vendorId, period, segment)
+  │     └── useAdminSales   → GET /sales/admin ou /sales/get/:vendorId → filterSalesByPeriod → filterSalesBySegment
   ├── RankWidget            → abas Vendas/Renovação → GET /analytics/ranking?vendorDepartment=...
   └── SdrRankWidget         → GET /analytics/sdr-ranking
 ```
@@ -86,11 +95,12 @@ AdminPanel
 
 [src/features/admin/pages/AdminPanel.jsx](src/features/admin/pages/AdminPanel.jsx)
 
-`AdminPanel` guarda os dois filtros com `useState("")`:
+`AdminPanel` guarda os filtros com `useState`:
 - `selectedVendorId`: `""` significa "Todos"; senão, o `_id` do vendedor.
-- `selectedWeek`: `""` significa "Todas as semanas"; senão, a **chave da semana**, que é a data da segunda-feira (`"2026-10-12"`).
+- `periodSelection`: a escolha do filtro de período (`{ value, from, to }`); `period` é ela resolvida com `resolvePeriod` (em `useMemo`), ou `null` para todo o período. Uma semana continua usando a **chave da semana** (a segunda-feira, `"2026-10-12"`) como `value`.
+- `selectedSegment`: `""`, `"B2B"` ou `"B2G"`.
 
-O `SalesFilters` recebe os dois valores e as funções para trocar (`onVendorChange`, `onWeekChange`). O `SaleWidget` recebe os dois como `vendorId` e `weekKey`.
+O `SalesFilters` recebe os valores e as funções para trocar (`onVendorChange`, `onPeriodChange`, `onSegmentChange`). O `SaleWidget` recebe `vendorId`, `period` e `segment`.
 
 **Por que o estado fica no `AdminPanel`:** os filtros são usados por dois componentes irmãos, a barra de filtros (seletores e exportação) e a lista. O estado fica no pai dos dois, e cada um recebe o que precisa por props. Assim a lista e a exportação nunca ficam com filtros diferentes.
 
@@ -147,11 +157,11 @@ As duas rotas são privadas (o token vai pelo `apiClient`) e respondem `{ data: 
 
 **Por que o vendedor está na chave:** cada filtro tem o seu cache. Voltar para um vendedor já visto mostra os dados na hora, enquanto o React Query atualiza por trás.
 
-### `useAdminSales(vendorId, weekKey)`
-[useAdminSales.js](src/features/admin/hooks/useAdminSales.js) roda `useSuspenseQuery(adminSalesQuery(vendorId))` com um `select` que aplica `filterSalesByWeek(sales, weekKey)`. Devolve `{ sales, total }`, em que `total` é a quantidade **depois** do filtro de semana, a que aparece no contador.
+### `useAdminSales(vendorId, period, segment)`
+[useAdminSales.js](src/features/admin/hooks/useAdminSales.js) roda `useSuspenseQuery(adminSalesQuery(vendorId))` com um `select` que aplica `filterSalesByPeriod(sales, period)` e depois `filterSalesBySegment`. Devolve `{ sales, total }`, em que `total` é a quantidade **depois** dos filtros, a que aparece no contador.
 - **Trocar de vendedor** muda a chave: o widget suspende e mostra "Carregando dados..." até a resposta chegar (ou na hora, se aquele vendedor já está no cache).
 - **Trocar de semana** não muda a chave: o `select` roda de novo sobre os dados que já estão no cache, sem requisição e sem "Carregando".
-- O `select` é criado com `useCallback` dependendo de `weekKey`, para só refazer o filtro quando a semana muda.
+- O `select` é criado com `useCallback` dependendo de `period` e `segment`, para só refazer o filtro quando eles mudam.
 
 ### `useWeekOptions()`
 [useWeekOptions.js](src/features/admin/hooks/useWeekOptions.js) devolve `{ weeks }`, as opções do seletor de semana: `[{ key, label }]`, da semana atual até a semana do dia 1º do mês (ou até a venda mais antiga, se for antes).
@@ -170,11 +180,11 @@ As duas rotas são privadas (o token vai pelo `apiClient`) e respondem `{ data: 
 
 Devolve `{ exportSales, isExporting, exportFailed }`.
 
-`exportSales({ vendor, weekKey })` recebe o vendedor selecionado (ou `null` para "Todos") e a semana (ou `""`) e:
+`exportSales({ vendor, period, segment })` recebe o vendedor selecionado (ou `null` para "Todos"), o período (ou `null`) e o setor e:
 1. busca as vendas com `queryClient.fetchQuery(adminSalesQuery(vendor?._id))`, a mesma busca da lista;
-2. aplica `filterSalesByWeek(sales, weekKey)`, o mesmo filtro da lista;
+2. aplica `filterSalesByPeriod` e `filterSalesBySegment`, os mesmos filtros da lista;
 3. monta o CSV com `salesToCsv`;
-4. baixa o arquivo com `downloadFile`, com o nome de `buildExportFileName({ vendor, weekKey })`.
+4. baixa o arquivo com `downloadFile`, com o nome de `buildExportFileName({ vendor, period, segment })`.
 
 A lista e a exportação usam **as mesmas duas funções** (`adminSalesQuery` e `filterSalesByWeek`), então o arquivo sempre tem exatamente o que está na tela.
 
@@ -245,14 +255,14 @@ O `AdminLayout` é uma rota sem `path` (rota de layout): ele envolve as filhas s
 
 Título da página (`<h1>`, 24px), descrição em cinza e, à direita, o que vier em `children` (no Dashboard, os filtros). Em telas estreitas, as ações descem para baixo do título.
 
-### `SalesFilters({ selectedVendorId, onVendorChange, selectedWeek, onWeekChange })`
+### `SalesFilters({ selectedVendorId, onVendorChange, periodSelection, onPeriodChange, period, selectedSegment, onSegmentChange })`
 
 [src/features/admin/components/SalesFilters/SalesFilters.jsx](src/features/admin/components/SalesFilters/SalesFilters.jsx)
 
 Substituiu o antigo `Header`, já que o logo foi para o menu lateral. Da esquerda para a direita:
-- **Semana:** "Todas as semanas" (valor `""`) e uma opção por semana de `useWeekOptions` (valor = chave da semana, texto = `label`). Controlado por `selectedWeek`/`onWeekChange`, com `aria-label="Filtrar por semana"`.
+- **Período:** `PeriodFilter`, controlado por `periodSelection`/`onPeriodChange`, com `aria-label="Filtrar por período"`. A exportação recebe o `period` já resolvido.
 - **Vendedor:** "Todos" (valor `""`) e um item por vendedor (valor `_id`, texto `getVendorLabel(vendor)`). Controlado por `selectedVendorId`/`onVendorChange`, com `aria-label="Filtrar por vendedor"`. Se a lista não carregar, mostra uma opção desabilitada "Não foi possível carregar os vendedores".
-- **Exportar:** chama `exportSales({ vendor: selectedVendor, weekKey: selectedWeek })`, em que `selectedVendor` é o vendedor da lista com o `_id` selecionado, ou `null`. Durante a exportação fica desabilitado e mostra "Exportando...". Se a última exportação falhou, aparece "Não foi possível exportar" em vermelho acima do botão.
+- **Exportar:** chama `exportSales({ vendor: selectedVendor, period, segment: selectedSegment })`, em que `selectedVendor` é o vendedor da lista com o `_id` selecionado, ou `null`. Durante a exportação fica desabilitado e mostra "Exportando...". Se a última exportação falhou, aparece "Não foi possível exportar" em vermelho acima do botão.
 
 **CSS** ([SalesFilters.module.css](src/features/admin/components/SalesFilters/SalesFilters.module.css)):
 - `.field` + `.label`: cada controle tem um rótulo pequeno em caixa alta acima ("SEMANA", "VENDEDOR").
@@ -273,7 +283,7 @@ O que aparece enquanto um widget carrega: o card com o título certo e três lin
 
 As classes globais dos cards ficam em [global.css](src/shared/styles/global.css): card branco com borda cinza, cantos de 12px e uma sombra bem leve; cabeçalho com linha cinza embaixo; título de 15px em cinza escuro. Antes a linha e o título eram roxos. O `box-sizing` repetido na regra `*` foi removido.
 
-### `SaleWidget({ vendorId, weekKey })`
+### `SaleWidget({ vendorId, period, segment })`
 
 [src/features/admin/components/SaleWidget/SaleWidget.jsx](src/features/admin/components/SaleWidget/SaleWidget.jsx)
 
@@ -377,7 +387,7 @@ Monta o CSV com uma linha de cabeçalho e uma linha por venda:
 ### `escapeCsvCell(value)`
 Prepara um valor para uma célula. Se o texto tiver `;`, aspas ou quebra de linha, ele vai entre aspas e as aspas internas são dobradas (`Obra "A"` vira `"Obra ""A"""`). `null` e `undefined` viram célula vazia. Sem isso, um nome de negociação com `;` quebraria as colunas.
 
-### `buildExportFileName({ vendor, weekKey }, date)`
+### `buildExportFileName({ vendor, period, segment }, date)`
 Monta o nome do arquivo: `vendas-<vendedor ou todos>[-semana-<segunda da semana>]-<data de hoje>.csv`. Exemplos: `vendas-todos-2026-10-22.csv` e `vendas-carla-semana-2026-10-12-2026-10-22.csv`.
 - O nome do vendedor vira um "slug": sem acento, minúsculo, com hífens (`Gabriela Antônia` vira `gabriela-antonia`). Sem nome no cadastro, usa o `_id` do vendedor.
 - A data é a do computador (`toLocaleDateString("sv-SE")` gera `AAAA-MM-DD`), e não a de UTC, para não virar o dia seguinte à noite.
@@ -443,7 +453,7 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 
 [src/features/admin/pages/ChartsPage.jsx](src/features/admin/pages/ChartsPage.jsx)
 
-`PageHeader` com o título "Gráficos", o botão **Modo escuro** e um seletor de **semana** próprio. Abaixo vêm os **indicadores** (`SalesKpis`) e a grade com os catorze gráficos. O seletor tem as mesmas opções do Dashboard (`useWeekOptions`), mas o estado é separado: filtrar aqui não muda o Dashboard, e vice-versa.
+`PageHeader` com o título "Gráficos", o botão **Modo escuro** e o filtro de **período** (o mesmo `PeriodFilter` do Dashboard, com `aria-label="Filtrar gráficos por período"`) e o de setor. Abaixo vêm os **indicadores** (`SalesKpis`) e a grade com os catorze gráficos. O estado dos filtros é separado do Dashboard: filtrar aqui não muda o Dashboard, e vice-versa.
 
 - `CHARTS` lista os gráficos na ordem da grade: `title` (usado no carregamento e no erro), `Chart` (o componente) e `className` opcional.
 - Cada gráfico fica dentro de um `ErrorBoundary` e de um `Suspense` com `WidgetFallback`, como no Dashboard. Se um gráfico der erro (por exemplo, as equipes não carregam), só ele mostra o erro.
@@ -452,9 +462,9 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 - **Modo escuro:** o botão (`aria-pressed`) liga a classe `.dark` na página, que troca as variáveis de cor (`--color-*`, `--chart-*`, `--heat-*`) só dentro da aba Gráficos; o resto do admin não muda. A escolha fica salva no navegador (`localStorage`, chave `admin-charts-theme`), dentro de `try/catch` porque o navegador pode bloquear o armazenamento; nesse caso abre no claro.
 - **Exportar CSV:** cada card tem um botão "CSV" no canto que baixa os dados daquele gráfico (com a semana no nome do arquivo quando filtrada).
 - **Gerar PDF:** o botão "Gerar PDF" abre o [PrintDialog](src/features/admin/components/PrintDialog/PrintDialog.jsx), com uma caixinha para os Indicadores e para cada gráfico, e "Selecionar todos" (já marcado ao abrir; fica "meio marcado" quando só alguns estão escolhidos, e o contador mostra "3 de 15"). Sem nada marcado, o botão de gerar fica desativado. Ao gerar, a página guarda os títulos escolhidos e a hora em `printItems`, chama `window.print()` e o navegador abre a janela de impressão, onde se escolhe "Salvar como PDF". Quando a janela fecha (evento `afterprint`), tudo volta ao normal. Cancelar, clicar fora ou apertar Esc fecha sem imprimir.
-- **Como fica o PDF:** regras `@media print` em A4 deitado. Some o menu lateral, os filtros, os botões CSV e a dica do mapa de calor; aparece um cabeçalho "Relatório de vendas · Black Friday" com a semana, o setor e a data/hora de geração; os widgets não escolhidos recebem `.notPrinted` (escondidos só na impressão). A grade fica em 2 colunas, os indicadores em 4, nenhum card é cortado no meio entre páginas, e o tema sai sempre **claro**, mesmo com o modo escuro ligado. Com todos marcados, o relatório é a página inteira. Os filtros de semana e setor já aplicados valem para o relatório.
+- **Como fica o PDF:** regras `@media print` em A4 deitado. Some o menu lateral, os filtros, os botões CSV e a dica do calendário; aparece um cabeçalho "Relatório de vendas · Black Friday" com o período, o setor e a data/hora de geração; os widgets não escolhidos recebem `.notPrinted` (escondidos só na impressão). A grade fica em 2 colunas, os indicadores em 4, nenhum card é cortado no meio entre páginas, e o tema sai sempre **claro**, mesmo com o modo escuro ligado. Com todos marcados, o relatório é a página inteira. Os filtros de período e setor já aplicados valem para o relatório.
 - Para os gráficos acompanharem a largura do papel, o SVG do `TimeSeriesChart` ganhou `viewBox` e, na impressão, `width: 100%; height: auto`. Também foram acrescentadas regras de impressão no `global.css` (`html`, `body`, `#root` e `.container` sem altura fixa nem `overflow: hidden`, senão só a primeira página sairia) e no `AdminLayout.module.css` (esconde o menu lateral). Na tela, nada disso muda.
-- **CSS** ([ChartsPage.module.css](src/features/admin/pages/ChartsPage.module.css)): grade de 2 colunas; "Vendas por pessoa" e "Ticket médio" ocupam 2 linhas (`.tall`), porque têm uma barra por vendedor. Abaixo de 1100px vira 1 coluna. O seletor reaproveita o visual dos filtros do Dashboard com `composes` do `SalesFilters.module.css`, sem mudar aquele arquivo. Também define `--chart-grid` (cinza das linhas de grade), `--chart-reference` (cinza da linha da meta e da linha do mouse), as cores das séries (`--chart-blue`, `--chart-orange`, `--chart-aqua`, `--chart-rest`) e os 6 tons do mapa de calor (`--heat-0` a `--heat-5`), cada um com a versão clara e a escura.
+- **CSS** ([ChartsPage.module.css](src/features/admin/pages/ChartsPage.module.css)): grade de 2 colunas; "Vendas por pessoa" e "Ticket médio" ocupam 2 linhas (`.tall`), porque têm uma barra por vendedor. Abaixo de 1100px vira 1 coluna. O seletor reaproveita o visual dos filtros do Dashboard com `composes` do `SalesFilters.module.css`, sem mudar aquele arquivo. Também define `--chart-grid` (cinza das linhas de grade), `--chart-reference` (cinza da linha da meta e da linha do mouse), as cores das séries (`--chart-blue`, `--chart-orange`, `--chart-aqua`, `--chart-rest`) os 6 tons do calendário (`--heat-0` a `--heat-5`) e a cor do número em cima de cada tom (`--heat-text-0` a `--heat-text-5`, escuro nos tons claros e branco nos escuros), cada um com a versão clara e a escura.
 
 **Indicadores** (`SalesKpis`): quatro cartões no topo, seguindo o filtro de semana. Total vendido, vendas fechadas e ticket médio mostram a variação contra a semana anterior (▲ verde / ▼ vermelho, sempre com a seta e o texto, não só a cor). Sem filtro, mostram "Campanha inteira". O quarto cartão é o % da meta da campanha (vem de `getGoal`).
 
@@ -473,7 +483,7 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 | Participação por setor | Barra 100% | Quanto cada segmento representa do total, com % e valor | Sim |
 | Concentração | Número + barra 100% | Quanto % do total vem dos 3 maiores vendedores, e quanto vem dos demais | Sim |
 | Cancelamentos | Números + barras | Taxa de cancelamento (canceladas ÷ ativas + canceladas), quantidade, valor perdido e valor cancelado por pessoa | Sim |
-| Quando as vendas fecham | Mapa de calor | Quantidade de vendas por dia da semana × hora (horário de Brasília). Quanto mais escuro (no claro) ou mais claro (no escuro), mais vendas | Sim |
+| Calendário de vendas | Calendário | Uma linha por semana (com a segunda-feira à esquerda) e uma coluna por dia da semana. Cada quadrado mostra o dia do mês e, embaixo à direita, quantas vendas teve; a cor fica mais forte com mais vendas. A coluna "Total" soma a semana e a linha "Total" soma cada dia da semana (o dia da semana que mais vende fica destacado). Passando o mouse, mostra a quantidade e o valor do dia. Não usa horário, porque as vendas são cadastradas só com a data | Sim |
 
 **Dias do eixo:** sem filtro, vão do dia da primeira venda até hoje. Com uma semana, vão de segunda até domingo, ou até hoje na semana atual. Dias sem venda entram no eixo (a linha acumulada fica reta, a coluna fica vazia).
 
@@ -513,28 +523,32 @@ Barras horizontais em HTML (lista `<ol>`). Cada item é `{ key, label, value, de
 
 Uma barra horizontal dividida em partes proporcionais (100%), com 2px entre as partes, e embaixo a legenda em lista: cor, nome, % e valor. Cada item é `{ key, label, value, share, color }`. Usada em "Participação por setor" e "Concentração".
 
-#### `Heatmap({ title, rows, cells, max, formatCell })`
+#### `SalesCalendar({ title, weekdays, calendar, formatDetail })`
 
-[components/charts/Heatmap.jsx](src/features/admin/components/charts/Heatmap.jsx)
+[components/charts/SalesCalendar.jsx](src/features/admin/components/charts/SalesCalendar.jsx)
 
-Grade de 7 linhas (dias) × 24 colunas (horas). A cor de cada quadrado vem de `heatLevel(quantidade, máximo)`: 0 (sem venda) a 5 (o máximo), um tom de azul por nível. Passando o mouse, a linha de baixo mostra "Ter, 10h: 1 venda, R$ 30.000,00". Ao lado fica a escala "Menos → Mais". Em telas estreitas a grade rola para o lado. Também tem a tabela invisível para leitores de tela, só com os horários que tiveram venda.
+Tabela HTML (já acessível para leitor de tela, sem tabela escondida): cabeçalho com Seg a Dom e "Total", uma linha por semana e a linha de totais no rodapé. Dias fora do período ficam vazios. Cada dia tem `aria-label` com o dia da semana, a data, a quantidade e o valor. A cor vem de `heatLevel(quantidade, máximo)`, de 0 a 5. Embaixo, a linha de detalhe (ao passar o mouse) e a escala "Menos vendas → Mais". Em telas estreitas a tabela rola para o lado.
+
+#### `ShareBar` com item expansível
+
+Quando um item tem `details` (lista de itens), a linha dele na legenda vira um botão com uma setinha (`aria-expanded`). Clicando, abre embaixo a lista recuada com cada item, sua porcentagem e valor. É o que o "Demais (8)" da **Concentração** usa: abre os vendedores do 4º em diante, cada um com a % do total.
 
 #### `InsightWidgets`
 
 [components/InsightWidgets/InsightWidgets.jsx](src/features/admin/components/InsightWidgets/InsightWidgets.jsx)
 
-Os cards de análise: `SalesKpis`, `ForecastCard`, `WeeklySalesChart`, `TicketChart`, `SegmentShareChart`, `ConcentrationChart`, `CancellationChart` e `HeatmapChart`. Usam o `ChartCard` dos `SalesChartWidgets`.
+Os cards de análise: `SalesKpis`, `ForecastCard`, `WeeklySalesChart`, `TicketChart`, `SegmentShareChart`, `ConcentrationChart`, `CancellationChart` e `SalesCalendarChart`. Usam o `ChartCard` dos `SalesChartWidgets`.
 
 #### `SalesChartWidgets`
 
 [components/SalesChartWidgets/SalesChartWidgets.jsx](src/features/admin/components/SalesChartWidgets/SalesChartWidgets.jsx)
 
-Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesChart`, `GoalTrackChart`, `FunnelSalesChart`, `VendorSalesChart`, `TeamSalesChart`, `PassageChart`), todos recebendo `weekKey` (o `GoalTrackChart` ignora). `ChartCard({ title, description, csvRows, weekKey, children })` é a moldura comum: card, título, descrição em cinza, o botão "CSV" (quando `csvRows` tem dados além do cabeçalho) e o corpo. `csvRows` é uma lista de linhas (cada linha uma lista de células); o botão monta o arquivo com `tableToCsv` e baixa com `downloadFile`. Sem dados, cada card mostra um aviso ("Nenhuma venda no período", "Nenhuma passagem no período", "Nenhuma venda ainda").
+Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesChart`, `GoalTrackChart`, `FunnelSalesChart`, `VendorSalesChart`, `TeamSalesChart`, `PassageChart`), todos recebendo `period` e `segment` (o `GoalTrackChart` ignora o período). `ChartCard({ title, description, csvRows, period, segment, children })` é a moldura comum: card, título, descrição em cinza, o botão "CSV" (quando `csvRows` tem dados além do cabeçalho) e o corpo. `csvRows` é uma lista de linhas (cada linha uma lista de células); o botão monta o arquivo com `tableToCsv` e baixa com `downloadFile`. Sem dados, cada card mostra um aviso ("Nenhuma venda no período", "Nenhuma passagem no período", "Nenhuma venda ainda").
 
 ### Hooks dos gráficos
 
-- [useSalesCharts(weekKey)](src/features/admin/hooks/useSalesCharts.js): `useSuspenseQuery(adminSalesQuery(""))` com um `select` que roda `buildSalesCharts`. Usa **o mesmo cache** da lista de vendas do Dashboard (chave `["admin-sales", "all"]`), então os sete gráficos fazem uma requisição só, e trocar de semana não busca de novo: só recalcula.
-- [useSalesInsights(weekKey)](src/features/admin/hooks/useSalesInsights.js): igual ao `useSalesCharts`, no mesmo cache, mas o `select` roda `buildSalesInsights` (indicadores, ticket, cancelamentos, mapa de calor, participação, concentração e semanas).
+- [useSalesCharts(period, segment)](src/features/admin/hooks/useSalesCharts.js): `useSuspenseQuery(adminSalesQuery(""))` com um `select` que roda `buildSalesCharts`. Usa **o mesmo cache** da lista de vendas do Dashboard (chave `["admin-sales", "all"]`), então os sete gráficos fazem uma requisição só, e trocar de período ou setor não busca de novo: só recalcula.
+- [useSalesInsights(period, segment)](src/features/admin/hooks/useSalesInsights.js): igual ao `useSalesCharts`, no mesmo cache, mas o `select` roda `buildSalesInsights` (indicadores, ticket, cancelamentos, calendário, participação, concentração e semanas).
 - [useTeams()](src/features/admin/hooks/useTeams.js): busca as equipes com `getTeams`, chave `["admin-teams"]`.
 - [useElementWidth(larguraInicial)](src/features/admin/hooks/useElementWidth.js): devolve `[ref, largura]`. Mede o elemento com `ResizeObserver` e atualiza quando ele muda de tamanho. Sem `ResizeObserver` (nos testes), fica na largura inicial.
 
@@ -557,9 +571,9 @@ Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesC
 | `buildSalesCharts(vendas, semana, agora)` | Junta tudo: filtra as ativas, aplica a semana e devolve `{ days, activeSales, total, bySegment, byFunnel, byVendor, passages, campaign }`. `campaign` é o acumulado da campanha inteira, sem a semana, para o "Acumulado x meta" |
 
 - [utils/chartScale.js](src/features/admin/utils/chartScale.js): `niceTicks(máximo)` devolve os valores do eixo (0, 25, 50, 75, 100…), sempre redondos (passos de 1, 2, 2,5 ou 5 vezes uma potência de 10); `formatCompactCurrency(valor)` escreve "R$ 200 mil", "R$ 2,5 mi" ou "R$ 1,2 bi" (até 1 casa decimal, sem ",0"). A abreviação é feita no código, e não com o `notation: "compact"` do `Intl`, porque o `Intl` muda de versão para versão do Node: no Node 22 do Cloudflare ele escrevia "R$ 3,0 mi" e no Node 24 "R$ 3 mi", e isso derrubou um deploy; `formatPassages(n)` escreve "1 passagem" ou "3 passagens".
-- [utils/chartColors.js](src/features/admin/utils/chartColors.js): as cores das séries, como variáveis CSS com a cor clara de reserva (`var(--chart-blue, #2a78d6)`). Azul para a primeira (e para os gráficos de uma série só), laranja para a segunda, verde-água para um segmento desconhecido e cinza (`rest`) para "Demais". No escuro viram `#3987e5`, `#d95926` e `#199e70`. `segmentColor(segmento)` fixa B2B em azul e B2G em laranja, para a cor de cada segmento não mudar quando o filtro tira um deles. As cores foram conferidas para daltonismo e contraste, no fundo claro e no escuro. `heatLevel(quantidade, máximo)` dá o nível de 0 a 5 do mapa de calor.
+- [utils/chartColors.js](src/features/admin/utils/chartColors.js): as cores das séries, como variáveis CSS com a cor clara de reserva (`var(--chart-blue, #2a78d6)`). Azul para a primeira (e para os gráficos de uma série só), laranja para a segunda, verde-água para um segmento desconhecido e cinza (`rest`) para "Demais". No escuro viram `#3987e5`, `#d95926` e `#199e70`. `segmentColor(segmento)` fixa B2B em azul e B2G em laranja, para a cor de cada segmento não mudar quando o filtro tira um deles. As cores foram conferidas para daltonismo e contraste, no fundo claro e no escuro. `heatLevel(quantidade, máximo)` dá o nível de 0 a 5 do calendário.
 - `chartScale.js` também tem `formatPercent` ("43,4%"), `formatVariation` ("+5,1%", "-12,4%") e `formatSalesCount` ("1 venda", "2 vendas").
-- `weeks.js` ganhou `daysBetween(dia1, dia2)` (dias entre duas datas "AAAA-MM-DD") e `getWeekdayAndHour(data)` (dia da semana, com segunda = 0, e hora, no horário de São Paulo).
+- `weeks.js` ganhou `daysBetween(dia1, dia2)` (dias entre duas datas "AAAA-MM-DD").
 
 [utils/salesInsights.js](src/features/admin/utils/salesInsights.js), as contas das análises:
 
@@ -570,15 +584,15 @@ Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesC
 | `buildKpis(ativas, semana)` | `{ current, previous }`: a semana e a anterior; sem semana, `previous` é `null` |
 | `ticketBySegment` / `ticketByVendor` | Ticket médio por setor / por vendedor, do maior para o menor, com "N vendas" em `detail` |
 | `cancellationSummary(vendas)` | `{ count, closed, rate, lostValue, byVendor }`; recebe as vendas de todos os status |
-| `salesHeatmap(ativas)` | `{ cells, max }`: `cells[dia][hora] = { count, value }` |
+| `salesCalendar(ativas, dias)` | `{ weeks, weekdayTotals, max }`: cada semana tem 7 `cells` (`{ day, inRange, count, value }`) e o `total`; `weekdayTotals` soma cada dia da semana |
 | `segmentShare(ativas)` / `shareOf(itens)` | Valor e fração do total de cada segmento / de cada item |
-| `concentration(ativas)` | `{ top, topShare, rest }`: os 3 maiores vendedores e o resto |
+| `concentration(ativas)` | `{ top, topShare, rest }`: os 3 maiores vendedores e o resto (`rest.items` traz cada um dos demais com a sua %) |
 | `weeklyTotals(ativas, agora)` | `{ weeks, sales, renewals }` da primeira semana com venda até a atual, semanas vazias com 0 |
 | `forecast(campanha, meta, fim, agora)` | Média por dia (do primeiro dia com venda até hoje), dias restantes depois de hoje, projeção (vendido + média × dias restantes), ritmo necessário (falta ÷ dias restantes), se já bateu e se vai bater |
 | `goalTrack(campanha, meta, fim, agora)` | Os dias até o fim da campanha e as três séries do "Acumulado x meta" (vendido, projeção, ritmo necessário), com `null` onde a linha não existe |
 | `buildSalesInsights(vendas, semana, agora)` | Junta tudo para o `useSalesInsights` |
 
-[utils/tableCsv.js](src/features/admin/utils/tableCsv.js): `tableToCsv(linhas)` (mesmo formato do CSV de vendas: BOM, `;` e escape), `timeSeriesRows` e `barRows` (montam as linhas a partir dos dados dos gráficos), `formatCsvNumber` (vírgula decimal) e `buildChartFileName({ title, weekKey, segment })` ("grafico-ticket-medio-b2b-semana-2026-10-19-2026-10-22.csv"). `toSlug` foi exportado do `salesCsv.js` para ser reaproveitado aqui.
+[utils/tableCsv.js](src/features/admin/utils/tableCsv.js): `tableToCsv(linhas)` (mesmo formato do CSV de vendas: BOM, `;` e escape), `timeSeriesRows` e `barRows` (montam as linhas a partir dos dados dos gráficos), `formatCsvNumber` (vírgula decimal) e `buildChartFileName({ title, period, segment })` ("grafico-ticket-medio-b2b-semana-2026-10-19-2026-10-22.csv"). `toSlug` foi exportado do `salesCsv.js` para ser reaproveitado aqui.
 
 ---
 
@@ -593,17 +607,18 @@ Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesC
 | `components/RankWidget/RankWidget.test.jsx` | Abre na aba Vendas com posição, nome, cargo e pontos ("1 ponto" no singular); a aba Renovação busca e mostra o ranking de farm; avisa quando ninguém pontuou; com um setor, monta o ranking pelas vendas do setor sem chamar o backend |
 | `utils/chartData.test.js` | Dias do eixo sem semana, com semana atual (até hoje) e semana passada (7 dias); sem vendas não tem dias; dia pelo horário de São Paulo; acumulado com dias sem venda; séries por segmento em ordem alfabética com "Sem setor"; vendas x renovações por dia sem acumular; totais por vendedor do maior para o menor; totais por equipe com todas as equipes e "Sem equipe"; passagens por pessoa com cargo e `sdrId` antigo; canceladas fora e semana aplicada, mas a campanha com todas; formato do dia |
 | `utils/chartScale.test.js` | Escala começa em 0 e termina num número redondo acima do máximo; escala mínima sem valor; reais compactos; percentual e variação com sinal; "passagem" e "venda" no singular |
-| `utils/salesInsights.test.js` | Variação; indicadores da semana e da anterior; ticket médio por setor e pessoa; cancelamentos com taxa, valor e pessoa; mapa de calor no horário de São Paulo; participação somando 100%; concentração dos 3 maiores; semanas vazias com 0; previsão e ritmo necessário; nada projetado depois do fim; linhas tracejadas começando em hoje; sem ritmo necessário com a meta batida |
+| `utils/salesInsights.test.js` | Variação; indicadores da semana e da anterior; ticket médio por setor e pessoa; cancelamentos com taxa, valor e pessoa; calendário por semana com totais por dia da semana; concentração com a lista dos demais; participação somando 100%; concentração dos 3 maiores; semanas vazias com 0; previsão e ritmo necessário; nada projetado depois do fim; linhas tracejadas começando em hoje; sem ritmo necessário com a meta batida |
 | `utils/tableCsv.test.js` | Número com vírgula; BOM, `;` e escape; linhas dos gráficos de dia e de barras; nome do arquivo sem acento, com o setor e a semana |
-| `utils/segmentRanking.test.js` | Filtro de setor sem diferenciar maiúsculas; venda 2 pontos, renovação 1, só ativas, top 3; passagens 1 ponto por pessoa |
+| `utils/periods.test.js` | Todo o período não filtra; últimos N dias terminam hoje; este mês desde o dia 1º; semana de segunda a domingo; período específico com datas invertidas e sem fim; filtro pelo dia de São Paulo nos limites; período anterior do mesmo tamanho; nome da comparação e do arquivo |
+| `utils/segmentRanking.test.js` | Filtro de setor sem diferenciar maiúsculas; pontos da venda pela tabela do backend (setor + tipo); pontos da passagem pelo cargo, ignorando acento, maiúscula e espaços; ranking de vendedores só com ativas, do tipo da aba, top 3; passagens com os pontos do cargo |
 | `pages/ChartsPage.test.jsx` | Sem vendas, cada gráfico mostra o aviso; se as equipes não carregam, só o gráfico de equipes some; as setas do teclado mostram o dia e o valor na dica, e ela some ao sair do foco; o botão CSV baixa os dados certos; o modo escuro liga, desliga e fica salvo; a previsão mostra os dias restantes e o ritmo necessário ; Gerar PDF lista os 15 itens com todos marcados, "Selecionar todos" desmarca tudo e desativa o botão, escolher alguns deixa "meio marcado", imprime só os escolhidos com o cabeçalho e volta ao normal no `afterprint`; Cancelar e Esc fecham sem imprimir; todos marcados imprime tudo |
-| `pages/ChartsPage.mocks.test.jsx` | Com os dados falsos: os indicadores e os catorze gráficos na ordem; previsão (R$ 589.913,04 projetados, R$ 68.000,00 por dia em 41 dias); vendas por semana; ticket médio por setor; participação B2B 43,4% / B2G 56,6%; concentração de 64,9% nos 3 maiores; cancelamentos 11,1% (2 de 18, R$ 27.000,00); Ter 10h no mapa de calor; com a semana atual, indicadores com variação (+5,1%, +20%, -12,4%) e cancelamentos de 14,3%; acumulado e acumulado x meta chegam em R$ 212 mil (sem as canceladas) com a meta de R$ 3 mi; B2B R$ 92 mil e B2G R$ 120 mil; vendas por pessoa, por equipe e passagens da campanha; filtrando a semana atual, os valores mudam (R$ 82 mil) e o acumulado x meta continua na campanha inteira; com o setor B2B, tudo mostra só B2B (R$ 92 mil, participação 100%, 3,1% da meta) |
+| `pages/ChartsPage.mocks.test.jsx` | Com os dados falsos: os indicadores e os catorze gráficos na ordem; previsão (R$ 589.913,04 projetados, R$ 68.000,00 por dia em 41 dias); vendas por semana; ticket médio por setor; participação B2B 43,4% / B2G 56,6%; concentração de 64,9% nos 3 maiores; cancelamentos 11,1% (2 de 18, R$ 27.000,00); calendário (semana de 19/10 e totais por dia da semana); "Demais (8)" abre a lista do 4º ao 11º com a %; com os últimos 7 dias, 7 dias no eixo e comparação "vs período anterior"; com a semana atual, indicadores com variação (+5,1%, +20%, -12,4%) e cancelamentos de 14,3%; acumulado e acumulado x meta chegam em R$ 212 mil (sem as canceladas) com a meta de R$ 3 mi; B2B R$ 92 mil e B2G R$ 120 mil; vendas por pessoa, por equipe e passagens da campanha; filtrando a semana atual, os valores mudam (R$ 82 mil) e o acumulado x meta continua na campanha inteira; com o setor B2B, tudo mostra só B2B (R$ 92 mil, participação 100%, 3,1% da meta) |
 | `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!"; lista vendas, passagens e renovações por setor, sem as canceladas; avisa em cada coluna quando não tem nada |
 | `utils/sectorCounts.test.js` | Vendas e renovações por segmento em ordem alfabética; uma passagem por pessoa, pelo cargo, em vendas e renovações; ignora canceladas; aceita `sdrId` antigo e agrupa sem segmento ou cargo em "Sem setor" |
 | `components/SdrRankWidget/SdrRankWidget.test.jsx` | Mostra o ranking de passagens vindo do backend; avisa quando ninguém fez passagem; com um setor, conta só as passagens das vendas do setor |
 | `pages/AdminLayout.test.jsx` | Menu com Dashboard e Erros, abrindo no dashboard marcado; clicar em Erros troca a página sem recarregar e muda o item marcado; abrir direto em `/admin/erros` marca só Erros; clicar em Gráficos abre a aba e marca só ela |
 | `pages/ErrorsPage.test.jsx` | Título "Erros" e os widgets de logs de erro e de teste |
-| `pages/AdminPanel.test.jsx` | Opções de vendedor em ordem alfabética e de semana com todas as semanas do mês; filtra por uma semana de duas semanas atrás; vendedor sem nome aparece como "Vendedor sem nome" sem esvaziar a lista; avisa quando os vendedores não carregam; sem filtros lista e exporta tudo; só vendedor; só semana; semana + vendedor; semana sem vendas do vendedor mostra lista vazia; voltar para "Todas" e "Todos" mostra e exporta tudo; avisa quando a exportação falha e não baixa nada; setor começa em "Todos" e, com B2G, mostra e exporta só B2G. Em cada caso confere a lista na tela, o conteúdo do CSV e o nome do arquivo |
+| `pages/AdminPanel.test.jsx` | Opções de vendedor em ordem alfabética e de semana com todas as semanas do mês; filtra por uma semana de duas semanas atrás; vendedor sem nome aparece como "Vendedor sem nome" sem esvaziar a lista; avisa quando os vendedores não carregam; sem filtros lista e exporta tudo; só vendedor; só semana; semana + vendedor; semana sem vendas do vendedor mostra lista vazia; voltar para "Todas" e "Todos" mostra e exporta tudo; avisa quando a exportação falha e não baixa nada; setor começa em "Todos" e, com B2G, mostra e exporta só B2G; últimos 3 dias e período específico filtram a lista e a exportação. Em cada caso confere a lista na tela, o conteúdo do CSV e o nome do arquivo |
 
 Os testes do `AdminPanel` fixam a data em 22/10/2026 (`vi.setSystemTime`), para "Semana atual" e "Semana passada" não dependerem do dia em que rodam.
 

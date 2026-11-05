@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 
+import { resolvePeriod } from "./periods";
+
 import {
   buildSalesCharts,
   cumulativeByDay,
@@ -29,6 +31,8 @@ const makeSale = (overrides) => ({
   ...overrides,
 });
 
+const week = (key) => resolvePeriod({ value: key }, now);
+
 describe("chartData", () => {
   it("listDays vai da primeira venda até hoje, sem semana", () => {
     const sales = [makeSale({ realizedAt: "2026-10-19T15:00:00.000Z" }), makeSale({ realizedAt: "2026-10-21T15:00:00.000Z" })];
@@ -37,9 +41,9 @@ describe("chartData", () => {
   });
 
   it("listDays com semana vai de segunda até hoje na semana atual, e até domingo nas passadas", () => {
-    expect(listDays([], "2026-10-19", now)).toEqual(["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22"]);
-    expect(listDays([], "2026-10-12", now)).toHaveLength(7);
-    expect(listDays([], "2026-10-12", now).at(-1)).toBe("2026-10-18");
+    expect(listDays([], week("2026-10-19"), now)).toEqual(["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22"]);
+    expect(listDays([], week("2026-10-12"), now)).toHaveLength(7);
+    expect(listDays([], week("2026-10-12"), now).at(-1)).toBe("2026-10-18");
   });
 
   it("listDays sem vendas e sem semana não tem dias", () => {
@@ -132,7 +136,7 @@ describe("chartData", () => {
       makeSale({ realizedAt: "2026-10-21T15:00:00.000Z", value: 999, dealStatus: "cancelada" }),
     ];
 
-    const charts = buildSalesCharts(sales, "2026-10-19", now);
+    const charts = buildSalesCharts(sales, week("2026-10-19"), now);
 
     expect(charts.activeSales).toHaveLength(1);
     expect(charts.days).toEqual(["2026-10-19", "2026-10-20", "2026-10-21", "2026-10-22"]);

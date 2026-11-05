@@ -1,13 +1,6 @@
-import { funnelOf, isActiveSale, segmentOf, totalsByVendor } from "./chartData";
-import {
-  addDays,
-  daysBetween,
-  filterSalesByWeek,
-  getDayKey,
-  getWeekKey,
-  getWeekdayAndHour,
-  previousWeekKey,
-} from "./weeks";
+import { funnelOf, isActiveSale, listDays, segmentOf, totalsByVendor } from "./chartData";
+import { filterSalesByPeriod, previousPeriod } from "./periods";
+import { addDays, daysBetween, getDayKey, getWeekKey } from "./weeks";
 
 const NO_NAME = "Sem nome";
 const TOP_VENDORS = 3;
@@ -38,17 +31,14 @@ export function variation(current, previous) {
   return (current - previous) / previous;
 }
 
-export function buildKpis(activeSales, weekKey) {
-  const current = summarize(filterSalesByWeek(activeSales, weekKey));
+export function buildKpis(activeSales, period) {
+  const current = summarize(filterSalesByPeriod(activeSales, period));
 
-  if (!weekKey) {
+  if (!period) {
     return { current, previous: null };
   }
 
-  return {
-    current,
-    previous: summarize(filterSalesByWeek(activeSales, previousWeekKey(weekKey))),
-  };
+  return { current, previous: summarize(filterSalesByPeriod(activeSales, previousPeriod(period))) };
 }
 
 export function averageTicketBy(sales, keyOf, labelOf) {
@@ -108,21 +98,41 @@ export function cancellationSummary(sales) {
   };
 }
 
-export function salesHeatmap(sales) {
-  const cells = WEEKDAYS.map(() => Array.from({ length: 24 }, () => ({ count: 0, value: 0 })));
+const EMPTY_DAY = { count: 0, value: 0 };
 
+const sumCells = (cells) =>
+  cells.reduce((total, cell) => ({ count: total.count + cell.count, value: total.value + cell.value }), EMPTY_DAY);
+
+export function salesCalendar(sales, days) {
+  if (days.length === 0) {
+    return { weeks: [], weekdayTotals: WEEKDAYS.map(() => EMPTY_DAY), max: 0 };
+  }
+
+  const byDay = new Map();
   sales.forEach((sale) => {
-    const { weekday, hour } = getWeekdayAndHour(sale.realizedAt);
-    const cell = cells[weekday][hour];
-    cells[weekday][hour] = {
-      count: cell.count + 1,
-      value: cell.value + (sale.value ?? 0),
-    };
+    const day = getDayKey(sale.realizedAt);
+    const current = byDay.get(day) ?? EMPTY_DAY;
+    byDay.set(day, { count: current.count + 1, value: current.value + (sale.value ?? 0) });
   });
 
-  const max = Math.max(...cells.flat().map((cell) => cell.count));
+  const first = days[0];
+  const last = days.at(-1);
+  const weeks = [];
 
-  return { cells, max };
+  for (let week = getWeekKey(`${first}T15:00:00.000Z`); week <= last; week = addDays(week, 7)) {
+    const cells = WEEKDAYS.map((_, index) => {
+      const day = addDays(week, index);
+      const inRange = day >= first && day <= last;
+      return { day, inRange, ...(inRange ? (byDay.get(day) ?? EMPTY_DAY) : EMPTY_DAY) };
+    });
+    weeks.push({ week, cells, total: sumCells(cells) });
+  }
+
+  return {
+    weeks,
+    weekdayTotals: WEEKDAYS.map((_, index) => sumCells(weeks.map((week) => week.cells[index]))),
+    max: Math.max(...weeks.flatMap((week) => week.cells.map((cell) => cell.count))),
+  };
 }
 
 export function shareOf(items) {
@@ -156,6 +166,7 @@ export function concentration(sales, size = TOP_VENDORS) {
     top,
     topShare: top.reduce((sum, item) => sum + item.share, 0),
     rest: {
+      items: rest,
       count: rest.length,
       value: rest.reduce((sum, item) => sum + item.value, 0),
       share: rest.reduce((sum, item) => sum + item.share, 0),
@@ -235,21 +246,21 @@ export function goalTrack(campaign, goal, endDay, now = new Date()) {
   };
 }
 
-export function buildSalesInsights(sales, weekKey, now = new Date()) {
+export function buildSalesInsights(sales, period, now = new Date()) {
   const campaignSales = sales.filter(isActiveSale);
-  const activeSales = filterSalesByWeek(campaignSales, weekKey);
-  const periodSales = filterSalesByWeek(sales, weekKey);
+  const activeSales = filterSalesByPeriod(campaignSales, period);
+  const periodSales = filterSalesByPeriod(sales, period);
 
   return {
     activeSales,
     campaignTotal: sumValues(campaignSales),
-    kpis: buildKpis(campaignSales, weekKey),
+    kpis: buildKpis(campaignSales, period),
     ticket: {
       bySegment: ticketBySegment(activeSales),
       byVendor: ticketByVendor(activeSales),
     },
     cancellations: cancellationSummary(periodSales),
-    heatmap: salesHeatmap(activeSales),
+    calendar: salesCalendar(activeSales, listDays(activeSales, period, now)),
     segments: segmentShare(activeSales),
     concentration: concentration(activeSales),
     weekly: weeklyTotals(campaignSales, now),

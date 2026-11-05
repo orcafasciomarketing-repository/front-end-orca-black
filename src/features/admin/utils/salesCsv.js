@@ -1,4 +1,5 @@
 import { formatPassageNames } from "./passages";
+import { periodFileSuffix } from "./periods";
 
 const SEPARATOR = ";";
 const BYTE_ORDER_MARK = "\uFEFF";
@@ -55,11 +56,11 @@ export const toSlug = (text) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-export function buildExportFileName({ vendor, weekKey, segment } = {}, date = new Date()) {
+export function buildExportFileName({ vendor, period, segment } = {}, date = new Date()) {
   const day = date.toLocaleDateString("sv-SE");
   const scope = vendor ? toSlug(vendor.vendorName || vendor._id) : "todos";
   const sector = segment ? `-${toSlug(segment)}` : "";
-  const week = weekKey ? `-semana-${weekKey}` : "";
+  const week = periodFileSuffix(period);
 
   return `vendas-${scope}${sector}${week}-${day}.csv`;
 }

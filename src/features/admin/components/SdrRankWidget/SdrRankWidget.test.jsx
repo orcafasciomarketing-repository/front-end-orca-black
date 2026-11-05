@@ -20,7 +20,7 @@ const salesFor = (segment) => [
     value: 1000,
     realizedAt: "2026-10-20T15:00:00.000Z",
     vendorId: { _id: "v9", vendorName: "Zeca", job: "B2G Sales" },
-    sdrIds: [{ _id: "s9", name: "Paula", job: "SDR" }],
+    sdrIds: [{ _id: "s9", name: "Paula", job: "B2B SDR" }],
   },
   {
     _id: "b",
@@ -73,6 +73,6 @@ describe("SdrRankWidget", () => {
 
     const items = within(await screen.findByRole("list")).getAllByRole("listitem");
     expect(getRankSdrs).not.toHaveBeenCalled();
-    expect(items.map((item) => item.textContent)).toEqual(["1ºPaulaSDR1 ponto"]);
+    expect(items.map((item) => item.textContent)).toEqual(["1ºPaulaB2B SDR1 ponto"]);
   });
 });

@@ -2,13 +2,13 @@ import { useCallback } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
 import { filterSalesBySegment } from "../utils/segments";
-import { filterSalesByWeek } from "../utils/weeks";
+import { filterSalesByPeriod } from "../utils/periods";
 import { adminSalesQuery } from "./adminQueries";
 
-export function useAdminSales(vendorId, weekKey, segment = "") {
+export function useAdminSales(vendorId, period = null, segment = "") {
   const selectSales = useCallback(
-    ({ sales }) => filterSalesBySegment(filterSalesByWeek(sales, weekKey), segment),
-    [weekKey, segment],
+    ({ sales }) => filterSalesBySegment(filterSalesByPeriod(sales, period), segment),
+    [period, segment],
   );
 
   const { data: sales } = useSuspenseQuery({ ...adminSalesQuery(vendorId), select: selectSales });

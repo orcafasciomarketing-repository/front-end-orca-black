@@ -10,8 +10,8 @@ const STATUS_LABELS = {
   cancelada: "Cancelada",
 };
 
-export default function SaleWidget({ vendorId, weekKey, segment }) {
-  const { sales, total } = useAdminSales(vendorId, weekKey, segment);
+export default function SaleWidget({ vendorId, period, segment }) {
+  const { sales, total } = useAdminSales(vendorId, period, segment);
 
   return (
     <section className="widget">

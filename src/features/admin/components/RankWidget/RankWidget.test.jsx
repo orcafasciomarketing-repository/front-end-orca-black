@@ -95,10 +95,10 @@ describe("RankWidget", () => {
 
     const items = within(await screen.findByRole("list")).getAllByRole("listitem");
     expect(getRankVendors).not.toHaveBeenCalled();
-    expect(items.map((item) => item.textContent)).toEqual(["1ºZecaB2G Sales2 pontos"]);
+    expect(items.map((item) => item.textContent)).toEqual(["1ºZecaB2G Sales3 pontos"]);
 
     fireEvent.click(screen.getByRole("tab", { name: "Renovação" }));
     expect(await screen.findByText("Yara")).toBeInTheDocument();
-    expect(screen.getByRole("listitem")).toHaveTextContent("1ºYaraB2G Farmer1 ponto");
+    expect(screen.getByRole("listitem")).toHaveTextContent("1ºYaraB2G Farmer2 pontos");
   });
 });

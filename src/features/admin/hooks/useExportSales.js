@@ -4,20 +4,20 @@ import { reportError } from "../../../shared/errorLogger";
 import { downloadFile } from "../utils/downloadFile";
 import { buildExportFileName, salesToCsv } from "../utils/salesCsv";
 import { filterSalesBySegment } from "../utils/segments";
-import { filterSalesByWeek } from "../utils/weeks";
+import { filterSalesByPeriod } from "../utils/periods";
 import { adminSalesQuery } from "./adminQueries";
 
 export function useExportSales() {
   const queryClient = useQueryClient();
 
   const { mutate, isPending, isError } = useMutation({
-    mutationFn: async ({ vendor, weekKey, segment }) => {
+    mutationFn: async ({ vendor, period, segment }) => {
       const { sales } = await queryClient.fetchQuery(adminSalesQuery(vendor?._id));
-      const filteredSales = filterSalesBySegment(filterSalesByWeek(sales, weekKey), segment);
+      const filteredSales = filterSalesBySegment(filterSalesByPeriod(sales, period), segment);
 
       downloadFile(
         salesToCsv(filteredSales),
-        buildExportFileName({ vendor, weekKey, segment }),
+        buildExportFileName({ vendor, period, segment }),
         "text/csv;charset=utf-8",
       );
     },

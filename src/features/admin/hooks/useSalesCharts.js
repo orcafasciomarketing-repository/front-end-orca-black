@@ -5,10 +5,10 @@ import { buildSalesCharts } from "../utils/chartData";
 import { filterSalesBySegment } from "../utils/segments";
 import { adminSalesQuery } from "./adminQueries";
 
-export function useSalesCharts(weekKey, segment = "") {
+export function useSalesCharts(period = null, segment = "") {
   const selectCharts = useCallback(
-    ({ sales }) => buildSalesCharts(filterSalesBySegment(sales, segment), weekKey),
-    [weekKey, segment],
+    ({ sales }) => buildSalesCharts(filterSalesBySegment(sales, segment), period),
+    [period, segment],
   );
 
   const { data } = useSuspenseQuery({ ...adminSalesQuery(""), select: selectCharts });

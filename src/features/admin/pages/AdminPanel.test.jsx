@@ -56,12 +56,12 @@ const renderPanel = () =>
   );
 
 const vendorSelect = () => screen.getByRole("combobox", { name: "Filtrar por vendedor" });
-const weekSelect = () => screen.getByRole("combobox", { name: "Filtrar por semana" });
+const weekSelect = () => screen.getByRole("combobox", { name: "Filtrar por período" });
 const optionsOf = (select) => within(select).getAllByRole("option").map((option) => option.textContent);
 
 const waitForFilters = async () => {
   await waitFor(() => expect(within(vendorSelect()).getAllByRole("option")).toHaveLength(3));
-  await waitFor(() => expect(within(weekSelect()).getAllByRole("option")).toHaveLength(5));
+  await waitFor(() => expect(within(weekSelect()).getAllByRole("option")).toHaveLength(11));
 };
 
 const exportAndGetCsv = async () => {
@@ -95,11 +95,17 @@ describe("AdminPanel › filtros e exportação de vendas", () => {
 
     expect(optionsOf(vendorSelect())).toEqual(["Todos", "Bruno", "Carla"]);
     expect(optionsOf(weekSelect())).toEqual([
-      "Todas as semanas",
+      "Todo o período",
+      "Últimos 3 dias",
+      "Últimos 7 dias",
+      "Últimos 15 dias",
+      "Últimos 30 dias",
+      "Este mês",
       "Semana atual (19/10 a 25/10)",
       "Semana passada (12/10 a 18/10)",
       "05/10 a 11/10",
       "28/09 a 04/10",
+      "Período específico...",
     ]);
   });
 
@@ -246,6 +252,24 @@ describe("AdminPanel › filtros e exportação de vendas", () => {
     expect(csv).toContain("Negócio b");
     expect(csv).not.toContain("Negócio a");
     expect(fileName).toBe("vendas-todos-b2g-2026-10-22.csv");
+  });
+
+  it("período: últimos 3 dias e período específico filtram a lista e a exportação", async () => {
+    renderPanel();
+    await waitForFilters();
+
+    fireEvent.change(weekSelect(), { target: { value: "last-3" } });
+    await waitFor(() => expect(visibleSales()).toEqual(["a", "c"]));
+    expect((await exportAndGetCsv()).fileName).toBe("vendas-todos-2026-10-20-a-2026-10-22-2026-10-22.csv");
+
+    expect(screen.queryByLabelText("Data inicial")).not.toBeInTheDocument();
+    fireEvent.change(weekSelect(), { target: { value: "custom" } });
+    await waitFor(() => expect(visibleSales()).toEqual(["a", "b", "c"]));
+
+    fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-10-14" } });
+    fireEvent.change(screen.getByLabelText("Data final"), { target: { value: "2026-10-14" } });
+    await waitFor(() => expect(visibleSales()).toEqual(["b"]));
+    expect((await exportAndGetCsv()).fileName).toBe("vendas-todos-2026-10-14-a-2026-10-14-2026-10-22.csv");
   });
 });
 

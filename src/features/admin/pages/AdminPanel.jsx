@@ -1,6 +1,6 @@
 import styles from "./AdminPanel.module.css";
 
-import { Suspense, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
 import GoalWidget from "../components/GoalWidget/GoalWidget";
@@ -10,11 +10,14 @@ import SaleWidget from "../components/SaleWidget/SaleWidget";
 import SalesFilters from "../components/SalesFilters/SalesFilters";
 import SdrRankWidget from "../components/SdrRankWidget/SdrRankWidget";
 import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
+import { ALL_PERIODS, resolvePeriod } from "../utils/periods";
 
 export default function AdminPanel() {
   const [selectedVendorId, setSelectedVendorId] = useState("");
-  const [selectedWeek, setSelectedWeek] = useState("");
+  const [periodSelection, setPeriodSelection] = useState(ALL_PERIODS);
   const [selectedSegment, setSelectedSegment] = useState("");
+
+  const period = useMemo(() => resolvePeriod(periodSelection), [periodSelection]);
 
   return (
     <div className={styles.page}>
@@ -22,8 +25,9 @@ export default function AdminPanel() {
         <SalesFilters
           selectedVendorId={selectedVendorId}
           onVendorChange={setSelectedVendorId}
-          selectedWeek={selectedWeek}
-          onWeekChange={setSelectedWeek}
+          periodSelection={periodSelection}
+          onPeriodChange={setPeriodSelection}
+          period={period}
           selectedSegment={selectedSegment}
           onSegmentChange={setSelectedSegment}
         />
@@ -39,7 +43,7 @@ export default function AdminPanel() {
         <div className={styles.salesArea}>
           <ErrorBoundary location="Admin › vendas cadastradas">
             <Suspense fallback={<WidgetFallback title="Vendas cadastradas" />}>
-              <SaleWidget vendorId={selectedVendorId} weekKey={selectedWeek} segment={selectedSegment} />
+              <SaleWidget vendorId={selectedVendorId} period={period} segment={selectedSegment} />
             </Suspense>
           </ErrorBoundary>
         </div>

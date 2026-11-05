@@ -1,0 +1,36 @@
+.field {
+  composes: field from "../SalesFilters/SalesFilters.module.css";
+}
+
+.label {
+  composes: label from "../SalesFilters/SalesFilters.module.css";
+}
+
+.select {
+  composes: select from "../SalesFilters/SalesFilters.module.css";
+}
+
+.dateInput {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-size: 14px;
+  transition:
+    border-color 0.2s ease,
+    outline-color 0.2s ease;
+}
+
+.dateInput:hover {
+  border-color: #d1d5db;
+}
+
+.dateInput:focus-visible {
+  border-color: var(--color-primary);
+  outline-color: var(--color-primary-field);
+  outline-width: 3px;
+}

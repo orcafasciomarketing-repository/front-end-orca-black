@@ -25,10 +25,65 @@
 
 .item {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto auto;
+  grid-template-columns: 10px minmax(0, 1fr) auto auto 16px;
   align-items: center;
   gap: 8px;
   font-size: 14px;
+}
+
+.expandable {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toggle {
+  width: 100%;
+  margin: -4px -6px;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  outline: 2px solid transparent;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: content-box;
+}
+
+.toggle:hover {
+  background: var(--color-background);
+}
+
+.toggle:focus-visible {
+  outline-color: var(--color-primary);
+}
+
+.chevron {
+  color: var(--color-muted);
+  font-size: 12px;
+  text-align: center;
+  transition: transform 0.2s ease;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-left: 18px;
+  padding-left: 12px;
+  border-left: 2px solid var(--color-border);
+}
+
+.details .item {
+  color: var(--color-muted);
+  font-size: 13px;
 }
 
 .swatch {

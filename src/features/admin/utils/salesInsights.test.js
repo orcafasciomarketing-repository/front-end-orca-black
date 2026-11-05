@@ -6,13 +6,14 @@ import {
   concentration,
   forecast,
   goalTrack,
-  salesHeatmap,
+  salesCalendar,
   segmentShare,
   ticketBySegment,
   ticketByVendor,
   variation,
   weeklyTotals,
 } from "./salesInsights";
+import { resolvePeriod } from "./periods";
 
 const vendor = (id, name) => ({ _id: id, vendorName: name });
 
@@ -42,11 +43,11 @@ describe("salesInsights", () => {
       sale({ value: 2000, realizedAt: "2026-10-13T15:00:00.000Z" }),
     ];
 
-    expect(buildKpis(sales, "2026-10-19")).toEqual({
+    expect(buildKpis(sales, resolvePeriod({ value: "2026-10-19" }, now))).toEqual({
       current: { total: 4000, count: 2, average: 2000 },
       previous: { total: 2000, count: 1, average: 2000 },
     });
-    expect(buildKpis(sales, "")).toEqual({
+    expect(buildKpis(sales, null)).toEqual({
       current: { total: 6000, count: 3, average: 2000 },
       previous: null,
     });
@@ -93,16 +94,24 @@ describe("salesInsights", () => {
     ]);
   });
 
-  it("o mapa de calor usa dia da semana e hora de São Paulo", () => {
-    const { cells, max } = salesHeatmap([
-      sale({ realizedAt: "2026-10-20T13:30:00.000Z" }),
-      sale({ realizedAt: "2026-10-20T13:59:00.000Z", value: 500 }),
-      sale({ realizedAt: "2026-10-26T02:00:00.000Z" }),
-    ]);
+  it("o calendário organiza os dias por semana, conta as vendas e soma cada dia da semana", () => {
+    const { weeks, weekdayTotals, max } = salesCalendar(
+      [
+        sale({ realizedAt: "2026-10-20T03:00:00.000Z" }),
+        sale({ realizedAt: "2026-10-20T15:00:00.000Z", value: 500 }),
+        sale({ realizedAt: "2026-10-27T15:00:00.000Z" }),
+      ],
+      ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"],
+    );
 
-    expect(cells[1][10]).toEqual({ count: 2, value: 1500 });
-    expect(cells[6][23]).toEqual({ count: 1, value: 1000 });
+    expect(weeks.map((week) => week.week)).toEqual(["2026-10-19", "2026-10-26"]);
+    expect(weeks[0].cells[0]).toEqual({ day: "2026-10-19", inRange: false, count: 0, value: 0 });
+    expect(weeks[0].cells[1]).toEqual({ day: "2026-10-20", inRange: true, count: 2, value: 1500 });
+    expect(weeks[0].total).toEqual({ count: 2, value: 1500 });
+    expect(weeks[1].cells[2].inRange).toBe(false);
+    expect(weekdayTotals[1]).toEqual({ count: 3, value: 2500 });
     expect(max).toBe(2);
+    expect(salesCalendar([], [])).toMatchObject({ weeks: [], max: 0 });
   });
 
   it("participação por setor soma 100%", () => {
@@ -123,7 +132,11 @@ describe("salesInsights", () => {
 
     expect(result.top.map((item) => item.label)).toEqual(["A", "B", "C"]);
     expect(result.topShare).toBe(0.8);
-    expect(result.rest).toEqual({ count: 2, value: 3000, share: 0.2 });
+    expect(result.rest).toMatchObject({ count: 2, value: 3000, share: 0.2 });
+    expect(result.rest.items.map((item) => [item.label, item.share])).toEqual([
+      ["D", 0.13333333333333333],
+      ["E", 0.06666666666666667],
+    ]);
   });
 
   it("vendas por semana preenche semanas vazias e separa vendas de renovações", () => {
