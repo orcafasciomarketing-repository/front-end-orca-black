@@ -16,6 +16,9 @@ vi.mock("../utils/downloadFile", () => ({
 vi.mock("../components/RankWidget/RankWidget", () => ({
   default: () => <p>Rank</p>,
 }));
+vi.mock("../components/GoalWidget/GoalWidget", () => ({
+  default: () => <p>Meta</p>,
+}));
 vi.mock("../components/SdrRankWidget/SdrRankWidget", () => ({
   default: () => <p>Rank das passagens</p>,
 }));

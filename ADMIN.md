@@ -105,6 +105,9 @@ As duas rotas são privadas (o token vai pelo `apiClient`) e respondem `{ data: 
 ### `getRankSdrs()`
 `GET /analytics/sdr-ranking`. Devolve a lista de passagens (top 3), com `sdrId`, `name`, `job` e `points`. Usada pelo `SdrRankWidget`.
 
+### `getGoal()`
+`GET /analytics/goal`. Devolve `{ goal, total, percent }`: a meta em reais, o total já vendido e o percentual atingido. É a mesma rota da tela "Meta Black" da TV. Usada pelo `GoalWidget`.
+
 ---
 
 ## 4. Hooks
@@ -200,6 +203,7 @@ O `AdminLayout` é uma rota sem `path` (rota de layout): ele envolve as filhas s
 **Grade** ([AdminPanel.module.css](src/features/admin/pages/AdminPanel.module.css)):
 - `.grid`: 3 colunas iguais, linhas de no mínimo 240px e 24px de espaço.
 - `.salesArea`: Vendas cadastradas ocupa **2 colunas e 2 linhas**, com no máximo 640px de altura. A lista rola por dentro.
+- O `GoalWidget` fica no topo, dentro de `.full`, ocupando a largura toda.
 - Os outros widgets ocupam 1 coluna cada e vão preenchendo a grade na ordem: os dois rankings ficam empilhados à direita das vendas.
 - **Widgets novos:** coloque o componente dentro do `.grid`. Por padrão ele ocupa 1 coluna. Para ocupar 2, envolva com `<div className={styles.wide}>`; para a largura toda, `<div className={styles.full}>`.
 - Abaixo de 1100px de largura a grade vira 1 coluna.
@@ -288,6 +292,18 @@ Top 3 de vendedores, com **duas abas**: **Vendas** (`sales`, abre nela) e **Reno
 [src/features/admin/components/SdrRankWidget/SdrRankWidget.jsx](src/features/admin/components/SdrRankWidget/SdrRankWidget.jsx)
 
 Top 3 de passagens (SDR, Suporte e CS) da campanha inteira. Busca com `useRankSdrs()` ([useRankSdrs.js](src/features/admin/hooks/useRankSdrs.js), chave `["admin-rank-sdr"]`) e entrega para o `RankList`, com `id` igual a `sdrId`. Sem passagens, mostra "Nenhuma passagem ainda".
+
+### `GoalWidget()`
+
+[src/features/admin/components/GoalWidget/GoalWidget.jsx](src/features/admin/components/GoalWidget/GoalWidget.jsx)
+
+Barra de progresso da meta da Black Friday, no mesmo espírito da tela "Meta Black" da TV, mas com o visual claro do painel. Busca com `useGoal()` ([useGoal.js](src/features/admin/hooks/useGoal.js), `useSuspenseQuery` com a chave `["admin-goal"]`).
+- No cabeçalho, o percentual atingido (`7,07%`), formatado em pt-BR com até 2 casas.
+- No corpo, o total vendido em destaque e "de R$ meta" ao lado.
+- A barra preenche `percent`%, limitada entre 0 e 100: passar da meta deixa a barra cheia, mas o percentual do cabeçalho mostra o valor real (ex.: `150%`).
+- Embaixo, "Faltam R$ X" ou, com a meta batida, "Meta batida!" em verde.
+- A barra tem `role="progressbar"` com `aria-valuenow`, para leitores de tela.
+- CSS: `.percent` é o selo roxo do cabeçalho; `.track` é o trilho cinza; `.fill` é o preenchimento roxo, que anima a largura quando o valor muda; `.reached` pinta o texto de verde.
 
 ### `RankList({ items, emptyText })`
 
@@ -391,6 +407,7 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 | `utils/passages.test.js` | Lista e nomes das pessoas da passagem; lista vazia sem passagem; ignora pessoa não populada; aceita venda antiga com `sdrId` |
 | `utils/weeks.test.js` | Semana pela segunda-feira de São Paulo; domingo 23:59 e segunda 00:00 nos limites certos; semana anterior na virada do mês; intervalo de segunda a segunda; nomes "Semana atual" e "Semana passada"; semana do dia 1º do mês (inclusive na virada do mês em São Paulo); todas as semanas do mês mesmo sem vendas; começo do mês; volta mais com venda antes do mês; filtro sem semana devolve tudo; filtro respeita os limites |
 | `components/RankWidget/RankWidget.test.jsx` | Abre na aba Vendas com posição, nome, cargo e pontos ("1 ponto" no singular); a aba Renovação busca e mostra o ranking de farm; avisa quando ninguém pontuou |
+| `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!" |
 | `components/SdrRankWidget/SdrRankWidget.test.jsx` | Mostra o ranking de passagens vindo do backend; avisa quando ninguém fez passagem |
 | `pages/AdminLayout.test.jsx` | Menu com Dashboard e Erros, abrindo no dashboard marcado; clicar em Erros troca a página sem recarregar e muda o item marcado; abrir direto em `/admin/erros` marca só Erros |
 | `pages/ErrorsPage.test.jsx` | Título "Erros" e os widgets de logs de erro e de teste |

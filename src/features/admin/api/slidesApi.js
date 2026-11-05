@@ -24,3 +24,8 @@ export const getRankSdrs = async () => {
   const response = await http.get("/analytics/sdr-ranking");
   return response.data.data;
 };
+
+export const getGoal = async () => {
+  const response = await http.get("/analytics/goal");
+  return response.data.data;
+};

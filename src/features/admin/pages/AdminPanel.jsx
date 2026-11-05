@@ -3,6 +3,7 @@ import styles from "./AdminPanel.module.css";
 import { Suspense, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
+import GoalWidget from "../components/GoalWidget/GoalWidget";
 import PageHeader from "../components/PageHeader/PageHeader";
 import RankWidget from "../components/RankWidget/RankWidget";
 import SaleWidget from "../components/SaleWidget/SaleWidget";
@@ -25,6 +26,13 @@ export default function AdminPanel() {
         />
       </PageHeader>
       <div className={styles.grid}>
+        <div className={styles.full}>
+          <ErrorBoundary location="Admin › meta">
+            <Suspense fallback={<WidgetFallback title="Meta da Black Friday" />}>
+              <GoalWidget />
+            </Suspense>
+          </ErrorBoundary>
+        </div>
         <div className={styles.salesArea}>
           <ErrorBoundary location="Admin › vendas cadastradas">
             <Suspense fallback={<WidgetFallback title="Vendas cadastradas" />}>

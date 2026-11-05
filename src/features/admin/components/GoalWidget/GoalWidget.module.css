@@ -1,0 +1,57 @@
+.percent {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--color-primary-field);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+}
+
+.amounts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+}
+
+.total {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.goal {
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.track {
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-background);
+  overflow: hidden;
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--color-primary);
+  transition: width 0.8s ease;
+}
+
+.remaining {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.reached {
+  color: var(--color-success);
+  font-weight: 600;
+}
