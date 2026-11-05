@@ -25,6 +25,12 @@
   border-radius: 3px;
 }
 
+.swatchDashed {
+  width: 14px;
+  flex-shrink: 0;
+  border-top: 2px dashed;
+}
+
 .plot {
   position: relative;
   width: 100%;
@@ -70,6 +76,11 @@
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.dashedLine {
+  composes: line;
+  stroke-dasharray: 6 4;
 }
 
 .dot {

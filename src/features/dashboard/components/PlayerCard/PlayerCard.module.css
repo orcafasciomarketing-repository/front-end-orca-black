@@ -43,11 +43,11 @@
 
 .name {
   max-width: 100%;
-  font-size: clamp(20px, 2.08vw, 40px);
+  font-size: clamp(12px, 1.1vw, 21px);
   font-weight: 700;
   line-height: 1.1;
   text-transform: uppercase;
-  overflow-wrap: anywhere;
+  white-space: nowrap;
 }
 
 .score {

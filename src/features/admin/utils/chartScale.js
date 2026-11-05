@@ -36,3 +36,23 @@ export function formatCompactCurrency(value) {
 export function formatPassages(value) {
   return `${value} ${value === 1 ? "passagem" : "passagens"}`;
 }
+
+const percentFormatter = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
+
+export function formatPercent(value) {
+  return percentFormatter.format(value ?? 0);
+}
+
+const variationFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "percent",
+  maximumFractionDigits: 1,
+  signDisplay: "exceptZero",
+});
+
+export function formatVariation(value) {
+  return variationFormatter.format(value);
+}
+
+export function formatSalesCount(value) {
+  return `${value} ${value === 1 ? "venda" : "vendas"}`;
+}

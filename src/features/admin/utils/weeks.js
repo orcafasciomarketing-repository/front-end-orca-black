@@ -87,3 +87,13 @@ export function getDayKey(date) {
 export function addDays(dayKey, days) {
   return new Date(new Date(`${dayKey}T00:00:00.000Z`).getTime() + days * DAY_MS).toISOString().slice(0, 10);
 }
+
+export function daysBetween(fromDayKey, toDayKey) {
+  return Math.round((mondayOf(toDayKey).getTime() - mondayOf(fromDayKey).getTime()) / DAY_MS);
+}
+
+export function getWeekdayAndHour(date) {
+  const clock = toSaoPauloClock(date);
+
+  return { weekday: (clock.getUTCDay() + 6) % 7, hour: clock.getUTCHours() };
+}

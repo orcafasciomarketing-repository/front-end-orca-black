@@ -47,7 +47,7 @@ export function salesToCsv(sales) {
   return BYTE_ORDER_MARK + [header, ...rows].join("\r\n");
 }
 
-const toSlug = (text) =>
+export const toSlug = (text) =>
   text
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

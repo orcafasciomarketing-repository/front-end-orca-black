@@ -1,0 +1,97 @@
+.heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.scroller {
+  overflow-x: auto;
+}
+
+.grid {
+  min-width: 560px;
+  display: grid;
+  grid-template-columns: 40px repeat(24, minmax(14px, 1fr));
+  gap: 3px;
+}
+
+.hourLabel,
+.rowLabel {
+  color: var(--color-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.rowLabel {
+  align-self: center;
+}
+
+.cell {
+  height: 22px;
+  border-radius: 3px;
+}
+
+.level0 {
+  background: var(--heat-0);
+}
+
+.level1 {
+  background: var(--heat-1);
+}
+
+.level2 {
+  background: var(--heat-2);
+}
+
+.level3 {
+  background: var(--heat-3);
+}
+
+.level4 {
+  background: var(--heat-4);
+}
+
+.level5 {
+  background: var(--heat-5);
+}
+
+.active {
+  outline: 2px solid var(--color-text);
+  outline-offset: 1px;
+}
+
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+
+.detail {
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.scale {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--color-muted);
+  font-size: 11px;
+}
+
+.scale .cell {
+  width: 12px;
+  height: 12px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

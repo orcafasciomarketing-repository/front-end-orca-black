@@ -427,22 +427,34 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 
 [src/features/admin/pages/ChartsPage.jsx](src/features/admin/pages/ChartsPage.jsx)
 
-`PageHeader` com o título "Gráficos" e um seletor de **semana** próprio, e abaixo a grade com os sete gráficos. O seletor tem as mesmas opções do Dashboard (`useWeekOptions`), mas o estado é separado: filtrar aqui não muda o Dashboard, e vice-versa.
+`PageHeader` com o título "Gráficos", o botão **Modo escuro** e um seletor de **semana** próprio. Abaixo vêm os **indicadores** (`SalesKpis`) e a grade com os catorze gráficos. O seletor tem as mesmas opções do Dashboard (`useWeekOptions`), mas o estado é separado: filtrar aqui não muda o Dashboard, e vice-versa.
 
 - `CHARTS` lista os gráficos na ordem da grade: `title` (usado no carregamento e no erro), `Chart` (o componente) e `className` opcional.
 - Cada gráfico fica dentro de um `ErrorBoundary` e de um `Suspense` com `WidgetFallback`, como no Dashboard. Se um gráfico der erro (por exemplo, as equipes não carregam), só ele mostra o erro.
-- Todos os gráficos usam **só as vendas ativas**, como a meta e os rankings.
-- **CSS** ([ChartsPage.module.css](src/features/admin/pages/ChartsPage.module.css)): grade de 2 colunas; "Vendas por pessoa" ocupa 2 linhas (`.tall`), porque tem uma barra por vendedor. Abaixo de 1100px vira 1 coluna. O seletor reaproveita o visual dos filtros do Dashboard com `composes` do `SalesFilters.module.css`, sem mudar aquele arquivo. Também define `--chart-grid` (cinza das linhas de grade) e `--chart-reference` (cinza da linha da meta e da linha do mouse).
+- Todos os gráficos usam **só as vendas ativas**, como a meta e os rankings. A exceção é "Cancelamentos", que olha as canceladas.
+- **Fim da campanha:** [utils/campaign.js](src/features/admin/utils/campaign.js) guarda `CAMPAIGN_END_DAY = "2026-12-01"` (Cyber Monday). A previsão, o ritmo necessário e as linhas tracejadas do "Acumulado x meta" usam essa data. Para outra campanha, é só trocar ali.
+- **Modo escuro:** o botão (`aria-pressed`) liga a classe `.dark` na página, que troca as variáveis de cor (`--color-*`, `--chart-*`, `--heat-*`) só dentro da aba Gráficos; o resto do admin não muda. A escolha fica salva no navegador (`localStorage`, chave `admin-charts-theme`), dentro de `try/catch` porque o navegador pode bloquear o armazenamento; nesse caso abre no claro.
+- **Exportar CSV:** cada card tem um botão "CSV" no canto que baixa os dados daquele gráfico (com a semana no nome do arquivo quando filtrada).
+- **CSS** ([ChartsPage.module.css](src/features/admin/pages/ChartsPage.module.css)): grade de 2 colunas; "Vendas por pessoa" e "Ticket médio" ocupam 2 linhas (`.tall`), porque têm uma barra por vendedor. Abaixo de 1100px vira 1 coluna. O seletor reaproveita o visual dos filtros do Dashboard com `composes` do `SalesFilters.module.css`, sem mudar aquele arquivo. Também define `--chart-grid` (cinza das linhas de grade), `--chart-reference` (cinza da linha da meta e da linha do mouse), as cores das séries (`--chart-blue`, `--chart-orange`, `--chart-aqua`, `--chart-rest`) e os 6 tons do mapa de calor (`--heat-0` a `--heat-5`), cada um com a versão clara e a escura.
+
+**Indicadores** (`SalesKpis`): quatro cartões no topo, seguindo o filtro de semana. Total vendido, vendas fechadas e ticket médio mostram a variação contra a semana anterior (▲ verde / ▼ vermelho, sempre com a seta e o texto, não só a cor). Sem filtro, mostram "Campanha inteira". O quarto cartão é o % da meta da campanha (vem de `getGoal`).
 
 | Gráfico | Tipo | O que mostra | Segue o filtro de semana? |
 |---|---|---|---|
 | Vendas acumuladas | Linha | Valor vendido somado dia a dia (vendas + renovações) | Sim |
 | Vendas acumuladas por setor | Linhas | Uma linha por segmento (B2B, B2G), somando dia a dia | Sim |
-| Acumulado x meta | Linha + linha da meta | O acumulado da campanha com a meta como linha horizontal | **Não**: a meta é da campanha inteira |
+| Acumulado x meta | Linha + linha da meta | O acumulado da campanha com a meta como linha horizontal. O eixo vai até o fim da campanha e, a partir de hoje, saem duas linhas tracejadas: **projeção no ritmo atual** (azul) e **ritmo necessário** para bater a meta (laranja, some quando a meta já foi batida) | **Não**: a meta é da campanha inteira |
+| Previsão de fechamento | Números | Projeção para o fim da campanha, se bate ou não a meta (com ✓ ou !), média por dia até hoje, ritmo necessário por dia, dias restantes e quanto falta | **Não** |
+| Vendas por semana | Colunas | Total de cada semana, vendas e renovações lado a lado, da primeira semana com venda até a atual | **Não**: é a comparação entre semanas |
 | Vendas x renovações por dia | Colunas | Valor vendido em cada dia, vendas e renovações lado a lado (não acumula) | Sim |
 | Vendas por pessoa | Barras | Total de cada vendedor, do maior para o menor | Sim |
 | Vendas por equipe | Barras | Total de cada equipe, do maior para o menor. Equipes sem venda aparecem com R$ 0 | Sim |
 | Passagens por pessoa | Barras | Quantas passagens cada pessoa fez, com o cargo embaixo do nome | Sim |
+| Ticket médio | Barras | Valor médio por venda, por setor e por pessoa, com a quantidade de vendas embaixo do nome | Sim |
+| Participação por setor | Barra 100% | Quanto cada segmento representa do total, com % e valor | Sim |
+| Concentração | Número + barra 100% | Quanto % do total vem dos 3 maiores vendedores, e quanto vem dos demais | Sim |
+| Cancelamentos | Números + barras | Taxa de cancelamento (canceladas ÷ ativas + canceladas), quantidade, valor perdido e valor cancelado por pessoa | Sim |
+| Quando as vendas fecham | Mapa de calor | Quantidade de vendas por dia da semana × hora (horário de Brasília). Quanto mais escuro (no claro) ou mais claro (no escuro), mais vendas | Sim |
 
 **Dias do eixo:** sem filtro, vão do dia da primeira venda até hoje. Com uma semana, vão de segunda até domingo, ou até hoje na semana atual. Dias sem venda entram no eixo (a linha acumulada fica reta, a coluna fica vazia).
 
@@ -450,12 +462,14 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 
 Os gráficos são desenhados em **SVG próprio**, sem biblioteca de gráficos, para não acrescentar dependência ao projeto.
 
-#### `TimeSeriesChart({ title, days, series, variant, reference, formatValue })`
+#### `TimeSeriesChart({ title, days, series, variant, reference, formatValue, formatLabel, formatTitle, columnLabel })`
 
 [components/charts/TimeSeriesChart.jsx](src/features/admin/components/charts/TimeSeriesChart.jsx)
 
 Gráfico com os dias no eixo horizontal e reais no vertical.
-- `series`: lista de `{ key, label, color, values }`, com um valor por dia.
+- `series`: lista de `{ key, label, color, values, dashed? }`, com um valor por dia. Um valor `null` deixa um buraco na linha (é assim que o "Vendido" para em hoje e as linhas tracejadas começam em hoje). `dashed: true` desenha a linha tracejada, sem a bolinha no fim, e a legenda mostra um traço.
+- `formatLabel` / `formatTitle` / `columnLabel`: como escrever o rótulo do eixo, o título da dica e da tabela, e o nome da primeira coluna da tabela. O padrão é o dia ("05/10", coluna "Dia"); o "Vendas por semana" usa "Semana de 05/10".
+- As cores vão em `style` (e não no atributo `fill`) porque são variáveis CSS (`var(--chart-blue)`), que mudam no modo escuro.
 - `variant`: `"line"` (padrão) ou `"columns"`. Em linha, com uma série só, a área embaixo ganha um preenchimento claro (10% da cor). Em colunas, as séries ficam lado a lado em cada dia, com até 24px de largura, cantos de cima arredondados e 2px de espaço entre elas.
 - `reference`: opcional, `{ value, label }`. Desenha uma linha horizontal cinza com o texto no canto direito (a meta).
 - `formatValue`: formata os valores da dica e da tabela.
@@ -474,15 +488,34 @@ Barras horizontais em HTML (lista `<ol>`). Cada item é `{ key, label, value, de
 - `detail` aparece em cinza embaixo do nome (o cargo, nas passagens).
 - CSS: `.row` é a linha (nome à esquerda em 30%, barra à direita); `.track` reserva 128px à direita para o valor; `.bar` tem 16px de altura e a ponta arredondada.
 
+#### `ShareBar({ title, items, formatValue })`
+
+[components/charts/ShareBar.jsx](src/features/admin/components/charts/ShareBar.jsx)
+
+Uma barra horizontal dividida em partes proporcionais (100%), com 2px entre as partes, e embaixo a legenda em lista: cor, nome, % e valor. Cada item é `{ key, label, value, share, color }`. Usada em "Participação por setor" e "Concentração".
+
+#### `Heatmap({ title, rows, cells, max, formatCell })`
+
+[components/charts/Heatmap.jsx](src/features/admin/components/charts/Heatmap.jsx)
+
+Grade de 7 linhas (dias) × 24 colunas (horas). A cor de cada quadrado vem de `heatLevel(quantidade, máximo)`: 0 (sem venda) a 5 (o máximo), um tom de azul por nível. Passando o mouse, a linha de baixo mostra "Ter, 10h: 1 venda, R$ 30.000,00". Ao lado fica a escala "Menos → Mais". Em telas estreitas a grade rola para o lado. Também tem a tabela invisível para leitores de tela, só com os horários que tiveram venda.
+
+#### `InsightWidgets`
+
+[components/InsightWidgets/InsightWidgets.jsx](src/features/admin/components/InsightWidgets/InsightWidgets.jsx)
+
+Os cards de análise: `SalesKpis`, `ForecastCard`, `WeeklySalesChart`, `TicketChart`, `SegmentShareChart`, `ConcentrationChart`, `CancellationChart` e `HeatmapChart`. Usam o `ChartCard` dos `SalesChartWidgets`.
+
 #### `SalesChartWidgets`
 
 [components/SalesChartWidgets/SalesChartWidgets.jsx](src/features/admin/components/SalesChartWidgets/SalesChartWidgets.jsx)
 
-Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesChart`, `GoalTrackChart`, `FunnelSalesChart`, `VendorSalesChart`, `TeamSalesChart`, `PassageChart`), todos recebendo `weekKey` (o `GoalTrackChart` ignora). `ChartCard({ title, description, children })` é a moldura comum: card branco, título, descrição em cinza e o corpo. Sem dados, cada card mostra um aviso ("Nenhuma venda no período", "Nenhuma passagem no período", "Nenhuma venda ainda").
+Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesChart`, `GoalTrackChart`, `FunnelSalesChart`, `VendorSalesChart`, `TeamSalesChart`, `PassageChart`), todos recebendo `weekKey` (o `GoalTrackChart` ignora). `ChartCard({ title, description, csvRows, weekKey, children })` é a moldura comum: card, título, descrição em cinza, o botão "CSV" (quando `csvRows` tem dados além do cabeçalho) e o corpo. `csvRows` é uma lista de linhas (cada linha uma lista de células); o botão monta o arquivo com `tableToCsv` e baixa com `downloadFile`. Sem dados, cada card mostra um aviso ("Nenhuma venda no período", "Nenhuma passagem no período", "Nenhuma venda ainda").
 
 ### Hooks dos gráficos
 
 - [useSalesCharts(weekKey)](src/features/admin/hooks/useSalesCharts.js): `useSuspenseQuery(adminSalesQuery(""))` com um `select` que roda `buildSalesCharts`. Usa **o mesmo cache** da lista de vendas do Dashboard (chave `["admin-sales", "all"]`), então os sete gráficos fazem uma requisição só, e trocar de semana não busca de novo: só recalcula.
+- [useSalesInsights(weekKey)](src/features/admin/hooks/useSalesInsights.js): igual ao `useSalesCharts`, no mesmo cache, mas o `select` roda `buildSalesInsights` (indicadores, ticket, cancelamentos, mapa de calor, participação, concentração e semanas).
 - [useTeams()](src/features/admin/hooks/useTeams.js): busca as equipes com `getTeams`, chave `["admin-teams"]`.
 - [useElementWidth(larguraInicial)](src/features/admin/hooks/useElementWidth.js): devolve `[ref, largura]`. Mede o elemento com `ResizeObserver` e atualiza quando ele muda de tamanho. Sem `ResizeObserver` (nos testes), fica na largura inicial.
 
@@ -505,7 +538,28 @@ Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesC
 | `buildSalesCharts(vendas, semana, agora)` | Junta tudo: filtra as ativas, aplica a semana e devolve `{ days, activeSales, total, bySegment, byFunnel, byVendor, passages, campaign }`. `campaign` é o acumulado da campanha inteira, sem a semana, para o "Acumulado x meta" |
 
 - [utils/chartScale.js](src/features/admin/utils/chartScale.js): `niceTicks(máximo)` devolve os valores do eixo (0, 25, 50, 75, 100…), sempre redondos (passos de 1, 2, 2,5 ou 5 vezes uma potência de 10); `formatCompactCurrency(valor)` escreve "R$ 200 mil", "R$ 2,5 mi" ou "R$ 1,2 bi" (até 1 casa decimal, sem ",0"). A abreviação é feita no código, e não com o `notation: "compact"` do `Intl`, porque o `Intl` muda de versão para versão do Node: no Node 22 do Cloudflare ele escrevia "R$ 3,0 mi" e no Node 24 "R$ 3 mi", e isso derrubou um deploy; `formatPassages(n)` escreve "1 passagem" ou "3 passagens".
-- [utils/chartColors.js](src/features/admin/utils/chartColors.js): as cores das séries. Azul `#2a78d6` para a primeira (e para os gráficos de uma série só), laranja `#eb6834` para a segunda e verde-água `#1baf7a` para um segmento desconhecido. `segmentColor(segmento)` fixa B2B em azul e B2G em laranja, para a cor de cada segmento não mudar quando o filtro tira um deles. O par azul/laranja foi conferido para daltonismo e contraste com o fundo branco.
+- [utils/chartColors.js](src/features/admin/utils/chartColors.js): as cores das séries, como variáveis CSS com a cor clara de reserva (`var(--chart-blue, #2a78d6)`). Azul para a primeira (e para os gráficos de uma série só), laranja para a segunda, verde-água para um segmento desconhecido e cinza (`rest`) para "Demais". No escuro viram `#3987e5`, `#d95926` e `#199e70`. `segmentColor(segmento)` fixa B2B em azul e B2G em laranja, para a cor de cada segmento não mudar quando o filtro tira um deles. As cores foram conferidas para daltonismo e contraste, no fundo claro e no escuro. `heatLevel(quantidade, máximo)` dá o nível de 0 a 5 do mapa de calor.
+- `chartScale.js` também tem `formatPercent` ("43,4%"), `formatVariation` ("+5,1%", "-12,4%") e `formatSalesCount` ("1 venda", "2 vendas").
+- `weeks.js` ganhou `daysBetween(dia1, dia2)` (dias entre duas datas "AAAA-MM-DD") e `getWeekdayAndHour(data)` (dia da semana, com segunda = 0, e hora, no horário de São Paulo).
+
+[utils/salesInsights.js](src/features/admin/utils/salesInsights.js), as contas das análises:
+
+| Função | O que faz |
+|---|---|
+| `summarize(vendas)` | `{ total, count, average }` |
+| `variation(atual, anterior)` | Variação em fração (0,05 = +5%); `null` quando o anterior é 0 |
+| `buildKpis(ativas, semana)` | `{ current, previous }`: a semana e a anterior; sem semana, `previous` é `null` |
+| `ticketBySegment` / `ticketByVendor` | Ticket médio por setor / por vendedor, do maior para o menor, com "N vendas" em `detail` |
+| `cancellationSummary(vendas)` | `{ count, closed, rate, lostValue, byVendor }`; recebe as vendas de todos os status |
+| `salesHeatmap(ativas)` | `{ cells, max }`: `cells[dia][hora] = { count, value }` |
+| `segmentShare(ativas)` / `shareOf(itens)` | Valor e fração do total de cada segmento / de cada item |
+| `concentration(ativas)` | `{ top, topShare, rest }`: os 3 maiores vendedores e o resto |
+| `weeklyTotals(ativas, agora)` | `{ weeks, sales, renewals }` da primeira semana com venda até a atual, semanas vazias com 0 |
+| `forecast(campanha, meta, fim, agora)` | Média por dia (do primeiro dia com venda até hoje), dias restantes depois de hoje, projeção (vendido + média × dias restantes), ritmo necessário (falta ÷ dias restantes), se já bateu e se vai bater |
+| `goalTrack(campanha, meta, fim, agora)` | Os dias até o fim da campanha e as três séries do "Acumulado x meta" (vendido, projeção, ritmo necessário), com `null` onde a linha não existe |
+| `buildSalesInsights(vendas, semana, agora)` | Junta tudo para o `useSalesInsights` |
+
+[utils/tableCsv.js](src/features/admin/utils/tableCsv.js): `tableToCsv(linhas)` (mesmo formato do CSV de vendas: BOM, `;` e escape), `timeSeriesRows` e `barRows` (montam as linhas a partir dos dados dos gráficos), `formatCsvNumber` (vírgula decimal) e `buildChartFileName(título, semana)` ("grafico-ticket-medio-semana-2026-10-19-2026-10-22.csv"). `toSlug` foi exportado do `salesCsv.js` para ser reaproveitado aqui.
 
 ---
 
@@ -519,9 +573,11 @@ Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesC
 | `utils/weeks.test.js` | Semana pela segunda-feira de São Paulo; domingo 23:59 e segunda 00:00 nos limites certos; semana anterior na virada do mês; intervalo de segunda a segunda; nomes "Semana atual" e "Semana passada"; semana do dia 1º do mês (inclusive na virada do mês em São Paulo); todas as semanas do mês mesmo sem vendas; começo do mês; volta mais com venda antes do mês; filtro sem semana devolve tudo; filtro respeita os limites |
 | `components/RankWidget/RankWidget.test.jsx` | Abre na aba Vendas com posição, nome, cargo e pontos ("1 ponto" no singular); a aba Renovação busca e mostra o ranking de farm; avisa quando ninguém pontuou |
 | `utils/chartData.test.js` | Dias do eixo sem semana, com semana atual (até hoje) e semana passada (7 dias); sem vendas não tem dias; dia pelo horário de São Paulo; acumulado com dias sem venda; séries por segmento em ordem alfabética com "Sem setor"; vendas x renovações por dia sem acumular; totais por vendedor do maior para o menor; totais por equipe com todas as equipes e "Sem equipe"; passagens por pessoa com cargo e `sdrId` antigo; canceladas fora e semana aplicada, mas a campanha com todas; formato do dia |
-| `utils/chartScale.test.js` | Escala começa em 0 e termina num número redondo acima do máximo; escala mínima sem valor; "passagem" no singular |
-| `pages/ChartsPage.test.jsx` | Sem vendas, cada gráfico mostra o aviso; se as equipes não carregam, só o gráfico de equipes some; as setas do teclado mostram o dia e o valor na dica, e ela some ao sair do foco |
-| `pages/ChartsPage.mocks.test.jsx` | Com os dados falsos: os sete gráficos na ordem; acumulado e acumulado x meta chegam em R$ 212 mil (sem as canceladas) com a meta de R$ 3 mi; B2B R$ 92 mil e B2G R$ 120 mil; vendas por pessoa, por equipe e passagens da campanha; filtrando a semana atual, os valores mudam (R$ 82 mil) e o acumulado x meta continua na campanha inteira |
+| `utils/chartScale.test.js` | Escala começa em 0 e termina num número redondo acima do máximo; escala mínima sem valor; reais compactos; percentual e variação com sinal; "passagem" e "venda" no singular |
+| `utils/salesInsights.test.js` | Variação; indicadores da semana e da anterior; ticket médio por setor e pessoa; cancelamentos com taxa, valor e pessoa; mapa de calor no horário de São Paulo; participação somando 100%; concentração dos 3 maiores; semanas vazias com 0; previsão e ritmo necessário; nada projetado depois do fim; linhas tracejadas começando em hoje; sem ritmo necessário com a meta batida |
+| `utils/tableCsv.test.js` | Número com vírgula; BOM, `;` e escape; linhas dos gráficos de dia e de barras; nome do arquivo sem acento e com a semana |
+| `pages/ChartsPage.test.jsx` | Sem vendas, cada gráfico mostra o aviso; se as equipes não carregam, só o gráfico de equipes some; as setas do teclado mostram o dia e o valor na dica, e ela some ao sair do foco; o botão CSV baixa os dados certos; o modo escuro liga, desliga e fica salvo; a previsão mostra os dias restantes e o ritmo necessário |
+| `pages/ChartsPage.mocks.test.jsx` | Com os dados falsos: os indicadores e os catorze gráficos na ordem; previsão (R$ 589.913,04 projetados, R$ 68.000,00 por dia em 41 dias); vendas por semana; ticket médio por setor; participação B2B 43,4% / B2G 56,6%; concentração de 64,9% nos 3 maiores; cancelamentos 11,1% (2 de 18, R$ 27.000,00); Ter 10h no mapa de calor; com a semana atual, indicadores com variação (+5,1%, +20%, -12,4%) e cancelamentos de 14,3%; acumulado e acumulado x meta chegam em R$ 212 mil (sem as canceladas) com a meta de R$ 3 mi; B2B R$ 92 mil e B2G R$ 120 mil; vendas por pessoa, por equipe e passagens da campanha; filtrando a semana atual, os valores mudam (R$ 82 mil) e o acumulado x meta continua na campanha inteira |
 | `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!"; lista vendas, passagens e renovações por setor, sem as canceladas; avisa em cada coluna quando não tem nada |
 | `utils/sectorCounts.test.js` | Vendas e renovações por segmento em ordem alfabética; uma passagem por pessoa, pelo cargo, em vendas e renovações; ignora canceladas; aceita `sdrId` antigo e agrupa sem segmento ou cargo em "Sem setor" |
 | `components/SdrRankWidget/SdrRankWidget.test.jsx` | Mostra o ranking de passagens vindo do backend; avisa quando ninguém fez passagem |

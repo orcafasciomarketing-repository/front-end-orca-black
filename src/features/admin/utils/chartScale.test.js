@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { formatCompactCurrency, formatPassages, niceTicks } from "./chartScale";
+import {
+  formatCompactCurrency,
+  formatPassages,
+  formatPercent,
+  formatSalesCount,
+  formatVariation,
+  niceTicks,
+} from "./chartScale";
 
 describe("chartScale", () => {
   it("niceTicks começa em 0 e termina num número redondo acima do máximo", () => {
@@ -26,5 +33,18 @@ describe("chartScale", () => {
   it("formatPassages usa o singular com 1", () => {
     expect(formatPassages(1)).toBe("1 passagem");
     expect(formatPassages(3)).toBe("3 passagens");
+  });
+
+  it("formatPercent e formatVariation em português, com sinal na variação", () => {
+    expect(formatPercent(0.4339)).toBe("43,4%");
+    expect(formatPercent(0.12)).toBe("12%");
+    expect(formatVariation(0.0513)).toBe("+5,1%");
+    expect(formatVariation(-0.124)).toBe("-12,4%");
+    expect(formatVariation(0)).toBe("0%");
+  });
+
+  it("formatSalesCount usa o singular com 1", () => {
+    expect(formatSalesCount(1)).toBe("1 venda");
+    expect(formatSalesCount(2)).toBe("2 vendas");
   });
 });

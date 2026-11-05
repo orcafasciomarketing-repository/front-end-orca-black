@@ -27,13 +27,41 @@ function columnPath(x, y, width, height) {
   ].join(" ");
 }
 
-export default function TimeSeriesChart({ title, days, series, variant = "line", reference, formatValue }) {
+const hasValue = (value) => value !== null && value !== undefined;
+
+const lastIndexWithValue = (values) => values.findLastIndex(hasValue);
+
+function lineSegments(values, pointOf) {
+  const segments = [[]];
+
+  values.forEach((value, index) => {
+    if (hasValue(value)) {
+      segments.at(-1).push(pointOf(index, value));
+    } else if (segments.at(-1).length) {
+      segments.push([]);
+    }
+  });
+
+  return segments.filter((segment) => segment.length);
+}
+
+export default function TimeSeriesChart({
+  title,
+  days,
+  series,
+  variant = "line",
+  reference,
+  formatValue,
+  formatLabel = formatDay,
+  formatTitle = formatLabel,
+  columnLabel = "Dia",
+}) {
   const [containerRef, width] = useElementWidth(640);
   const [hoverIndex, setHoverIndex] = useState(null);
 
   const plotWidth = Math.max(width - MARGIN.left - MARGIN.right, 1);
   const plotHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
-  const maxValue = Math.max(...series.flatMap((item) => item.values), reference?.value ?? 0);
+  const maxValue = Math.max(...series.flatMap((item) => item.values.filter(hasValue)), reference?.value ?? 0);
   const ticks = niceTicks(maxValue);
   const yMax = ticks[ticks.length - 1];
 
@@ -84,7 +112,10 @@ export default function TimeSeriesChart({ title, days, series, variant = "line",
         <ul className={styles.legend}>
           {series.map((item) => (
             <li key={item.key} className={styles.legendItem}>
-              <span className={styles.swatch} style={{ background: item.color }} />
+              <span
+                className={item.dashed ? styles.swatchDashed : styles.swatch}
+                style={item.dashed ? { borderColor: item.color } : { background: item.color }}
+              />
               {item.label}
             </li>
           ))}
@@ -121,7 +152,7 @@ export default function TimeSeriesChart({ title, days, series, variant = "line",
             (day, index) =>
               index % labelEvery === 0 && (
                 <text key={day} className={styles.axisLabel} x={xOf(index)} y={HEIGHT - 8} textAnchor="middle">
-                  {formatDay(day)}
+                  {formatLabel(day)}
                 </text>
               ),
           )}
@@ -166,46 +197,55 @@ export default function TimeSeriesChart({ title, days, series, variant = "line",
                   const x = xOf(index) - groupWidth / 2 + seriesIndex * (columnWidth + COLUMN_GAP);
 
                   return (
+                    hasValue(value) &&
                     height > 0 && (
                       <path
                         key={`${item.key}-${days[index]}`}
                         d={columnPath(x, yOf(value), columnWidth, height)}
-                        fill={item.color}
+                        style={{ fill: item.color }}
                       />
                     )
                   );
                 }),
               )
             : series.map((item) => {
-                const points = item.values.map((value, index) => `${xOf(index)},${yOf(value)}`);
-                const lastIndex = item.values.length - 1;
+                const segments = lineSegments(item.values, (index, value) => `${xOf(index)},${yOf(value)}`);
+                const lastIndex = lastIndexWithValue(item.values);
+                const hoverValue = hoverIndex === null ? null : item.values[hoverIndex];
 
                 return (
                   <g key={item.key}>
-                    {series.length === 1 && (
+                    {series.length === 1 && lastIndex >= 0 && (
                       <path
-                        d={`M${xOf(0)},${yOf(0)} L${points.join(" L")} L${xOf(lastIndex)},${yOf(0)} Z`}
-                        fill={item.color}
+                        d={`M${xOf(0)},${yOf(0)} L${segments[0].join(" L")} L${xOf(lastIndex)},${yOf(0)} Z`}
+                        style={{ fill: item.color }}
                         opacity={0.1}
                       />
                     )}
-                    <polyline className={styles.line} points={points.join(" ")} stroke={item.color} />
-                    {lastIndex >= 0 && hoverIndex === null && (
+                    {segments.map((points) => (
+                      <polyline
+                        key={points[0]}
+                        className={item.dashed ? styles.dashedLine : styles.line}
+                        points={points.join(" ")}
+                        style={{ stroke: item.color }}
+                      />
+                    ))}
+                    {lastIndex >= 0 && hoverIndex === null && !item.dashed && (
                       <circle
                         className={styles.dot}
                         cx={xOf(lastIndex)}
                         cy={yOf(item.values[lastIndex])}
                         r={4}
-                        fill={item.color}
+                        style={{ fill: item.color }}
                       />
                     )}
-                    {hoverIndex !== null && (
+                    {hasValue(hoverValue) && (
                       <circle
                         className={styles.dot}
                         cx={hoverX}
-                        cy={yOf(item.values[hoverIndex])}
+                        cy={yOf(hoverValue)}
                         r={4}
-                        fill={item.color}
+                        style={{ fill: item.color }}
                       />
                     )}
                   </g>
@@ -222,14 +262,16 @@ export default function TimeSeriesChart({ title, days, series, variant = "line",
             }}
             role="status"
           >
-            <strong className={styles.tooltipTitle}>{formatDay(days[hoverIndex])}</strong>
-            {series.map((item) => (
-              <span key={item.key} className={styles.tooltipRow}>
-                <span className={styles.swatch} style={{ background: item.color }} />
-                <span className={styles.tooltipLabel}>{item.label}</span>
-                <strong>{formatValue(item.values[hoverIndex])}</strong>
-              </span>
-            ))}
+            <strong className={styles.tooltipTitle}>{formatTitle(days[hoverIndex])}</strong>
+            {series
+              .filter((item) => hasValue(item.values[hoverIndex]))
+              .map((item) => (
+                <span key={item.key} className={styles.tooltipRow}>
+                  <span className={styles.swatch} style={{ background: item.color }} />
+                  <span className={styles.tooltipLabel}>{item.label}</span>
+                  <strong>{formatValue(item.values[hoverIndex])}</strong>
+                </span>
+              ))}
           </div>
         )}
       </div>
@@ -239,7 +281,7 @@ export default function TimeSeriesChart({ title, days, series, variant = "line",
           <caption>{title}</caption>
           <thead>
             <tr>
-              <th scope="col">Dia</th>
+              <th scope="col">{columnLabel}</th>
               {series.map((item) => (
                 <th key={item.key} scope="col">
                   {item.label}
@@ -250,9 +292,9 @@ export default function TimeSeriesChart({ title, days, series, variant = "line",
           <tbody>
             {days.map((day, index) => (
               <tr key={day}>
-                <th scope="row">{formatDay(day)}</th>
+                <th scope="row">{formatTitle(day)}</th>
                 {series.map((item) => (
-                  <td key={item.key}>{formatValue(item.values[index])}</td>
+                  <td key={item.key}>{hasValue(item.values[index]) ? formatValue(item.values[index]) : "—"}</td>
                 ))}
               </tr>
             ))}

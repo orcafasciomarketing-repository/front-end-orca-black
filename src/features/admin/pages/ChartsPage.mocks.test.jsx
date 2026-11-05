@@ -15,14 +15,22 @@ const renderPage = () =>
   );
 
 const widget = (title) => screen.getByRole("region", { name: title });
-const barsOf = (title) =>
-  within(within(widget(title)).getByRole("list", { name: title }))
+const barsOf = (title, list = title) =>
+  within(within(widget(title)).getByRole("list", { name: list }))
     .getAllByRole("listitem")
     .map((item) => item.textContent.replace(/ /g, " "));
 const lastRowOf = (title) => {
   const rows = within(widget(title)).getAllByRole("row");
   return [...rows.at(-1).querySelectorAll("th, td")].map((cell) => cell.textContent.replace(/ /g, " "));
 };
+
+const rowOf = (title, label) => {
+  const row = within(widget(title))
+    .getAllByRole("row")
+    .find((item) => item.querySelector("th")?.textContent === label);
+  return [...row.querySelectorAll("th, td")].map((cell) => cell.textContent.replace(/\u00a0/g, " "));
+};
+const textOf = (element) => element.textContent.replace(/\u00a0/g, " ");
 
 const ready = async () => {
   await waitFor(() => expect(within(widget("Vendas por equipe")).getAllByRole("listitem")).toHaveLength(3));
@@ -41,18 +49,26 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     vi.unstubAllEnvs();
   });
 
-  it("mostra os sete gráficos", async () => {
+  it("mostra os indicadores e os catorze gráficos", async () => {
     renderPage();
     await ready();
 
+    expect(screen.getByRole("region", { name: "Indicadores" })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      "Acumulado x meta",
+      "Previsão de fechamento",
       "Vendas acumuladas",
       "Vendas acumuladas por setor",
-      "Acumulado x meta",
       "Vendas x renovações por dia",
+      "Vendas por semana",
       "Vendas por pessoa",
       "Vendas por equipe",
       "Passagens por pessoa",
+      "Ticket médio",
+      "Participação por setor",
+      "Concentração",
+      "Cancelamentos",
+      "Quando as vendas fecham",
     ]);
   });
 
@@ -61,7 +77,8 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     await ready();
 
     expect(lastRowOf("Vendas acumuladas")).toEqual(["21/10", "R$ 212.000,00"]);
-    expect(lastRowOf("Acumulado x meta")).toEqual(["21/10", "R$ 212.000,00"]);
+    expect(rowOf("Acumulado x meta", "21/10")).toEqual(["21/10", "R$ 212.000,00", "R$ 212.000,00", "R$ 212.000,00"]);
+    expect(lastRowOf("Acumulado x meta")).toEqual(["01/12", "—", "R$ 589.913,04", "R$ 3.000.000,00"]);
     expect(within(widget("Acumulado x meta")).getByText("Meta R$ 3 mi")).toBeInTheDocument();
     expect(lastRowOf("Vendas acumuladas por setor")).toEqual(["21/10", "R$ 92.000,00", "R$ 120.000,00"]);
   });
@@ -111,6 +128,66 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "Sem freioR$ 8.000,00",
     ]);
     expect(lastRowOf("Vendas x renovações por dia")[0]).toBe("21/10");
-    expect(lastRowOf("Acumulado x meta")).toEqual(["21/10", "R$ 212.000,00"]);
+    expect(rowOf("Acumulado x meta", "21/10")[1]).toBe("R$ 212.000,00");
+    expect(lastRowOf("Vendas por semana")).toEqual(["Semana de 19/10", "R$ 65.500,00", "R$ 16.500,00"]);
+
+    const kpis = screen.getByRole("region", { name: "Indicadores" });
+    expect(textOf(kpis)).toContain("Total vendidoR$ 82.000,00▲ +5,1% vs semana anterior");
+    expect(textOf(kpis)).toContain("Vendas fechadas6▲ +20% vs semana anterior");
+    expect(textOf(kpis)).toContain("Ticket médioR$ 13.666,67▼ -12,4% vs semana anterior");
+    expect(textOf(widget("Cancelamentos"))).toContain("Taxa de cancelamento14,3%");
+    expect(barsOf("Cancelamentos", "Valor cancelado por pessoa")).toEqual(["Heitor Alves1 canceladaR$ 20.000,00"]);
+  });
+
+  it("sem filtro, mostra previsão, indicadores e as análises da campanha inteira", async () => {
+    renderPage();
+    await ready();
+
+    const kpis = screen.getByRole("region", { name: "Indicadores" });
+    expect(textOf(kpis)).toContain("Total vendidoR$ 212.000,00Campanha inteira");
+    expect(textOf(kpis)).toContain("Meta da campanha7,1%de R$ 3.000.000,00");
+
+    const forecastCard = textOf(widget("Previsão de fechamento"));
+    expect(forecastCard).toContain("R$ 589.913,04");
+    expect(forecastCard).toContain("No ritmo atual, ficam faltando R$ 2.410.086,96");
+    expect(forecastCard).toContain("Ritmo necessário por diaR$ 68.000,00");
+    expect(forecastCard).toContain("Dias restantes até 01/1241");
+
+    expect(
+      within(widget("Vendas por semana"))
+        .getAllByRole("row")
+        .slice(1)
+        .map((row) => textOf(row)),
+    ).toEqual([
+      "Semana de 28/09R$ 9.000,00R$ 4.000,00",
+      "Semana de 05/10R$ 33.000,00R$ 6.000,00",
+      "Semana de 12/10R$ 69.000,00R$ 9.000,00",
+      "Semana de 19/10R$ 65.500,00R$ 16.500,00",
+    ]);
+    expect(barsOf("Ticket médio", "Ticket médio por setor")).toEqual([
+      "B2G5 vendasR$ 24.000,00",
+      "B2B11 vendasR$ 8.363,64",
+    ]);
+    expect(barsOf("Participação por setor")).toEqual(["B2B43,4%R$ 92.000,00", "B2G56,6%R$ 120.000,00"]);
+    expect(textOf(widget("Concentração"))).toContain("64,9%do total vem dos 3 maiores vendedores");
+    expect(barsOf("Concentração")).toEqual([
+      "1º Gustavo Rocha42,5%R$ 90.000,00",
+      "2º Brenda Lima12%R$ 25.500,00",
+      "3º Fernanda Melo10,4%R$ 22.000,00",
+      "Demais (8)35,1%R$ 74.500,00",
+    ]);
+    expect(textOf(widget("Cancelamentos"))).toContain(
+      "Taxa de cancelamento11,1%Canceladas2 de 18Valor perdidoR$ 27.000,00",
+    );
+    expect(barsOf("Cancelamentos", "Valor cancelado por pessoa")).toEqual([
+      "Heitor Alves1 canceladaR$ 20.000,00",
+      "Marcelo Dias1 canceladaR$ 7.000,00",
+    ]);
+    expect(rowOf("Quando as vendas fecham", "Ter").length).toBe(3);
+    expect(
+      within(widget("Quando as vendas fecham"))
+        .getAllByRole("row")
+        .map((row) => textOf(row)),
+    ).toContain("Ter10h1 venda, R$ 30.000,00");
   });
 });

@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  daysBetween,
   filterSalesByWeek,
   formatWeekLabel,
   getFirstWeekOfMonth,
   getWeekKey,
   getWeekRange,
+  getWeekdayAndHour,
   listWeeks,
   previousWeekKey,
 } from "./weeks";
@@ -95,5 +97,15 @@ describe("weeks", () => {
     ];
 
     expect(filterSalesByWeek(sales, "2026-10-19").map((sale) => sale._id)).toEqual(["segunda-inicio", "domingo-fim"]);
+  });
+
+  it("daysBetween conta os dias entre duas datas, atravessando o mês", () => {
+    expect(daysBetween("2026-10-21", "2026-12-01")).toBe(41);
+    expect(daysBetween("2026-10-21", "2026-10-21")).toBe(0);
+  });
+
+  it("getWeekdayAndHour usa segunda como 0 e a hora de São Paulo", () => {
+    expect(getWeekdayAndHour("2026-10-19T03:00:00.000Z")).toEqual({ weekday: 0, hour: 0 });
+    expect(getWeekdayAndHour("2026-10-19T02:59:00.000Z")).toEqual({ weekday: 6, hour: 23 });
   });
 });

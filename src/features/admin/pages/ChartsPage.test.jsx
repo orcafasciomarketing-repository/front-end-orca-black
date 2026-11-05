@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getAdminSales, getGoal, getTeams } from "../api/slidesApi";
+import { downloadFile } from "../utils/downloadFile";
 import ChartsPage from "./ChartsPage";
 
 vi.mock("../api/slidesApi", () => ({
@@ -10,6 +11,9 @@ vi.mock("../api/slidesApi", () => ({
   getVendors: vi.fn(),
   getGoal: vi.fn(),
   getTeams: vi.fn(),
+}));
+vi.mock("../utils/downloadFile", () => ({
+  downloadFile: vi.fn(),
 }));
 vi.mock("../../../shared/errorLogger", () => ({
   reportError: vi.fn(),
@@ -47,6 +51,7 @@ describe("ChartsPage", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    localStorage.clear();
   });
 
   it("sem vendas, cada gráfico avisa que não tem dados", async () => {
@@ -54,7 +59,7 @@ describe("ChartsPage", () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByText("Nenhuma venda no período")).toHaveLength(4));
+    await waitFor(() => expect(screen.getAllByText("Nenhuma venda no período")).toHaveLength(10));
     expect(within(widget("Acumulado x meta")).getByText("Nenhuma venda ainda")).toBeInTheDocument();
     expect(within(widget("Passagens por pessoa")).getByText("Nenhuma passagem no período")).toBeInTheDocument();
     await waitFor(() => expect(within(widget("Vendas por equipe")).getByText(/Wizards/)).toBeInTheDocument());
@@ -89,5 +94,48 @@ describe("ChartsPage", () => {
 
     fireEvent.blur(chart);
     expect(within(widget("Vendas acumuladas")).queryByRole("status")).not.toBeInTheDocument();
+  });
+
+  it("o botão CSV baixa os dados do gráfico", async () => {
+    renderPage();
+
+    const button = await within(await screen.findByRole("region", { name: "Vendas por pessoa" })).findByRole("button", {
+      name: "Exportar CSV: Vendas por pessoa",
+    });
+    fireEvent.click(button);
+
+    expect(downloadFile).toHaveBeenCalledWith(
+      "\uFEFFVendedor;Valor (R$)\r\nBruno;1000,00",
+      "grafico-vendas-por-pessoa-2026-10-22.csv",
+      "text/csv;charset=utf-8",
+    );
+  });
+
+  it("o modo escuro liga, desliga e fica salvo", async () => {
+    const { unmount } = renderPage();
+
+    const toggle = screen.getByRole("button", { name: "Modo escuro" });
+    expect(toggle).toHaveAttribute("aria-pressed", "false");
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    expect(localStorage.getItem("admin-charts-theme")).toBe("dark");
+
+    unmount();
+    renderPage();
+    expect(screen.getByRole("button", { name: "Modo escuro" })).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(screen.getByRole("button", { name: "Modo escuro" }));
+    expect(localStorage.getItem("admin-charts-theme")).toBe("light");
+  });
+
+  it("previsão de fechamento mostra o ritmo necessário até o fim da campanha", async () => {
+    renderPage();
+
+    const card = await screen.findByRole("region", {
+      name: "Previsão de fechamento",
+    });
+    await waitFor(() => expect(card.textContent.replace(/\u00a0/g, " ")).toContain("Dias restantes até 01/1240"));
+    expect(card.textContent.replace(/\u00a0/g, " ")).toContain("Ritmo necessário por diaR$ 74.975,00");
   });
 });

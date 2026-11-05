@@ -1,0 +1,169 @@
+.kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.tile {
+  gap: 4px;
+  padding: 16px 20px;
+}
+
+.tileLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tileValue {
+  color: var(--color-text);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tileDelta {
+  font-size: 13px;
+}
+
+.deltaNeutral {
+  color: var(--color-muted);
+}
+
+.deltaUp {
+  color: var(--color-success);
+  font-weight: 600;
+}
+
+.deltaDown {
+  color: var(--color-error);
+  font-weight: 600;
+}
+
+.forecast {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.heroLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.hero {
+  color: var(--color-text);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.statusGood,
+.statusBad {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.statusGood {
+  background: var(--color-success);
+}
+
+.statusBad {
+  background: var(--color-error);
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-background);
+}
+
+.fact dt {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.fact dd {
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.subtitle {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.headline {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kpis {
+    gap: 12px;
+  }
+}
