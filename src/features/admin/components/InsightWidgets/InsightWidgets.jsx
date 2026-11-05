@@ -388,40 +388,37 @@ export function CancellationChart({ period, segment }) {
 }
 
 export function SalesCalendarChart({ period, segment }) {
-  const { calendar, activeSales } = useSalesInsights(period, segment);
+  const { calendar } = useSalesInsights(period, segment);
   const title = "Calendário de vendas";
 
   return (
     <ChartCard
       title={title}
-      description="Vendas de cada dia, organizadas por semana, com o total de cada dia da semana"
+      description="Todos os dias de cada mês, com as vendas do dia e o total de cada semana e de cada dia da semana"
       csvRows={[
         ["Data", "Dia da semana", "Vendas", "Valor (R$)"],
-        ...calendar.weeks.flatMap((week) =>
-          week.cells
-            .map((cell, index) => ({ cell, weekday: WEEKDAYS[index] }))
-            .filter(({ cell }) => cell.inRange)
-            .map(({ cell, weekday }) => [
-              formatDay(cell.day),
-              weekday,
-              String(cell.count),
-              formatCsvNumber(cell.value),
-            ]),
+        ...calendar.months.flatMap((month) =>
+          month.weeks.flatMap((week) =>
+            week.cells
+              .map((cell, index) => ({ cell, weekday: WEEKDAYS[index] }))
+              .filter(({ cell }) => cell.inPeriod)
+              .map(({ cell, weekday }) => [
+                formatDay(cell.day),
+                weekday,
+                String(cell.count),
+                formatCsvNumber(cell.value),
+              ]),
+          ),
         ),
       ]}
       period={period}
       segment={segment}
     >
-      {activeSales.length === 0 ? (
-        <Empty />
-      ) : (
-        <SalesCalendar
-          title={title}
-          weekdays={WEEKDAYS}
-          calendar={calendar}
-          formatDetail={(cell) => `${formatSalesCount(cell.count)}, ${formatCurrency(cell.value)}`}
-        />
-      )}
+      <SalesCalendar
+        weekdays={WEEKDAYS}
+        calendar={calendar}
+        formatDetail={(cell) => `${formatSalesCount(cell.count)}, ${formatCurrency(cell.value)}`}
+      />
     </ChartCard>
   );
 }

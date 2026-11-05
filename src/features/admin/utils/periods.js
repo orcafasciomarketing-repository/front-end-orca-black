@@ -12,6 +12,8 @@ export const PERIOD_PRESETS = [
   { value: "month", label: "Este mês" },
 ];
 
+export const todayKey = (now = new Date()) => getDayKey(now);
+
 const formatDay = (dayKey) => `${dayKey.slice(8, 10)}/${dayKey.slice(5, 7)}`;
 
 const isWeekKey = (value) => /^\d{4}-\d{2}-\d{2}$/.test(value);

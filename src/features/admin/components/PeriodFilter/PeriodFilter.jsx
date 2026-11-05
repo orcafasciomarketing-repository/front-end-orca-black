@@ -1,7 +1,8 @@
 import styles from "./PeriodFilter.module.css";
 
 import { useWeekOptions } from "../../hooks/useWeekOptions";
-import { CUSTOM_PERIOD, PERIOD_PRESETS } from "../../utils/periods";
+import { CUSTOM_PERIOD, PERIOD_PRESETS, todayKey } from "../../utils/periods";
+import DateRangePicker from "../DateRangePicker/DateRangePicker";
 
 export default function PeriodFilter({ selection, onChange, ariaLabel }) {
   const { weeks } = useWeekOptions();
@@ -36,30 +37,17 @@ export default function PeriodFilter({ selection, onChange, ariaLabel }) {
         </select>
       </label>
       {isCustom && (
-        <>
-          <label className={styles.field}>
-            <span className={styles.label}>De</span>
-            <input
-              className={styles.dateInput}
-              type="date"
-              aria-label="Data inicial"
-              value={selection.from}
-              max={selection.to || undefined}
-              onChange={(event) => onChange({ ...selection, from: event.target.value })}
-            />
-          </label>
-          <label className={styles.field}>
-            <span className={styles.label}>Até</span>
-            <input
-              className={styles.dateInput}
-              type="date"
-              aria-label="Data final"
-              value={selection.to}
-              min={selection.from || undefined}
-              onChange={(event) => onChange({ ...selection, to: event.target.value })}
-            />
-          </label>
-        </>
+        <div className={styles.field}>
+          <span className={styles.label}>Datas</span>
+          <DateRangePicker
+            label="Escolher período"
+            start={selection.from}
+            end={selection.to}
+            today={todayKey()}
+            defaultOpen={!selection.from}
+            onChange={({ start, end }) => onChange({ ...selection, from: start, to: end })}
+          />
+        </div>
       )}
     </>
   );

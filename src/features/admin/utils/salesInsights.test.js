@@ -6,6 +6,7 @@ import {
   concentration,
   forecast,
   goalTrack,
+  calendarRange,
   salesCalendar,
   segmentShare,
   ticketBySegment,
@@ -94,24 +95,40 @@ describe("salesInsights", () => {
     ]);
   });
 
-  it("o calendário organiza os dias por semana, conta as vendas e soma cada dia da semana", () => {
-    const { weeks, weekdayTotals, max } = salesCalendar(
+  it("o calendário mostra o mês inteiro, separa dias fora do período e dias que ainda não chegaram", () => {
+    const { months, max } = salesCalendar(
       [
         sale({ realizedAt: "2026-10-20T03:00:00.000Z" }),
         sale({ realizedAt: "2026-10-20T15:00:00.000Z", value: 500 }),
-        sale({ realizedAt: "2026-10-27T15:00:00.000Z" }),
+        sale({ realizedAt: "2026-10-21T15:00:00.000Z" }),
       ],
-      ["2026-10-20", "2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24", "2026-10-25", "2026-10-26", "2026-10-27"],
+      { start: "2026-10-20", end: "2026-10-25" },
+      "2026-10-22",
     );
 
-    expect(weeks.map((week) => week.week)).toEqual(["2026-10-19", "2026-10-26"]);
-    expect(weeks[0].cells[0]).toEqual({ day: "2026-10-19", inRange: false, count: 0, value: 0 });
-    expect(weeks[0].cells[1]).toEqual({ day: "2026-10-20", inRange: true, count: 2, value: 1500 });
-    expect(weeks[0].total).toEqual({ count: 2, value: 1500 });
-    expect(weeks[1].cells[2].inRange).toBe(false);
-    expect(weekdayTotals[1]).toEqual({ count: 3, value: 2500 });
+    expect(months.map((month) => month.month)).toEqual(["2026-10"]);
+    const october = months[0];
+    const cells = october.weeks.flatMap((week) => week.cells).filter((cell) => cell.inMonth);
+    expect(cells).toHaveLength(31);
+    expect(october.weeks[0].cells[0]).toMatchObject({ day: "2026-09-28", inMonth: false });
+    expect(cells.find((cell) => cell.day === "2026-10-19")).toMatchObject({ inPeriod: false, future: false, count: 0 });
+    expect(cells.find((cell) => cell.day === "2026-10-20")).toMatchObject({ inPeriod: true, count: 2, value: 1500 });
+    expect(cells.find((cell) => cell.day === "2026-10-23")).toMatchObject({ inPeriod: false, future: true });
+    expect(october.total).toEqual({ count: 3, value: 2500 });
+    expect(october.weekdayTotals[1]).toEqual({ count: 2, value: 1500 });
     expect(max).toBe(2);
-    expect(salesCalendar([], [])).toMatchObject({ weeks: [], max: 0 });
+  });
+
+  it("o calendário cobre todos os meses do período e calendarRange vai da primeira venda até hoje", () => {
+    const sales = [sale({ realizedAt: "2026-09-29T15:00:00.000Z" })];
+    const range = calendarRange(sales, null, "2026-10-22");
+
+    expect(range).toEqual({ start: "2026-09-29", end: "2026-10-22" });
+    expect(salesCalendar(sales, range, "2026-10-22").months.map((month) => month.month)).toEqual([
+      "2026-09",
+      "2026-10",
+    ]);
+    expect(calendarRange([], null, "2026-10-22")).toEqual({ start: "2026-10-22", end: "2026-10-22" });
   });
 
   it("participação por setor soma 100%", () => {

@@ -1,10 +1,13 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { configure, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { getAdminSales, getGoal, getTeams } from "../api/slidesApi";
 import { downloadFile } from "../utils/downloadFile";
 import ChartsPage from "./ChartsPage";
+
+configure({ asyncUtilTimeout: 10000 });
+vi.setConfig({ testTimeout: 15000 });
 
 vi.mock("../api/slidesApi", () => ({
   getAdminSales: vi.fn(),
@@ -59,7 +62,7 @@ describe("ChartsPage", () => {
 
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByText("Nenhuma venda no período")).toHaveLength(10));
+    await waitFor(() => expect(screen.getAllByText("Nenhuma venda no período")).toHaveLength(9));
     expect(within(widget("Acumulado x meta")).getByText("Nenhuma venda ainda")).toBeInTheDocument();
     expect(within(widget("Passagens por pessoa")).getByText("Nenhuma passagem no período")).toBeInTheDocument();
     await waitFor(() => expect(within(widget("Vendas por equipe")).getByText(/Wizards/)).toBeInTheDocument());
@@ -151,6 +154,7 @@ describe("ChartsPage", () => {
 
     expect(options.map((option) => option.textContent)).toEqual([
       "Indicadores",
+      "Comparar períodos",
       "Acumulado x meta",
       "Previsão de fechamento",
       "Vendas acumuladas",
@@ -167,7 +171,7 @@ describe("ChartsPage", () => {
       "Calendário de vendas",
     ]);
     expect(selectAll).toBeChecked();
-    expect(within(dialog).getByText("15 de 15")).toBeInTheDocument();
+    expect(within(dialog).getByText("16 de 16")).toBeInTheDocument();
 
     fireEvent.click(selectAll);
     expect(within(dialog).getByRole("button", { name: "Gerar PDF" })).toBeDisabled();

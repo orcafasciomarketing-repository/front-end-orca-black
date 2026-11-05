@@ -55,6 +55,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
 
     expect(screen.getByRole("region", { name: "Indicadores" })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
+      "Comparar períodos",
       "Acumulado x meta",
       "Previsão de fechamento",
       "Vendas acumuladas",
@@ -183,10 +184,27 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "Heitor Alves1 canceladaR$ 20.000,00",
       "Marcelo Dias1 canceladaR$ 7.000,00",
     ]);
-    expect(rowOf("Calendário de vendas", "19/10")).toEqual(["19/10", "192", "203", "211", "", "", "", "", "6"]);
-    expect(rowOf("Calendário de vendas", "Total")).toEqual(["Total", "3", "5", "3", "2", "1", "1", "1", "16"]);
+    const october = within(widget("Calendário de vendas")).getByRole("table", { name: "Outubro de 2026" });
+    const cellsOf = (row) => [...row.querySelectorAll("th, td")].map((cell) => cell.textContent);
+    const octoberRows = within(october).getAllByRole("row");
+    expect(within(widget("Calendário de vendas")).getByRole("table", { name: "Setembro de 2026" })).toBeInTheDocument();
+    expect(octoberRows.map((row) => cellsOf(row)[0])).toEqual([
+      "Semana",
+      "28/09",
+      "05/10",
+      "12/10",
+      "19/10",
+      "26/10",
+      "Total",
+    ]);
+    expect(cellsOf(octoberRows[4])).toEqual(["19/10", "192", "203", "211", "22", "23", "24", "25", "6"]);
+    expect(cellsOf(octoberRows[5])).toEqual(["26/10", "26", "27", "28", "29", "30", "31", "", "0"]);
+    expect(cellsOf(octoberRows.at(-1))).toEqual(["Total", "3", "4", "3", "2", "1", "1", "1", "15"]);
     expect(
       within(widget("Calendário de vendas")).getByRole("cell", { name: /Ter, 20\/10: 3 vendas/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(widget("Calendário de vendas")).getByRole("cell", { name: "Sex, 30/10: ainda não chegou" }),
     ).toBeInTheDocument();
 
     fireEvent.click(within(widget("Concentração")).getByRole("button", { name: /Demais \(8\)/ }));
@@ -243,6 +261,45 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     await waitFor(() => expect(lastRowOf("Vendas acumuladas")[0]).toBe("21/10"));
     expect(within(widget("Vendas acumuladas")).getAllByRole("row")).toHaveLength(8);
     expect(textOf(screen.getByRole("region", { name: "Indicadores" }))).toContain("vs período anterior");
+  });
+
+  it("comparar períodos: começa em esta semana x semana passada e troca por atalho ou pelo calendário", async () => {
+    renderPage();
+    await ready();
+
+    const comparison = () => within(widget("Comparar períodos")).getByRole("table", { name: "Comparação dos períodos" });
+    const rowOfComparison = (label) =>
+      [...within(comparison()).getByRole("rowheader", { name: label }).closest("tr").querySelectorAll("th, td")].map(
+        (cell) => textOf(cell),
+      );
+
+    await waitFor(() =>
+      expect(rowOfComparison("Total vendido")).toEqual(["Total vendido", "R$ 82.000,00", "R$ 45.000,00", "▲ +82,2%"]),
+    );
+    expect(rowOfComparison("Vendas fechadas")).toEqual(["Vendas fechadas", "6", "2", "▲ +200%"]);
+    expect(textOf(comparison())).toContain("A · 19/10 a 21/10");
+    expect(textOf(comparison())).toContain("B · 12/10 a 14/10");
+
+    fireEvent.change(within(widget("Comparar períodos")).getByRole("combobox", { name: "Atalho de comparação" }), {
+      target: { value: "day" },
+    });
+    await waitFor(() =>
+      expect(rowOfComparison("Total vendido")).toEqual(["Total vendido", "R$ 5.000,00", "R$ 15.000,00", "▼ -66,7%"]),
+    );
+    expect(textOf(comparison())).toContain("A · qua, 21/10");
+    expect(textOf(comparison())).toContain("B · qua, 14/10");
+
+    fireEvent.click(within(widget("Comparar períodos")).getByRole("button", { name: "Período A: qua, 21/10" }));
+    const picker = screen.getByRole("dialog", { name: "Período A" });
+    fireEvent.click(within(picker).getByRole("button", { name: "13 de outubro de 2026" }));
+    fireEvent.click(within(picker).getByRole("button", { name: "13 de outubro de 2026" }));
+
+    await waitFor(() =>
+      expect(rowOfComparison("Total vendido")).toEqual(["Total vendido", "R$ 30.000,00", "R$ 15.000,00", "▲ +100%"]),
+    );
+    expect(within(widget("Comparar períodos")).getByRole("combobox", { name: "Atalho de comparação" })).toHaveValue(
+      "custom",
+    );
   });
 });
 

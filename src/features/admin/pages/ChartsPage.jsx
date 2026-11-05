@@ -14,6 +14,7 @@ import {
   WeeklySalesChart,
 } from "../components/InsightWidgets/InsightWidgets";
 import PageHeader from "../components/PageHeader/PageHeader";
+import PeriodComparison from "../components/PeriodComparison/PeriodComparison";
 import PeriodFilter from "../components/PeriodFilter/PeriodFilter";
 import PrintDialog from "../components/PrintDialog/PrintDialog";
 import {
@@ -34,6 +35,7 @@ const THEME_KEY = "admin-charts-theme";
 const KPIS_TITLE = "Indicadores";
 
 const CHARTS = [
+  { title: "Comparar períodos", Chart: PeriodComparison, className: "full" },
   { title: "Acumulado x meta", Chart: GoalTrackChart },
   { title: "Previsão de fechamento", Chart: ForecastCard },
   { title: "Vendas acumuladas", Chart: TotalSalesChart },

@@ -5,7 +5,18 @@
 }
 
 .scroller {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   overflow-x: auto;
+}
+
+.month {
+  padding: 0 4px 4px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: left;
 }
 
 .table {
@@ -57,8 +68,19 @@
   font-weight: 700;
 }
 
-.outside {
+.blank {
   height: 44px;
+}
+
+.outside {
+  background: var(--color-background);
+  color: var(--color-muted);
+  opacity: 0.5;
+}
+
+.future {
+  border: 1px dashed var(--color-border);
+  color: var(--color-muted);
 }
 
 .level0 {
@@ -134,15 +156,6 @@
   width: 12px;
   height: 12px;
   border-radius: 3px;
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
 }
 
 @media print {

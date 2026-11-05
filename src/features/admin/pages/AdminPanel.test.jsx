@@ -262,12 +262,18 @@ describe("AdminPanel › filtros e exportação de vendas", () => {
     await waitFor(() => expect(visibleSales()).toEqual(["a", "c"]));
     expect((await exportAndGetCsv()).fileName).toBe("vendas-todos-2026-10-20-a-2026-10-22-2026-10-22.csv");
 
-    expect(screen.queryByLabelText("Data inicial")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", { name: "Escolher período" })).not.toBeInTheDocument();
     fireEvent.change(weekSelect(), { target: { value: "custom" } });
     await waitFor(() => expect(visibleSales()).toEqual(["a", "b", "c"]));
 
-    fireEvent.change(screen.getByLabelText("Data inicial"), { target: { value: "2026-10-14" } });
-    fireEvent.change(screen.getByLabelText("Data final"), { target: { value: "2026-10-14" } });
+    const picker = screen.getByRole("dialog", { name: "Escolher período" });
+    expect(within(picker).getByText("Outubro de 2026")).toBeInTheDocument();
+    expect(within(picker).getByRole("status")).toHaveTextContent("Clique no dia inicial");
+    fireEvent.click(within(picker).getByRole("button", { name: "14 de outubro de 2026" }));
+    expect(within(picker).getByRole("status")).toHaveTextContent("Agora clique no dia final");
+    fireEvent.click(within(picker).getByRole("button", { name: "14 de outubro de 2026" }));
+    expect(screen.queryByRole("dialog", { name: "Escolher período" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Escolher período: qua, 14/10" })).toBeInTheDocument();
     await waitFor(() => expect(visibleSales()).toEqual(["b"]));
     expect((await exportAndGetCsv()).fileName).toBe("vendas-todos-2026-10-14-a-2026-10-14-2026-10-22.csv");
   });
