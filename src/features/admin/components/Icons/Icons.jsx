@@ -21,6 +21,15 @@ export function DashboardIcon() {
   );
 }
 
+export function ChartIcon() {
+  return (
+    <svg {...iconProps}>
+      <line x1="4" y1="20" x2="20" y2="20" />
+      <polyline points="4 15 9 10 13 13 20 6" />
+    </svg>
+  );
+}
+
 export function AlertIcon() {
   return (
     <svg {...iconProps}>

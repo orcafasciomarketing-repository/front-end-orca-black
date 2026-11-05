@@ -12,6 +12,7 @@ const renderAt = (path) => {
         element: <AdminLayout />,
         children: [
           { index: true, element: <p>Página dashboard</p> },
+          { path: "graficos", element: <p>Página gráficos</p> },
           { path: "erros", element: <p>Página erros</p> },
         ],
       },
@@ -48,6 +49,16 @@ describe("AdminLayout", () => {
     renderAt("/admin/erros");
 
     expect(screen.getByText("Página erros")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("abre a aba Gráficos pelo menu", () => {
+    renderAt("/admin");
+
+    fireEvent.click(screen.getByRole("link", { name: "Gráficos" }));
+
+    expect(screen.getByText("Página gráficos")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Gráficos" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
 });

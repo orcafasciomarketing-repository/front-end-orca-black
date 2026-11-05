@@ -9,9 +9,18 @@
 
 .body {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  align-items: stretch;
+  gap: 24px;
   padding: 20px;
+}
+
+.progress {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
 }
 
 .amounts {
@@ -54,4 +63,86 @@
 .reached {
   color: var(--color-success);
   font-weight: 600;
+}
+
+.divider {
+  width: 1px;
+  flex-shrink: 0;
+  background: var(--color-border);
+}
+
+.sectors {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.groupTitle {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.groupList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupItem {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.sector {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.count {
+  font-weight: 700;
+}
+
+.groupEmpty,
+.loading {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.loading {
+  flex: 1;
+  align-self: center;
+  text-align: center;
+}
+
+@media (max-width: 1100px) {
+  .body {
+    flex-direction: column;
+  }
+
+  .divider {
+    width: auto;
+    height: 1px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sectors {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

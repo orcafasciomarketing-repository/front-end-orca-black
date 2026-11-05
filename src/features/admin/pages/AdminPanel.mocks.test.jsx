@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadFile } from "../utils/downloadFile";
 import AdminPanel from "./AdminPanel";
 
-configure({ asyncUtilTimeout: 4000 });
+configure({ asyncUtilTimeout: 10000 });
+vi.setConfig({ testTimeout: 15000 });
 
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),

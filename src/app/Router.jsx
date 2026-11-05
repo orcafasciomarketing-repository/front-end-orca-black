@@ -6,6 +6,7 @@ import RouteErrorScreen from "./RouteErrorScreen";
 import LoginPage from "../features/auth/pages/LoginPage";
 import AdminLayout from "../features/admin/pages/AdminLayout";
 import AdminPanel from "../features/admin/pages/AdminPanel";
+import ChartsPage from "../features/admin/pages/ChartsPage";
 import ErrorsPage from "../features/admin/pages/ErrorsPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
 
@@ -24,6 +25,7 @@ const router = createBrowserRouter([
         element: <AdminLayout />,
         children: [
           { index: true, element: <AdminPanel /> },
+          { path: "graficos", element: <ChartsPage /> },
           { path: "erros", element: <ErrorsPage /> },
         ],
       },

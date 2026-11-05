@@ -1,0 +1,24 @@
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.description {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.body {
+  flex: 1;
+  padding: 20px;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  text-align: center;
+}

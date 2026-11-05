@@ -29,3 +29,8 @@ export const getGoal = async () => {
   const response = await http.get("/analytics/goal");
   return response.data.data;
 };
+
+export const getTeams = async () => {
+  const response = await http.get("/analytics/scoreboard", { params: { period: "all" } });
+  return response.data.data.map(({ teamId, teamName }) => ({ teamId, teamName }));
+};

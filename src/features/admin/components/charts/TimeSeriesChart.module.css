@@ -1,0 +1,132 @@
+.chart {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  flex-shrink: 0;
+  border-radius: 3px;
+}
+
+.plot {
+  position: relative;
+  width: 100%;
+}
+
+.svg {
+  display: block;
+  max-width: 100%;
+  overflow: visible;
+  cursor: crosshair;
+}
+
+.svg:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.grid {
+  stroke: var(--chart-grid);
+  stroke-width: 1;
+}
+
+.axisLabel {
+  fill: var(--color-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.reference {
+  stroke: var(--chart-reference);
+  stroke-width: 1;
+}
+
+.referenceLabel {
+  fill: var(--color-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dot {
+  stroke: var(--color-surface);
+  stroke-width: 2;
+}
+
+.crosshair {
+  stroke: var(--chart-reference);
+  stroke-width: 1;
+}
+
+.hoverBand {
+  fill: var(--color-background);
+}
+
+.tooltip {
+  position: absolute;
+  top: 8px;
+  z-index: 1;
+  min-width: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-surface);
+  box-shadow: 0 4px 12px rgba(16, 24, 40, 0.12);
+  font-size: 13px;
+  pointer-events: none;
+}
+
+.tooltipTitle {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tooltipLabel {
+  margin-right: auto;
+  padding-right: 12px;
+  color: var(--color-muted);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}

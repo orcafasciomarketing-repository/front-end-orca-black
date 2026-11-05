@@ -1,0 +1,56 @@
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(96px, 30%) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.label {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.name {
+  overflow: hidden;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.track {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 128px;
+}
+
+.bar {
+  height: 16px;
+  min-width: 2px;
+  flex-shrink: 0;
+  border-radius: 0 4px 4px 0;
+}
+
+.value {
+  margin-right: -128px;
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}

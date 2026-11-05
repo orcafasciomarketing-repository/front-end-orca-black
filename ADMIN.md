@@ -1,6 +1,6 @@
 # Painel admin
 
-Como funciona o painel admin (`/admin`): o layout com menu lateral, as duas páginas (Dashboard e Erros), os widgets, os filtros por semana e por vendedor e a exportação.
+Como funciona o painel admin (`/admin`): o layout com menu lateral, as três páginas (Dashboard, Gráficos e Erros), os widgets, os filtros por semana e por vendedor e a exportação.
 
 O código não tem comentários de propósito. Toda explicação fica neste documento. Os widgets de logs de erro e de teste estão em [ERROS_E_LOGS.md](ERROS_E_LOGS.md).
 
@@ -15,8 +15,8 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 │  ORÇA BLACK  │ Dashboard                 [Semana ▾] [Vendedor ▾] [⤓ Exportar] │
 │              │ Vendas e rankings da Black Friday                   │
 │ ▣ Dashboard  │ ┌──────────────────────────┐ ┌────────────────────┐ │
-│ ⚠ Erros      │ │ Vendas cadastradas       │ │ Rank dos vendedores│ │
-│              │ │ (2 colunas × 2 linhas)   │ │ [Vendas|Renovação] │ │
+│ 📈 Gráficos  │ │ Vendas cadastradas       │ │ Rank dos vendedores│ │
+│ ⚠ Erros      │ │ (2 colunas × 2 linhas)   │ │ [Vendas|Renovação] │ │
 │ (menu escuro)│ │                          │ ├────────────────────┤ │
 │              │ │                          │ │ Rank das passagens │ │
 │              │ └──────────────────────────┘ └────────────────────┘ │
@@ -26,9 +26,10 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 | Rota | Página | Conteúdo |
 |---|---|---|
 | `/admin` | `AdminPanel` (Dashboard) | Filtros, Vendas cadastradas, Rank dos vendedores e Rank das passagens |
+| `/admin/graficos` | `ChartsPage` (Gráficos) | Filtro de semana e os sete gráficos de acompanhamento das vendas |
 | `/admin/erros` | `ErrorsPage` (Erros) | Logs de erro e Logs de teste |
 
-As duas páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
+As três páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
 
 ### Filtros
 
@@ -106,7 +107,10 @@ As duas rotas são privadas (o token vai pelo `apiClient`) e respondem `{ data: 
 `GET /analytics/sdr-ranking`. Devolve a lista de passagens (top 3), com `sdrId`, `name`, `job` e `points`. Usada pelo `SdrRankWidget`.
 
 ### `getGoal()`
-`GET /analytics/goal`. Devolve `{ goal, total, percent }`: a meta em reais, o total já vendido e o percentual atingido. É a mesma rota da tela "Meta Black" da TV. Usada pelo `GoalWidget`.
+`GET /analytics/goal`. Devolve `{ goal, total, percent }`: a meta em reais, o total já vendido e o percentual atingido. É a mesma rota da tela "Meta Black" da TV. Usada pelo `GoalWidget` e pelo gráfico "Acumulado x meta".
+
+### `getTeams()`
+`GET /analytics/scoreboard?period=all`. O admin não tem uma rota só de equipes, então usa o placar geral das TVs e guarda só `{ teamId, teamName }` de cada equipe. Usada pelo gráfico "Vendas por equipe", que liga cada venda à equipe pelo `teamId` do vendedor (`sale.vendorId.teamId`).
 
 ---
 
@@ -182,6 +186,7 @@ A moldura de todas as páginas do admin: menu lateral à esquerda e a página at
 { path: "/admin", element: <PrivateRoute />, children: [
   { element: <AdminLayout />, children: [
     { index: true, element: <AdminPanel /> },
+    { path: "graficos", element: <ChartsPage /> },
     { path: "erros", element: <ErrorsPage /> },
   ] },
 ] }
@@ -303,7 +308,15 @@ Barra de progresso da meta da Black Friday, no mesmo espírito da tela "Meta Bla
 - A barra preenche `percent`%, limitada entre 0 e 100: passar da meta deixa a barra cheia, mas o percentual do cabeçalho mostra o valor real (ex.: `150%`).
 - Embaixo, "Faltam R$ X" ou, com a meta batida, "Meta batida!" em verde.
 - A barra tem `role="progressbar"` com `aria-valuenow`, para leitores de tela.
-- CSS: `.percent` é o selo roxo do cabeçalho; `.track` é o trilho cinza; `.fill` é o preenchimento roxo, que anima a largura quando o valor muda; `.reached` pinta o texto de verde.
+- À direita da barra, separada por um traço vertical, fica a lista por setor (`SectorSummary`), em três colunas: **Vendas** e **Renovações** por segmento (B2B, B2G) e **Passagens** pelo cargo de quem fez a passagem (SDR, Suporte, CS). Cada coluna mostra o setor e a quantidade; sem nada, mostra "Nenhuma venda", "Nenhuma passagem" ou "Nenhuma renovação".
+- `SectorSummary` busca com `useSectorCounts()` e fica dentro de um `Suspense` e de um `ErrorBoundary` próprios. Enquanto as vendas carregam, a barra já aparece e a lista mostra "Carregando setores..."; se as vendas derem erro, só a lista some, a barra continua.
+- CSS: `.percent` é o selo roxo do cabeçalho; `.track` é o trilho cinza; `.fill` é o preenchimento roxo, que anima a largura quando o valor muda; `.reached` pinta o texto de verde; `.divider` é o traço vertical de 1px; `.sectors` é a grade de 3 colunas; `.groupTitle` é o título cinza e em maiúsculas de cada coluna; `.groupItem` é a linha com o setor à esquerda e a quantidade em negrito à direita.
+- Abaixo de 1100px a lista vai para baixo da barra e o traço vira horizontal; abaixo de 600px as três colunas ficam uma embaixo da outra.
+
+#### `useSectorCounts()`
+[useSectorCounts.js](src/features/admin/hooks/useSectorCounts.js) roda `useSuspenseQuery(adminSalesQuery(""))` com um `select` que aplica `countBySector`. Devolve `{ counts }`.
+
+**Por que reaproveitar a query das vendas:** é a mesma chave (`["admin-sales", "all"]`) da lista de Vendas cadastradas sem filtro. As duas compartilham o cache, então abrir o painel faz uma requisição só para as duas.
 
 ### `RankList({ items, emptyText })`
 
@@ -372,6 +385,8 @@ Uma semana é identificada pela **chave**: a data da segunda-feira, como `"2026-
 | `getFirstWeekOfMonth(agora)` | Chave da semana do dia 1º do mês atual, no horário de São Paulo. Se o mês começa numa quinta, é a semana que começou na segunda do mês anterior (1º/10/2026 → `"2026-09-28"`) |
 | `listWeeks(vendas, agora)` | Lista `{ key, label }` da semana atual até a mais antiga entre a semana do dia 1º do mês e a semana da venda mais antiga, da mais nova para a mais antiga. Inclui semanas sem venda, para dar para filtrar qualquer semana do mês (por exemplo, duas semanas atrás) mesmo antes de haver vendas nelas |
 | `filterSalesByWeek(vendas, chave)` | Sem chave, devolve as vendas como vieram. Com chave, mantém só as que têm `realizedAt` dentro de `getWeekRange(chave)` |
+| `getDayKey(data)` | Dia da data no horário de São Paulo, como `"2026-10-21"`. Usado pelos gráficos para saber em que dia cada venda caiu (uma venda às 23h de São Paulo já é 02h UTC do dia seguinte, mas conta no dia certo) |
+| `addDays(dia, n)` | O dia `n` dias depois (ou antes, com `n` negativo), no mesmo formato |
 | `toSaoPauloClock(data)` e `mondayOf(chave)` | Internas: atrasam o relógio em 3h (para os `getUTC*` darem a data de São Paulo) e transformam a chave em `Date` |
 
 **Por que `realizedAt`:** é a data em que a venda foi ganha e nunca muda. O backend usa o mesmo campo nos filtros de semana.
@@ -387,6 +402,14 @@ Uma semana é identificada pela **chave**: a data da segunda-feira, como `"2026-
 
 Como o separador do CSV é `;`, a vírgula entre os nomes não quebra a coluna.
 
+### `countBySector(sales)`
+[sectorCounts.js](src/features/admin/utils/sectorCounts.js). Recebe a lista de vendas e devolve `{ sales, passages, renewals }`, cada um uma lista de `{ sector, count }` em ordem alfabética do setor.
+- Só conta vendas com `dealStatus: "ativa"`, como a meta e os rankings.
+- `sales`: vendas com `funnelType` diferente de `"farm"`, agrupadas pelo `segment` em maiúsculas (`B2B`, `B2G`).
+- `renewals`: vendas com `funnelType: "farm"`, agrupadas do mesmo jeito.
+- `passages`: cada pessoa da passagem (`getPassagePeople`, então aceita `sdrIds` e o `sdrId` antigo) conta 1, agrupada pelo `job`. Uma venda com duas pessoas conta 2 passagens. Entram passagens de vendas e de renovações.
+- Venda sem segmento ou pessoa sem cargo entram em "Sem setor".
+
 ### `downloadFile(content, fileName, type)`
 
 [src/features/admin/utils/downloadFile.js](src/features/admin/utils/downloadFile.js)
@@ -395,6 +418,94 @@ Baixa um texto como arquivo: cria um `Blob`, gera uma URL temporária, clica num
 
 ### `formatDateTime(value)`
 Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de vendas.
+
+---
+
+## Aba Gráficos
+
+### `ChartsPage()` (Gráficos)
+
+[src/features/admin/pages/ChartsPage.jsx](src/features/admin/pages/ChartsPage.jsx)
+
+`PageHeader` com o título "Gráficos" e um seletor de **semana** próprio, e abaixo a grade com os sete gráficos. O seletor tem as mesmas opções do Dashboard (`useWeekOptions`), mas o estado é separado: filtrar aqui não muda o Dashboard, e vice-versa.
+
+- `CHARTS` lista os gráficos na ordem da grade: `title` (usado no carregamento e no erro), `Chart` (o componente) e `className` opcional.
+- Cada gráfico fica dentro de um `ErrorBoundary` e de um `Suspense` com `WidgetFallback`, como no Dashboard. Se um gráfico der erro (por exemplo, as equipes não carregam), só ele mostra o erro.
+- Todos os gráficos usam **só as vendas ativas**, como a meta e os rankings.
+- **CSS** ([ChartsPage.module.css](src/features/admin/pages/ChartsPage.module.css)): grade de 2 colunas; "Vendas por pessoa" ocupa 2 linhas (`.tall`), porque tem uma barra por vendedor. Abaixo de 1100px vira 1 coluna. O seletor reaproveita o visual dos filtros do Dashboard com `composes` do `SalesFilters.module.css`, sem mudar aquele arquivo. Também define `--chart-grid` (cinza das linhas de grade) e `--chart-reference` (cinza da linha da meta e da linha do mouse).
+
+| Gráfico | Tipo | O que mostra | Segue o filtro de semana? |
+|---|---|---|---|
+| Vendas acumuladas | Linha | Valor vendido somado dia a dia (vendas + renovações) | Sim |
+| Vendas acumuladas por setor | Linhas | Uma linha por segmento (B2B, B2G), somando dia a dia | Sim |
+| Acumulado x meta | Linha + linha da meta | O acumulado da campanha com a meta como linha horizontal | **Não**: a meta é da campanha inteira |
+| Vendas x renovações por dia | Colunas | Valor vendido em cada dia, vendas e renovações lado a lado (não acumula) | Sim |
+| Vendas por pessoa | Barras | Total de cada vendedor, do maior para o menor | Sim |
+| Vendas por equipe | Barras | Total de cada equipe, do maior para o menor. Equipes sem venda aparecem com R$ 0 | Sim |
+| Passagens por pessoa | Barras | Quantas passagens cada pessoa fez, com o cargo embaixo do nome | Sim |
+
+**Dias do eixo:** sem filtro, vão do dia da primeira venda até hoje. Com uma semana, vão de segunda até domingo, ou até hoje na semana atual. Dias sem venda entram no eixo (a linha acumulada fica reta, a coluna fica vazia).
+
+### Componentes de gráfico
+
+Os gráficos são desenhados em **SVG próprio**, sem biblioteca de gráficos, para não acrescentar dependência ao projeto.
+
+#### `TimeSeriesChart({ title, days, series, variant, reference, formatValue })`
+
+[components/charts/TimeSeriesChart.jsx](src/features/admin/components/charts/TimeSeriesChart.jsx)
+
+Gráfico com os dias no eixo horizontal e reais no vertical.
+- `series`: lista de `{ key, label, color, values }`, com um valor por dia.
+- `variant`: `"line"` (padrão) ou `"columns"`. Em linha, com uma série só, a área embaixo ganha um preenchimento claro (10% da cor). Em colunas, as séries ficam lado a lado em cada dia, com até 24px de largura, cantos de cima arredondados e 2px de espaço entre elas.
+- `reference`: opcional, `{ value, label }`. Desenha uma linha horizontal cinza com o texto no canto direito (a meta).
+- `formatValue`: formata os valores da dica e da tabela.
+- **Escala:** o eixo vertical vai de 0 até um número redondo acima do maior valor (ou da meta), com `niceTicks`. Os rótulos usam reais compactos ("R$ 200 mil", "R$ 3 mi"). Os dias do eixo horizontal aparecem pulando alguns quando não cabem (no mínimo 56px entre rótulos).
+- **Legenda:** só aparece com duas séries ou mais. Com uma série, o título do card já diz o que é.
+- **Dica (tooltip):** passando o mouse, uma linha vertical (ou uma faixa cinza, nas colunas) marca o dia e uma caixa mostra o dia e o valor de cada série. A caixa troca de lado perto da borda direita. O gráfico também recebe foco pelo Tab, e as **setas ← →** andam de dia em dia; ao sair do foco a dica some.
+- **Largura:** `useElementWidth` mede a largura do card e o SVG é redesenhado nela, então o gráfico acompanha o tamanho da tela sem distorcer o texto.
+- **Acessibilidade:** além do SVG (`role="img"`), cada gráfico tem uma tabela invisível (`.srOnly`) com um dia por linha, lida por leitores de tela. Os testes usam essa tabela para conferir os valores.
+
+#### `BarChart({ title, items, color, formatValue })`
+
+[components/charts/BarChart.jsx](src/features/admin/components/charts/BarChart.jsx)
+
+Barras horizontais em HTML (lista `<ol>`). Cada item é `{ key, label, value, detail? }`.
+- A maior barra ocupa a largura toda; as outras são proporcionais. O valor fica escrito na ponta de cada barra, então não precisa de dica.
+- `detail` aparece em cinza embaixo do nome (o cargo, nas passagens).
+- CSS: `.row` é a linha (nome à esquerda em 30%, barra à direita); `.track` reserva 128px à direita para o valor; `.bar` tem 16px de altura e a ponta arredondada.
+
+#### `SalesChartWidgets`
+
+[components/SalesChartWidgets/SalesChartWidgets.jsx](src/features/admin/components/SalesChartWidgets/SalesChartWidgets.jsx)
+
+Os sete cards da aba, um componente para cada (`TotalSalesChart`, `SegmentSalesChart`, `GoalTrackChart`, `FunnelSalesChart`, `VendorSalesChart`, `TeamSalesChart`, `PassageChart`), todos recebendo `weekKey` (o `GoalTrackChart` ignora). `ChartCard({ title, description, children })` é a moldura comum: card branco, título, descrição em cinza e o corpo. Sem dados, cada card mostra um aviso ("Nenhuma venda no período", "Nenhuma passagem no período", "Nenhuma venda ainda").
+
+### Hooks dos gráficos
+
+- [useSalesCharts(weekKey)](src/features/admin/hooks/useSalesCharts.js): `useSuspenseQuery(adminSalesQuery(""))` com um `select` que roda `buildSalesCharts`. Usa **o mesmo cache** da lista de vendas do Dashboard (chave `["admin-sales", "all"]`), então os sete gráficos fazem uma requisição só, e trocar de semana não busca de novo: só recalcula.
+- [useTeams()](src/features/admin/hooks/useTeams.js): busca as equipes com `getTeams`, chave `["admin-teams"]`.
+- [useElementWidth(larguraInicial)](src/features/admin/hooks/useElementWidth.js): devolve `[ref, largura]`. Mede o elemento com `ResizeObserver` e atualiza quando ele muda de tamanho. Sem `ResizeObserver` (nos testes), fica na largura inicial.
+
+### Utilitários dos gráficos
+
+[utils/chartData.js](src/features/admin/utils/chartData.js), funções puras que transformam a lista de vendas nos dados de cada gráfico:
+
+| Função | O que faz |
+|---|---|
+| `isActiveSale(venda)` | `true` para venda ativa com `realizedAt` |
+| `segmentOf(venda)` / `funnelOf(venda)` | Segmento em maiúsculas (ou "Sem setor") / `"renewals"` para farm, `"sales"` para o resto |
+| `listDays(vendas, semana, agora)` | Os dias do eixo, como descrito acima |
+| `formatDay(dia)` | `"2026-10-05"` → `"05/10"` |
+| `cumulativeByDay(vendas, dias)` | Soma do valor dia a dia, acumulando |
+| `cumulativeByDayAndGroup(vendas, dias, chaveDe)` | Uma série acumulada por grupo (ex.: segmento), em ordem alfabética |
+| `dailyByFunnel(vendas, dias)` | `{ sales, renewals }` com o valor de cada dia, sem acumular |
+| `totalsByVendor(vendas)` | Total por vendedor, do maior para o menor (empate em ordem alfabética) |
+| `totalsByTeam(vendas, equipes)` | Total por equipe; todas as equipes aparecem, mesmo com R$ 0; vendedor sem equipe conhecida vai para "Sem equipe" |
+| `passagesByPerson(vendas)` | Quantidade de passagens por pessoa, com o cargo em `detail`. Aceita `sdrIds` e o `sdrId` antigo |
+| `buildSalesCharts(vendas, semana, agora)` | Junta tudo: filtra as ativas, aplica a semana e devolve `{ days, activeSales, total, bySegment, byFunnel, byVendor, passages, campaign }`. `campaign` é o acumulado da campanha inteira, sem a semana, para o "Acumulado x meta" |
+
+- [utils/chartScale.js](src/features/admin/utils/chartScale.js): `niceTicks(máximo)` devolve os valores do eixo (0, 25, 50, 75, 100…), sempre redondos (passos de 1, 2, 2,5 ou 5 vezes uma potência de 10); `formatCompactCurrency(valor)` escreve "R$ 200 mil"; `formatPassages(n)` escreve "1 passagem" ou "3 passagens".
+- [utils/chartColors.js](src/features/admin/utils/chartColors.js): as cores das séries. Azul `#2a78d6` para a primeira (e para os gráficos de uma série só), laranja `#eb6834` para a segunda e verde-água `#1baf7a` para um segmento desconhecido. `segmentColor(segmento)` fixa B2B em azul e B2G em laranja, para a cor de cada segmento não mudar quando o filtro tira um deles. O par azul/laranja foi conferido para daltonismo e contraste com o fundo branco.
 
 ---
 
@@ -407,12 +518,17 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 | `utils/passages.test.js` | Lista e nomes das pessoas da passagem; lista vazia sem passagem; ignora pessoa não populada; aceita venda antiga com `sdrId` |
 | `utils/weeks.test.js` | Semana pela segunda-feira de São Paulo; domingo 23:59 e segunda 00:00 nos limites certos; semana anterior na virada do mês; intervalo de segunda a segunda; nomes "Semana atual" e "Semana passada"; semana do dia 1º do mês (inclusive na virada do mês em São Paulo); todas as semanas do mês mesmo sem vendas; começo do mês; volta mais com venda antes do mês; filtro sem semana devolve tudo; filtro respeita os limites |
 | `components/RankWidget/RankWidget.test.jsx` | Abre na aba Vendas com posição, nome, cargo e pontos ("1 ponto" no singular); a aba Renovação busca e mostra o ranking de farm; avisa quando ninguém pontuou |
-| `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!" |
+| `utils/chartData.test.js` | Dias do eixo sem semana, com semana atual (até hoje) e semana passada (7 dias); sem vendas não tem dias; dia pelo horário de São Paulo; acumulado com dias sem venda; séries por segmento em ordem alfabética com "Sem setor"; vendas x renovações por dia sem acumular; totais por vendedor do maior para o menor; totais por equipe com todas as equipes e "Sem equipe"; passagens por pessoa com cargo e `sdrId` antigo; canceladas fora e semana aplicada, mas a campanha com todas; formato do dia |
+| `utils/chartScale.test.js` | Escala começa em 0 e termina num número redondo acima do máximo; escala mínima sem valor; "passagem" no singular |
+| `pages/ChartsPage.test.jsx` | Sem vendas, cada gráfico mostra o aviso; se as equipes não carregam, só o gráfico de equipes some; as setas do teclado mostram o dia e o valor na dica, e ela some ao sair do foco |
+| `pages/ChartsPage.mocks.test.jsx` | Com os dados falsos: os sete gráficos na ordem; acumulado e acumulado x meta chegam em R$ 212 mil (sem as canceladas) com a meta de R$ 3 mi; B2B R$ 92 mil e B2G R$ 120 mil; vendas por pessoa, por equipe e passagens da campanha; filtrando a semana atual, os valores mudam (R$ 82 mil) e o acumulado x meta continua na campanha inteira |
+| `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!"; lista vendas, passagens e renovações por setor, sem as canceladas; avisa em cada coluna quando não tem nada |
+| `utils/sectorCounts.test.js` | Vendas e renovações por segmento em ordem alfabética; uma passagem por pessoa, pelo cargo, em vendas e renovações; ignora canceladas; aceita `sdrId` antigo e agrupa sem segmento ou cargo em "Sem setor" |
 | `components/SdrRankWidget/SdrRankWidget.test.jsx` | Mostra o ranking de passagens vindo do backend; avisa quando ninguém fez passagem |
-| `pages/AdminLayout.test.jsx` | Menu com Dashboard e Erros, abrindo no dashboard marcado; clicar em Erros troca a página sem recarregar e muda o item marcado; abrir direto em `/admin/erros` marca só Erros |
+| `pages/AdminLayout.test.jsx` | Menu com Dashboard e Erros, abrindo no dashboard marcado; clicar em Erros troca a página sem recarregar e muda o item marcado; abrir direto em `/admin/erros` marca só Erros; clicar em Gráficos abre a aba e marca só ela |
 | `pages/ErrorsPage.test.jsx` | Título "Erros" e os widgets de logs de erro e de teste |
 | `pages/AdminPanel.test.jsx` | Opções de vendedor em ordem alfabética e de semana com todas as semanas do mês; filtra por uma semana de duas semanas atrás; vendedor sem nome aparece como "Vendedor sem nome" sem esvaziar a lista; avisa quando os vendedores não carregam; sem filtros lista e exporta tudo; só vendedor; só semana; semana + vendedor; semana sem vendas do vendedor mostra lista vazia; voltar para "Todas" e "Todos" mostra e exporta tudo; avisa quando a exportação falha e não baixa nada. Em cada caso confere a lista na tela, o conteúdo do CSV e o nome do arquivo |
 
 Os testes do `AdminPanel` fixam a data em 22/10/2026 (`vi.setSystemTime`), para "Semana atual" e "Semana passada" não dependerem do dia em que rodam.
 
-Os testes foram conferidos quebrando o código de propósito: com a exportação ignorando o vendedor, o teste "só o vendedor" falhou; com a exportação ignorando a semana, os testes "só a semana" e "semana + vendedor" falharam.
+Os testes foram conferidos quebrando o código de propósito: com a exportação ignorando o vendedor, o teste "só o vendedor" falhou; com a exportação ignorando a semana, os testes "só a semana" e "semana + vendedor" falharam. Nos gráficos, contando as vendas canceladas, 4 testes falharam; ignorando o filtro de semana, 2 testes falharam.

@@ -79,3 +79,11 @@ export function filterSalesByWeek(sales, weekKey) {
     return realizedAt >= start && realizedAt < end;
   });
 }
+
+export function getDayKey(date) {
+  return toSaoPauloClock(date).toISOString().slice(0, 10);
+}
+
+export function addDays(dayKey, days) {
+  return new Date(new Date(`${dayKey}T00:00:00.000Z`).getTime() + days * DAY_MS).toISOString().slice(0, 10);
+}

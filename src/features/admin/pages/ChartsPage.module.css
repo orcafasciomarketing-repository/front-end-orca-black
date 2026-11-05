@@ -1,0 +1,51 @@
+.page {
+  --chart-grid: #eef0f3;
+  --chart-reference: #9ca3af;
+
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+}
+
+.field {
+  composes: field from "../components/SalesFilters/SalesFilters.module.css";
+}
+
+.label {
+  composes: label from "../components/SalesFilters/SalesFilters.module.css";
+}
+
+.select {
+  composes: select from "../components/SalesFilters/SalesFilters.module.css";
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.grid > * {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.grid > * > * {
+  flex: 1;
+}
+
+.tall {
+  grid-row: span 2;
+}
+
+@media (max-width: 1100px) {
+  .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tall {
+    grid-row: auto;
+  }
+}

@@ -163,7 +163,7 @@ Semana passada no placar: Orçawinx 8 · Sem freio 4 · Wizards 1.
 
 Todos esses testes fixam a data em quarta, 21/10/2026, 12h em São Paulo (`vi.setSystemTime`), para os resultados não dependerem do dia em que rodam.
 
-Os dois testes de integração (`*.mocks.test.jsx`) esperam até 4 segundos por cada resultado (`configure({ asyncUtilTimeout: 4000 })`), em vez de 1 segundo, que é o padrão. O servidor falso tem 300 ms de atraso por requisição e o admin faz várias em sequência. Com a suíte inteira rodando em paralelo, 1 segundo às vezes não bastava.
+Os dois testes de integração (`*.mocks.test.jsx`) esperam até 4 segundos por cada resultado (`configure({ asyncUtilTimeout: 4000 })`), em vez de 1 segundo, que é o padrão. O servidor falso tem 300 ms de atraso por requisição e o admin faz várias em sequência. Com a suíte inteira rodando em paralelo, 1 segundo às vezes não bastava. Nos testes do admin (`AdminPanel.mocks.test.jsx` e `ChartsPage.mocks.test.jsx`) a espera é de 10 segundos e cada teste pode levar até 15 (`vi.setConfig({ testTimeout: 15000 })`, em vez dos 5 padrão): o primeiro teste do Dashboard leva perto de 5 segundos com a suíte inteira rodando, e já estourava às vezes antes da aba Gráficos existir. O limite só muda quanto tempo o teste espera, não o que ele confere.
 
 **Os testes pegam erro de verdade:** com o cálculo de semana do admin ignorando o horário de São Paulo, 9 testes falharam (limites, cada semana e o relatório).
 
