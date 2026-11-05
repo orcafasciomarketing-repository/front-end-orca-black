@@ -2,13 +2,29 @@ import styles from "./SaleWidget.module.css";
 
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import { useAdminSales } from "../../hooks/useAdminSales";
+import { toCompanyUrl } from "../../utils/companyLink";
 import { formatDateTime } from "../../utils/formatDateTime";
 import { formatPassageNames, getPassagePeople } from "../../utils/passages";
 
 const STATUS_LABELS = {
-  ativa: "Ativa",
+  ativa: "Concluída",
   cancelada: "Cancelada",
 };
+
+function SaleName({ name }) {
+  const url = toCompanyUrl(name);
+
+  if (!url) {
+    return name;
+  }
+
+  return (
+    <a className={styles.saleLink} href={url} target="_blank" rel="noopener noreferrer" title="Abrir em nova aba">
+      {name}{" "}
+      <span className={styles.srOnly}>(abre em nova aba)</span>
+    </a>
+  );
+}
 
 export default function SaleWidget({ vendorId, period, segment }) {
   const { sales, total } = useAdminSales(vendorId, period, segment);
@@ -26,7 +42,9 @@ export default function SaleWidget({ vendorId, period, segment }) {
           {sales.map((sale) => (
             <li key={sale._id} className={styles.item}>
               <div className={styles.itemTop}>
-                <strong className={styles.saleName}>{sale.rdDealName}</strong>
+                <strong className={styles.saleName}>
+                  <SaleName name={sale.rdDealName} />
+                </strong>
                 <span
                   className={`${styles.status} ${sale.dealStatus === "ativa" ? styles.active : styles.canceled}`}
                 >

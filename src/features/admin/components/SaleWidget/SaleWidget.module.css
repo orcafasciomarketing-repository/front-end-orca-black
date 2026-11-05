@@ -44,6 +44,34 @@
   white-space: nowrap;
 }
 
+.saleLink {
+  border-radius: 4px;
+  outline: 2px solid transparent;
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-decoration-color: transparent;
+  text-underline-offset: 3px;
+  transition: text-decoration-color 0.2s ease;
+}
+
+.saleLink:hover {
+  text-decoration-color: currentColor;
+}
+
+.saleLink:focus-visible {
+  outline-color: var(--color-primary);
+  outline-offset: 2px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .status {
   flex-shrink: 0;
   padding: 2px 8px;

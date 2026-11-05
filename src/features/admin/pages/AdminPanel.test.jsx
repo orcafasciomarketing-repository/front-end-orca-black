@@ -277,5 +277,29 @@ describe("AdminPanel › filtros e exportação de vendas", () => {
     await waitFor(() => expect(visibleSales()).toEqual(["b"]));
     expect((await exportAndGetCsv()).fileName).toBe("vendas-todos-2026-10-14-a-2026-10-14-2026-10-22.csv");
   });
+
+  it("nome da venda com link da empresa vira link que abre em nova aba; nome comum continua texto", async () => {
+    getAdminSales.mockImplementation(async () => ({
+      sales: [
+        { ...allSales[0], rdDealName: "www.acme.com.br" },
+        { ...allSales[1], rdDealName: "javascript:alert(1)" },
+        allSales[2],
+      ],
+      total: 3,
+    }));
+    renderPanel();
+
+    const link = await screen.findByRole("link", { name: /www\.acme\.com\.br/ });
+    expect(link).toHaveAttribute("href", "https://www.acme.com.br/");
+    expect(link).toHaveAttribute("target", "_blank");
+    expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    expect(link).toHaveAccessibleName("www.acme.com.br (abre em nova aba)");
+
+    expect(screen.getByText("javascript:alert(1)").closest("a")).toBeNull();
+    expect(screen.getByText("Negócio c").closest("a")).toBeNull();
+    expect(screen.getAllByText("Concluída")).toHaveLength(3);
+    expect(screen.queryByText("Ativa")).not.toBeInTheDocument();
+    expect(screen.getAllByRole("link")).toHaveLength(1);
+  });
 });
 
