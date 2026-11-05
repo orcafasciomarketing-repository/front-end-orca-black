@@ -126,6 +126,7 @@ export default function TimeSeriesChart({
           className={styles.svg}
           width={width}
           height={HEIGHT}
+          viewBox={`0 0 ${width} ${HEIGHT}`}
           role="img"
           aria-label={`${title}. Use as setas para ver cada dia.`}
           tabIndex={0}

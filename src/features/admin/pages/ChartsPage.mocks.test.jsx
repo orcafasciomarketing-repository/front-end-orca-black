@@ -190,4 +190,35 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
         .map((row) => textOf(row)),
     ).toContain("Ter10h1 venda, R$ 30.000,00");
   });
+
+  it("filtrando o setor B2B, todos os gráficos e indicadores mostram só B2B", async () => {
+    renderPage();
+    await ready();
+
+    expect(
+      within(screen.getByRole("combobox", { name: "Filtrar gráficos por setor" }))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["Todos", "B2B", "B2G"]);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Filtrar gráficos por setor" }), {
+      target: { value: "B2B" },
+    });
+
+    await waitFor(() => expect(lastRowOf("Vendas acumuladas")).toEqual(["21/10", "R$ 92.000,00"]));
+    expect(rowOf("Acumulado x meta", "21/10")[1]).toBe("R$ 92.000,00");
+    expect(textOf(widget("Acumulado x meta"))).toContain("B2B contra a meta total");
+    expect(barsOf("Participação por setor")).toEqual(["B2B100%R$ 92.000,00"]);
+    expect(barsOf("Ticket médio", "Ticket médio por setor")).toEqual(["B2B11 vendasR$ 8.363,64"]);
+    expect(barsOf("Vendas por pessoa").map((bar) => bar.split("R$")[0])).not.toContain("Gustavo Rocha");
+    expect(barsOf("Cancelamentos", "Valor cancelado por pessoa")).toEqual([
+      "Heitor Alves1 canceladaR$ 20.000,00",
+      "Marcelo Dias1 canceladaR$ 7.000,00",
+    ]);
+
+    const kpis = screen.getByRole("region", { name: "Indicadores" });
+    expect(textOf(kpis)).toContain("Total vendidoR$ 92.000,00");
+    expect(textOf(kpis)).toContain("B2B na meta da campanha3,1%");
+  });
 });
+

@@ -30,6 +30,16 @@
   gap: 4px 8px;
 }
 
+.segment {
+  align-self: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--color-primary-field);
+  color: var(--color-primary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
 .total {
   font-size: 28px;
   font-weight: 700;

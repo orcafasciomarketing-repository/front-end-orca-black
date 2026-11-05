@@ -141,3 +141,14 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+@media print {
+  .svg {
+    width: 100%;
+    height: auto;
+  }
+
+  .tooltip {
+    display: none;
+  }
+}

@@ -15,9 +15,9 @@ import BarChart from "../charts/BarChart";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 import { DownloadIcon } from "../Icons/Icons";
 
-export function ChartCard({ title, description, csvRows, weekKey, children }) {
+export function ChartCard({ title, description, csvRows, weekKey, segment, children }) {
   const exportCsv = () =>
-    downloadFile(tableToCsv(csvRows), buildChartFileName(title, weekKey), "text/csv;charset=utf-8");
+    downloadFile(tableToCsv(csvRows), buildChartFileName({ title, weekKey, segment }), "text/csv;charset=utf-8");
 
   return (
     <section className="widget" aria-label={title}>
@@ -52,8 +52,8 @@ const NO_SALES = "Nenhuma venda no período";
 
 const dayRows = (days, series) => timeSeriesRows(days, series, { formatLabel: formatDay });
 
-export function TotalSalesChart({ weekKey }) {
-  const { days, activeSales, total } = useSalesCharts(weekKey);
+export function TotalSalesChart({ weekKey, segment }) {
+  const { days, activeSales, total } = useSalesCharts(weekKey, segment);
   const title = "Vendas acumuladas";
   const series = [{ key: "total", label: "Vendido", color: CHART_COLORS.blue, values: total }];
 
@@ -63,6 +63,7 @@ export function TotalSalesChart({ weekKey }) {
       description="Valor vendido somado dia a dia, vendas e renovações"
       csvRows={dayRows(days, series)}
       weekKey={weekKey}
+      segment={segment}
     >
       {activeSales.length === 0 ? (
         <Empty text={NO_SALES} />
@@ -73,12 +74,12 @@ export function TotalSalesChart({ weekKey }) {
   );
 }
 
-export function SegmentSalesChart({ weekKey }) {
-  const { days, activeSales, bySegment } = useSalesCharts(weekKey);
+export function SegmentSalesChart({ weekKey, segment }) {
+  const { days, activeSales, bySegment } = useSalesCharts(weekKey, segment);
   const title = "Vendas acumuladas por setor";
-  const series = bySegment.map((segment) => ({
-    ...segment,
-    color: segmentColor(segment.label),
+  const series = bySegment.map((item) => ({
+    ...item,
+    color: segmentColor(item.label),
   }));
 
   return (
@@ -87,6 +88,7 @@ export function SegmentSalesChart({ weekKey }) {
       description="Valor vendido somado dia a dia, por segmento"
       csvRows={dayRows(days, series)}
       weekKey={weekKey}
+      segment={segment}
     >
       {activeSales.length === 0 ? (
         <Empty text={NO_SALES} />
@@ -97,9 +99,9 @@ export function SegmentSalesChart({ weekKey }) {
   );
 }
 
-export function GoalTrackChart() {
+export function GoalTrackChart({ segment }) {
   const { goal } = useGoal();
-  const { campaign } = useSalesCharts("");
+  const { campaign } = useSalesCharts("", segment);
   const title = "Acumulado x meta";
   const track = goalTrack(campaign, goal.goal, CAMPAIGN_END_DAY);
   const series = [
@@ -128,8 +130,13 @@ export function GoalTrackChart() {
   return (
     <ChartCard
       title={title}
-      description={`Campanha inteira até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de semana`}
+      description={
+        segment
+          ? `${segment} contra a meta total, até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de semana`
+          : `Campanha inteira até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de semana`
+      }
       csvRows={dayRows(track.days, series)}
+      segment={segment}
     >
       {campaign.days.length === 0 ? (
         <Empty text="Nenhuma venda ainda" />
@@ -149,8 +156,8 @@ export function GoalTrackChart() {
   );
 }
 
-export function FunnelSalesChart({ weekKey }) {
-  const { days, activeSales, byFunnel } = useSalesCharts(weekKey);
+export function FunnelSalesChart({ weekKey, segment }) {
+  const { days, activeSales, byFunnel } = useSalesCharts(weekKey, segment);
   const title = "Vendas x renovações por dia";
   const series = [
     {
@@ -168,7 +175,13 @@ export function FunnelSalesChart({ weekKey }) {
   ];
 
   return (
-    <ChartCard title={title} description="Valor vendido em cada dia" csvRows={dayRows(days, series)} weekKey={weekKey}>
+    <ChartCard
+      title={title}
+      description="Valor vendido em cada dia"
+      csvRows={dayRows(days, series)}
+      weekKey={weekKey}
+      segment={segment}
+    >
       {activeSales.length === 0 ? (
         <Empty text={NO_SALES} />
       ) : (
@@ -178,8 +191,8 @@ export function FunnelSalesChart({ weekKey }) {
   );
 }
 
-export function VendorSalesChart({ weekKey }) {
-  const { byVendor } = useSalesCharts(weekKey);
+export function VendorSalesChart({ weekKey, segment }) {
+  const { byVendor } = useSalesCharts(weekKey, segment);
   const title = "Vendas por pessoa";
 
   return (
@@ -188,6 +201,7 @@ export function VendorSalesChart({ weekKey }) {
       description="Valor vendido por vendedor, vendas e renovações"
       csvRows={barRows(byVendor, { column: "Vendedor" })}
       weekKey={weekKey}
+      segment={segment}
     >
       {byVendor.length === 0 ? (
         <Empty text={NO_SALES} />
@@ -198,8 +212,8 @@ export function VendorSalesChart({ weekKey }) {
   );
 }
 
-export function TeamSalesChart({ weekKey }) {
-  const { activeSales } = useSalesCharts(weekKey);
+export function TeamSalesChart({ weekKey, segment }) {
+  const { activeSales } = useSalesCharts(weekKey, segment);
   const { teams } = useTeams();
   const items = totalsByTeam(activeSales, teams);
   const title = "Vendas por equipe";
@@ -210,6 +224,7 @@ export function TeamSalesChart({ weekKey }) {
       description="Valor vendido por equipe, vendas e renovações"
       csvRows={barRows(items, { column: "Equipe" })}
       weekKey={weekKey}
+      segment={segment}
     >
       {items.length === 0 ? (
         <Empty text="Nenhuma equipe cadastrada" />
@@ -220,8 +235,8 @@ export function TeamSalesChart({ weekKey }) {
   );
 }
 
-export function PassageChart({ weekKey }) {
-  const { passages } = useSalesCharts(weekKey);
+export function PassageChart({ weekKey, segment }) {
+  const { passages } = useSalesCharts(weekKey, segment);
   const title = "Passagens por pessoa";
 
   return (
@@ -235,6 +250,7 @@ export function PassageChart({ weekKey }) {
         digits: 0,
       })}
       weekKey={weekKey}
+      segment={segment}
     >
       {passages.length === 0 ? (
         <Empty text="Nenhuma passagem no período" />

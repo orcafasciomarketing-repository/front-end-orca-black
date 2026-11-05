@@ -225,4 +225,54 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
     fireEvent.click(within(sectionOf("Rank dos vendedores")).getByRole("tab", { name: "Renovação" }));
     await waitFor(() => expect(within(sectionOf("Rank dos vendedores")).getByText("Karine Souza")).toBeInTheDocument());
   });
+
+  it("filtro de setor B2G: lista, exportação, meta e rankings só com B2G; voltar para Todos mostra tudo", async () => {
+    renderPanel();
+    await ready();
+    await waitFor(() =>
+      expect(within(sectionOf("Rank dos vendedores")).getByText("Gustavo Rocha")).toBeInTheDocument(),
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Filtrar por setor" }), { target: { value: "B2G" } });
+
+    await expectListToShow([
+      "Prefeitura de Campinas",
+      "Secretaria de Obras SP",
+      "Governo do Estado MG",
+      "Câmara Municipal BH",
+      "Prefeitura de Santos",
+    ]);
+
+    const goal = sectionOf("Meta da Black Friday");
+    await waitFor(() => expect(goal).toHaveTextContent("B2G representa 56,6% do total vendido"));
+    expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("B2GR$ 120.000,00de R$ 3.000.000,00 (meta total)");
+    expect(within(goal).getByText("4%")).toBeInTheDocument();
+
+    const vendorRank = () =>
+      within(sectionOf("Rank dos vendedores"))
+        .getAllByRole("listitem")
+        .map((item) => item.textContent);
+    await waitFor(() =>
+      expect(vendorRank()).toEqual(["1ºGustavo RochaB2G Sales6 pontos", "2ºFernanda MeloB2G Sales2 pontos"]),
+    );
+    const passageRank = within(sectionOf("Rank das passagens"))
+      .getAllByRole("listitem")
+      .map((item) => item.textContent);
+    expect(passageRank).toEqual([
+      "1ºCaio MartinsCS1 ponto",
+      "2ºJulia TomazSuporte1 ponto",
+      "3ºLucas DanielSDR1 ponto",
+    ]);
+
+    fireEvent.click(within(sectionOf("Rank dos vendedores")).getByRole("tab", { name: "Renovação" }));
+    await waitFor(() => expect(vendorRank()).toEqual(["1ºJoice PereiraB2G Farmer1 ponto"]));
+
+    const { fileName, rows } = await exportReport();
+    expect(fileName).toBe("vendas-todos-b2g-2026-10-21.csv");
+    expect(rows).toHaveLength(5);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Filtrar por setor" }), { target: { value: "" } });
+    await expectListToShow(ALL_DEALS);
+    await waitFor(() => expect(sectionOf("Meta da Black Friday")).toHaveTextContent("Faltam"));
+  });
 });

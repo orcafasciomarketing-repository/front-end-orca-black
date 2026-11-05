@@ -66,3 +66,9 @@
   font-size: 14px;
   text-align: center;
 }
+
+@media print {
+  .exportButton {
+    display: none;
+  }
+}

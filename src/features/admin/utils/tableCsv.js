@@ -10,10 +10,11 @@ export function tableToCsv(rows) {
   return BYTE_ORDER_MARK + rows.map((row) => row.map(escapeCsvCell).join(SEPARATOR)).join("\r\n");
 }
 
-export function buildChartFileName(title, weekKey, date = new Date()) {
+export function buildChartFileName({ title, weekKey, segment }, date = new Date()) {
+  const sector = segment ? `-${toSlug(segment)}` : "";
   const week = weekKey ? `-semana-${weekKey}` : "";
 
-  return `grafico-${toSlug(title)}${week}-${date.toLocaleDateString("sv-SE")}.csv`;
+  return `grafico-${toSlug(title)}${sector}${week}-${date.toLocaleDateString("sv-SE")}.csv`;
 }
 
 export function timeSeriesRows(days, series, { column = "Dia", formatLabel = (day) => day } = {}) {

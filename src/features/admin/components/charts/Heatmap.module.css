@@ -95,3 +95,13 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
+
+@media print {
+  .grid {
+    min-width: 0;
+  }
+
+  .detail {
+    visibility: hidden;
+  }
+}

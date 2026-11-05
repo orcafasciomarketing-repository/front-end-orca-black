@@ -6,6 +6,7 @@ import ErrorBoundary from "../../../../shared/components/ErrorBoundary/ErrorBoun
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import { useGoal } from "../../hooks/useGoal";
 import { useSectorCounts } from "../../hooks/useSectorCounts";
+import { useSegmentTotal } from "../../hooks/useSegmentTotal";
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
@@ -15,22 +16,64 @@ const SECTOR_GROUPS = [
   { field: "renewals", label: "Renovações", emptyText: "Nenhuma renovação" },
 ];
 
-export default function GoalWidget() {
+const shareFormatter = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
+
+export default function GoalWidget({ segment = "" }) {
   const { goal } = useGoal();
-  const fillWidth = Math.min(Math.max(goal.percent, 0), 100);
+
+  if (segment) {
+    return <SegmentGoal goal={goal} segment={segment} />;
+  }
+
   const remaining = Math.max(goal.goal - goal.total, 0);
+
+  return (
+    <GoalCard
+      goal={goal.goal}
+      total={goal.total}
+      percent={goal.percent}
+      segment=""
+      note={remaining === 0 ? "Meta batida!" : `Faltam ${formatCurrency(remaining)}`}
+      reached={remaining === 0}
+    />
+  );
+}
+
+function SegmentGoal({ goal, segment }) {
+  const { total, allSegments } = useSegmentTotal(segment);
+  const percent = goal.goal > 0 ? (total / goal.goal) * 100 : 0;
+  const share = allSegments > 0 ? total / allSegments : 0;
+
+  return (
+    <GoalCard
+      goal={goal.goal}
+      total={total}
+      percent={percent}
+      segment={segment}
+      note={`${segment} representa ${shareFormatter.format(share)} do total vendido`}
+      reached={false}
+    />
+  );
+}
+
+function GoalCard({ goal, total, percent, segment, note, reached }) {
+  const fillWidth = Math.min(Math.max(percent, 0), 100);
 
   return (
     <section className="widget">
       <header className="header">
         <h2 className="title">Meta da Black Friday</h2>
-        <span className={styles.percent}>{percentFormatter.format(goal.percent)}%</span>
+        <span className={styles.percent}>{percentFormatter.format(percent)}%</span>
       </header>
       <div className={styles.body}>
         <div className={styles.progress}>
           <p className={styles.amounts}>
-            <strong className={styles.total}>{formatCurrency(goal.total)}</strong>
-            <span className={styles.goal}>de {formatCurrency(goal.goal)}</span>
+            {segment && <span className={styles.segment}>{segment}</span>}
+            <strong className={styles.total}>{formatCurrency(total)}</strong>
+            <span className={styles.goal}>
+              de {formatCurrency(goal)}
+              {segment && " (meta total)"}
+            </span>
           </p>
           <div
             className={styles.track}
@@ -42,14 +85,12 @@ export default function GoalWidget() {
           >
             <div className={styles.fill} style={{ width: `${fillWidth}%` }} />
           </div>
-          <p className={`${styles.remaining} ${remaining === 0 ? styles.reached : ""}`}>
-            {remaining === 0 ? "Meta batida!" : `Faltam ${formatCurrency(remaining)}`}
-          </p>
+          <p className={`${styles.remaining} ${reached ? styles.reached : ""}`}>{note}</p>
         </div>
         <span className={styles.divider} aria-hidden="true" />
         <ErrorBoundary location="Admin › meta (setores)">
           <Suspense fallback={<p className={styles.loading}>Carregando setores...</p>}>
-            <SectorSummary />
+            <SectorSummary segment={segment} />
           </Suspense>
         </ErrorBoundary>
       </div>
@@ -57,8 +98,8 @@ export default function GoalWidget() {
   );
 }
 
-function SectorSummary() {
-  const { counts } = useSectorCounts();
+function SectorSummary({ segment }) {
+  const { counts } = useSectorCounts(segment);
 
   return (
     <div className={styles.sectors}>

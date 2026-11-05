@@ -78,3 +78,18 @@
   min-width: 0;
   overflow-y: auto;
 }
+
+@media print {
+  .layout {
+    display: block;
+    background: #ffffff;
+  }
+
+  .sidebar {
+    display: none;
+  }
+
+  .main {
+    overflow: visible;
+  }
+}

@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 
 import ErrorBoundary from "../../../../shared/components/ErrorBoundary/ErrorBoundary";
 import { useRankVendors } from "../../hooks/useRankVendors";
+import { useSegmentRankVendors } from "../../hooks/useSegmentRanks";
 import RankList from "../RankList/RankList";
 
 const TABS = [
@@ -11,7 +12,7 @@ const TABS = [
   { type: "farm", label: "Renovação" },
 ];
 
-export default function RankWidget() {
+export default function RankWidget({ segment = "" }) {
   const [activeType, setActiveType] = useState("sales");
 
   return (
@@ -33,9 +34,9 @@ export default function RankWidget() {
           ))}
         </div>
       </header>
-      <ErrorBoundary key={activeType} location={`Admin › rank dos vendedores (${activeType})`}>
+      <ErrorBoundary key={`${activeType}-${segment}`} location={`Admin › rank dos vendedores (${activeType})`}>
         <Suspense fallback={<p className={styles.loading}>Carregando ranking...</p>}>
-          <VendorRank type={activeType} />
+          {segment ? <SegmentVendorRank type={activeType} segment={segment} /> : <VendorRank type={activeType} />}
         </Suspense>
       </ErrorBoundary>
     </section>
@@ -44,6 +45,17 @@ export default function RankWidget() {
 
 function VendorRank({ type }) {
   const { rank } = useRankVendors(type);
+
+  return <VendorRankList rank={rank} />;
+}
+
+function SegmentVendorRank({ type, segment }) {
+  const { rank } = useSegmentRankVendors(type, segment);
+
+  return <VendorRankList rank={rank} />;
+}
+
+function VendorRankList({ rank }) {
   const items = rank.map((vendor) => ({ ...vendor, id: vendor.vendorId }));
 
   return <RankList items={items} emptyText="Nenhuma venda pontuada ainda" />;

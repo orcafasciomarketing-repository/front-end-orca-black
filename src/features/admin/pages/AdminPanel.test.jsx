@@ -225,4 +225,27 @@ describe("AdminPanel › filtros e exportação de vendas", () => {
     expect(await screen.findByText("Não foi possível exportar")).toBeInTheDocument();
     expect(downloadFile).not.toHaveBeenCalled();
   });
+
+  it("setor: começa em Todos e, com B2G, mostra e exporta só as vendas B2G", async () => {
+    getAdminSales.mockImplementation(async () => ({
+      sales: allSales.map((sale) => (sale._id === "b" ? { ...sale, segment: "b2g" } : sale)),
+      total: 3,
+    }));
+    renderPanel();
+    await waitForFilters();
+
+    const segmentSelect = screen.getByRole("combobox", { name: "Filtrar por setor" });
+    expect(optionsOf(segmentSelect)).toEqual(["Todos", "B2B", "B2G"]);
+    expect(segmentSelect).toHaveValue("");
+    await waitFor(() => expect(visibleSales()).toEqual(["a", "b", "c"]));
+
+    fireEvent.change(segmentSelect, { target: { value: "B2G" } });
+    await waitFor(() => expect(visibleSales()).toEqual(["b"]));
+
+    const { csv, fileName } = await exportAndGetCsv();
+    expect(csv).toContain("Negócio b");
+    expect(csv).not.toContain("Negócio a");
+    expect(fileName).toBe("vendas-todos-b2g-2026-10-22.csv");
+  });
 });
+

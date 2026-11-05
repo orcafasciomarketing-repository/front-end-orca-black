@@ -40,14 +40,14 @@ describe("tableCsv", () => {
     ]);
   });
 
-  it("buildChartFileName usa o título sem acento e a semana", () => {
+  it("buildChartFileName usa o título sem acento, o setor e a semana", () => {
     const date = new Date(2026, 9, 22);
 
-    expect(buildChartFileName("Vendas x renovações por dia", "", date)).toBe(
+    expect(buildChartFileName({ title: "Vendas x renovações por dia" }, date)).toBe(
       "grafico-vendas-x-renovacoes-por-dia-2026-10-22.csv",
     );
-    expect(buildChartFileName("Ticket médio", "2026-10-19", date)).toBe(
-      "grafico-ticket-medio-semana-2026-10-19-2026-10-22.csv",
+    expect(buildChartFileName({ title: "Ticket médio", weekKey: "2026-10-19", segment: "B2B" }, date)).toBe(
+      "grafico-ticket-medio-b2b-semana-2026-10-19-2026-10-22.csv",
     );
   });
 });

@@ -55,10 +55,11 @@ export const toSlug = (text) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
 
-export function buildExportFileName({ vendor, weekKey } = {}, date = new Date()) {
+export function buildExportFileName({ vendor, weekKey, segment } = {}, date = new Date()) {
   const day = date.toLocaleDateString("sv-SE");
   const scope = vendor ? toSlug(vendor.vendorName || vendor._id) : "todos";
+  const sector = segment ? `-${toSlug(segment)}` : "";
   const week = weekKey ? `-semana-${weekKey}` : "";
 
-  return `vendas-${scope}${week}-${day}.csv`;
+  return `vendas-${scope}${sector}${week}-${day}.csv`;
 }

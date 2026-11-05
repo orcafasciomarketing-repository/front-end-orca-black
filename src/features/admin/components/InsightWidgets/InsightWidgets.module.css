@@ -167,3 +167,10 @@
     gap: 12px;
   }
 }
+
+@media print {
+  .kpis {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+  }
+}

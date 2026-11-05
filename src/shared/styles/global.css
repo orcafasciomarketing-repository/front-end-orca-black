@@ -44,3 +44,17 @@ body,
   font-weight: 600;
   color: var(--color-text);
 }
+
+@media print {
+  html,
+  body,
+  #root,
+  .container {
+    height: auto;
+    overflow: visible;
+  }
+
+  .widget {
+    box-shadow: none;
+  }
+}

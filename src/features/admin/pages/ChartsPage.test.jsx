@@ -138,4 +138,82 @@ describe("ChartsPage", () => {
     await waitFor(() => expect(card.textContent.replace(/\u00a0/g, " ")).toContain("Dias restantes até 01/1240"));
     expect(card.textContent.replace(/\u00a0/g, " ")).toContain("Ritmo necessário por diaR$ 74.975,00");
   });
+
+  it("Gerar PDF: escolhe os widgets, imprime só eles com o cabeçalho e volta ao normal depois", async () => {
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    renderPage();
+    await within(await screen.findByRole("region", { name: "Vendas por pessoa" })).findByText(/Bruno/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar PDF" }));
+    const dialog = screen.getByRole("dialog", { name: "Gerar relatório em PDF" });
+    const selectAll = within(dialog).getByRole("checkbox", { name: /Selecionar todos/ });
+    const options = within(dialog).getAllByRole("listitem");
+
+    expect(options.map((option) => option.textContent)).toEqual([
+      "Indicadores",
+      "Acumulado x meta",
+      "Previsão de fechamento",
+      "Vendas acumuladas",
+      "Vendas acumuladas por setor",
+      "Vendas x renovações por dia",
+      "Vendas por semana",
+      "Vendas por pessoa",
+      "Vendas por equipe",
+      "Passagens por pessoa",
+      "Ticket médio",
+      "Participação por setor",
+      "Concentração",
+      "Cancelamentos",
+      "Quando as vendas fecham",
+    ]);
+    expect(selectAll).toBeChecked();
+    expect(within(dialog).getByText("15 de 15")).toBeInTheDocument();
+
+    fireEvent.click(selectAll);
+    expect(within(dialog).getByRole("button", { name: "Gerar PDF" })).toBeDisabled();
+
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Vendas por pessoa" }));
+    fireEvent.click(within(dialog).getByRole("checkbox", { name: "Indicadores" }));
+    expect(selectAll).not.toBeChecked();
+    expect(selectAll.indeterminate).toBe(true);
+    fireEvent.click(within(dialog).getByRole("button", { name: "Gerar PDF" }));
+
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByText("Relatório de vendas · Black Friday")).toBeInTheDocument();
+    expect(screen.getByText(/Semana: Todas as semanas · Setor: Todos · Gerado em/)).toBeInTheDocument();
+
+    const printed = (title) => !screen.getByRole("region", { name: title }).closest("div[class*='notPrinted']");
+    expect(printed("Vendas por pessoa")).toBe(true);
+    expect(printed("Indicadores")).toBe(true);
+    expect(printed("Vendas acumuladas")).toBe(false);
+    expect(printed("Cancelamentos")).toBe(false);
+
+    fireEvent(window, new Event("afterprint"));
+    await waitFor(() => expect(screen.queryByText("Relatório de vendas · Black Friday")).not.toBeInTheDocument());
+    expect(printed("Vendas acumuladas")).toBe(true);
+    print.mockRestore();
+  });
+
+  it("Gerar PDF com todos selecionados imprime a página inteira; Cancelar e Esc fecham sem imprimir", async () => {
+    const print = vi.spyOn(window, "print").mockImplementation(() => {});
+    renderPage();
+    await within(await screen.findByRole("region", { name: "Vendas por pessoa" })).findByText(/Bruno/);
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar PDF" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar PDF" }));
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(print).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Gerar PDF" }));
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Gerar PDF" }));
+
+    expect(print).toHaveBeenCalledTimes(1);
+    expect(document.querySelectorAll("div[class*='notPrinted']")).toHaveLength(0);
+    print.mockRestore();
+  });
 });

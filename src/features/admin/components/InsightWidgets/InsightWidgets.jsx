@@ -42,8 +42,8 @@ function Delta({ current, previous }) {
   );
 }
 
-export function SalesKpis({ weekKey }) {
-  const { kpis } = useSalesInsights(weekKey);
+export function SalesKpis({ weekKey, segment }) {
+  const { kpis, campaignTotal } = useSalesInsights(weekKey, segment);
   const { goal } = useGoal();
   const { current, previous } = kpis;
 
@@ -80,8 +80,10 @@ export function SalesKpis({ weekKey }) {
         </dl>
       ))}
       <dl className={`widget ${styles.tile}`}>
-        <dt className={styles.tileLabel}>Meta da campanha</dt>
-        <dd className={styles.tileValue}>{formatPercent((goal.percent ?? 0) / 100)}</dd>
+        <dt className={styles.tileLabel}>{segment ? `${segment} na meta da campanha` : "Meta da campanha"}</dt>
+        <dd className={styles.tileValue}>
+          {formatPercent(segment ? (goal.goal ? campaignTotal / goal.goal : 0) : (goal.percent ?? 0) / 100)}
+        </dd>
         <dd className={styles.tileDelta}>
           <span className={styles.deltaNeutral}>de {formatCurrency(goal.goal)}</span>
         </dd>
@@ -90,9 +92,9 @@ export function SalesKpis({ weekKey }) {
   );
 }
 
-export function ForecastCard() {
+export function ForecastCard({ segment }) {
   const { goal } = useGoal();
-  const { campaign } = useSalesCharts("");
+  const { campaign } = useSalesCharts("", segment);
   const plan = forecast(campaign, goal.goal, CAMPAIGN_END_DAY);
   const title = "Previsão de fechamento";
   const endLabel = formatDay(CAMPAIGN_END_DAY);
@@ -107,7 +109,12 @@ export function ForecastCard() {
   return (
     <ChartCard
       title={title}
-      description={`Se o ritmo atual continuar até ${endLabel}`}
+      description={
+        segment
+          ? `Se o ritmo atual de ${segment} continuar até ${endLabel}, contra a meta total`
+          : `Se o ritmo atual continuar até ${endLabel}`
+      }
+      segment={segment}
       csvRows={[
         ["Indicador", "Valor"],
         ["Projeção (R$)", formatCsvNumber(plan.projection)],
@@ -145,8 +152,8 @@ export function ForecastCard() {
 
 const formatWeek = (weekKey) => `Semana de ${formatDay(weekKey)}`;
 
-export function WeeklySalesChart() {
-  const { weekly } = useSalesInsights("");
+export function WeeklySalesChart({ segment }) {
+  const { weekly } = useSalesInsights("", segment);
   const title = "Vendas por semana";
   const series = [
     {
@@ -167,6 +174,7 @@ export function WeeklySalesChart() {
     <ChartCard
       title={title}
       description="Comparativo semana a semana, sem o filtro de semana"
+      segment={segment}
       csvRows={timeSeriesRows(weekly.weeks, series, {
         column: "Semana",
         formatLabel: formatWeek,
@@ -189,8 +197,8 @@ export function WeeklySalesChart() {
   );
 }
 
-export function TicketChart({ weekKey }) {
-  const { ticket } = useSalesInsights(weekKey);
+export function TicketChart({ weekKey, segment }) {
+  const { ticket } = useSalesInsights(weekKey, segment);
   const title = "Ticket médio";
 
   return (
@@ -210,6 +218,7 @@ export function TicketChart({ weekKey }) {
         }),
       ]}
       weekKey={weekKey}
+      segment={segment}
     >
       {ticket.byVendor.length === 0 ? (
         <Empty />
@@ -239,12 +248,12 @@ export function TicketChart({ weekKey }) {
   );
 }
 
-export function SegmentShareChart({ weekKey }) {
-  const { segments } = useSalesInsights(weekKey);
+export function SegmentShareChart({ weekKey, segment }) {
+  const { segments } = useSalesInsights(weekKey, segment);
   const title = "Participação por setor";
-  const items = segments.map((segment) => ({
-    ...segment,
-    color: segmentColor(segment.label),
+  const items = segments.map((item) => ({
+    ...item,
+    color: segmentColor(item.label),
   }));
 
   return (
@@ -256,14 +265,15 @@ export function SegmentShareChart({ weekKey }) {
         ...items.map((item) => [item.label, formatCsvNumber(item.value), formatCsvNumber(item.share * 100, 1)]),
       ]}
       weekKey={weekKey}
+      segment={segment}
     >
       {items.length === 0 ? <Empty /> : <ShareBar title={title} items={items} formatValue={formatCurrency} />}
     </ChartCard>
   );
 }
 
-export function ConcentrationChart({ weekKey }) {
-  const { concentration } = useSalesInsights(weekKey);
+export function ConcentrationChart({ weekKey, segment }) {
+  const { concentration } = useSalesInsights(weekKey, segment);
   const { top, topShare, rest } = concentration;
   const title = "Concentração";
   const items = [
@@ -294,6 +304,7 @@ export function ConcentrationChart({ weekKey }) {
         ...items.map((item) => [item.label, formatCsvNumber(item.value), formatCsvNumber(item.share * 100, 1)]),
       ]}
       weekKey={weekKey}
+      segment={segment}
     >
       {top.length === 0 ? (
         <Empty />
@@ -310,8 +321,8 @@ export function ConcentrationChart({ weekKey }) {
   );
 }
 
-export function CancellationChart({ weekKey }) {
-  const { cancellations } = useSalesInsights(weekKey);
+export function CancellationChart({ weekKey, segment }) {
+  const { cancellations } = useSalesInsights(weekKey, segment);
   const title = "Cancelamentos";
 
   return (
@@ -329,6 +340,7 @@ export function CancellationChart({ weekKey }) {
         }),
       ]}
       weekKey={weekKey}
+      segment={segment}
     >
       {cancellations.closed === 0 ? (
         <Empty />
@@ -366,8 +378,8 @@ export function CancellationChart({ weekKey }) {
   );
 }
 
-export function HeatmapChart({ weekKey }) {
-  const { heatmap, activeSales } = useSalesInsights(weekKey);
+export function HeatmapChart({ weekKey, segment }) {
+  const { heatmap, activeSales } = useSalesInsights(weekKey, segment);
   const title = "Quando as vendas fecham";
   const formatCell = (cell) => `${formatSalesCount(cell.count)}, ${formatCurrency(cell.value)}`;
 
@@ -385,6 +397,7 @@ export function HeatmapChart({ weekKey }) {
         ),
       ]}
       weekKey={weekKey}
+      segment={segment}
     >
       {activeSales.length === 0 ? (
         <Empty />

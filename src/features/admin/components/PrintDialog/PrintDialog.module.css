@@ -1,0 +1,136 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(17, 24, 39, 0.5);
+}
+
+.dialog {
+  width: 100%;
+  max-width: 440px;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  background: var(--color-surface);
+  color: var(--color-text);
+  box-shadow: 0 20px 40px rgba(16, 24, 40, 0.2);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.description {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.option:hover {
+  background: var(--color-background);
+}
+
+.option input {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+
+.selectAll {
+  padding-block: 12px;
+  border-bottom: 1px solid var(--color-border);
+  font-weight: 600;
+}
+
+.counter {
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.list {
+  flex: 1;
+  padding: 8px 0;
+  overflow-y: auto;
+}
+
+.footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 16px 20px;
+  border-top: 1px solid var(--color-border);
+}
+
+.cancelButton,
+.printButton {
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+.cancelButton {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.cancelButton:hover {
+  border-color: var(--color-primary);
+}
+
+.printButton {
+  border: none;
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+.printButton:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.printButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelButton:focus-visible,
+.printButton:focus-visible {
+  outline-color: var(--color-primary);
+  outline-offset: 2px;
+}

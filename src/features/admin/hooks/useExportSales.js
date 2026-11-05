@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { reportError } from "../../../shared/errorLogger";
 import { downloadFile } from "../utils/downloadFile";
 import { buildExportFileName, salesToCsv } from "../utils/salesCsv";
+import { filterSalesBySegment } from "../utils/segments";
 import { filterSalesByWeek } from "../utils/weeks";
 import { adminSalesQuery } from "./adminQueries";
 
@@ -10,11 +11,15 @@ export function useExportSales() {
   const queryClient = useQueryClient();
 
   const { mutate, isPending, isError } = useMutation({
-    mutationFn: async ({ vendor, weekKey }) => {
+    mutationFn: async ({ vendor, weekKey, segment }) => {
       const { sales } = await queryClient.fetchQuery(adminSalesQuery(vendor?._id));
-      const filteredSales = filterSalesByWeek(sales, weekKey);
+      const filteredSales = filterSalesBySegment(filterSalesByWeek(sales, weekKey), segment);
 
-      downloadFile(salesToCsv(filteredSales), buildExportFileName({ vendor, weekKey }), "text/csv;charset=utf-8");
+      downloadFile(
+        salesToCsv(filteredSales),
+        buildExportFileName({ vendor, weekKey, segment }),
+        "text/csv;charset=utf-8",
+      );
     },
     onError: (error) => reportError(error, { location: "Admin › exportação de vendas" }),
   });

@@ -3,9 +3,17 @@ import styles from "./SalesFilters.module.css";
 import { useExportSales } from "../../hooks/useExportSales";
 import { getVendorLabel, useVendors } from "../../hooks/useVendors";
 import { useWeekOptions } from "../../hooks/useWeekOptions";
+import { SEGMENT_OPTIONS } from "../../utils/segments";
 import { DownloadIcon } from "../Icons/Icons";
 
-export default function SalesFilters({ selectedVendorId, onVendorChange, selectedWeek, onWeekChange }) {
+export default function SalesFilters({
+  selectedVendorId,
+  onVendorChange,
+  selectedWeek,
+  onWeekChange,
+  selectedSegment = "",
+  onSegmentChange,
+}) {
   const { vendors, vendorsFailed } = useVendors();
   const { weeks } = useWeekOptions();
   const { exportSales, isExporting, exportFailed } = useExportSales();
@@ -51,13 +59,28 @@ export default function SalesFilters({ selectedVendorId, onVendorChange, selecte
           ))}
         </select>
       </label>
+      <label className={styles.field}>
+        <span className={styles.label}>Setor</span>
+        <select
+          className={styles.select}
+          aria-label="Filtrar por setor"
+          value={selectedSegment}
+          onChange={(event) => onSegmentChange(event.target.value)}
+        >
+          {SEGMENT_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className={styles.field}>
         {exportFailed && <span className={styles.exportError}>Não foi possível exportar</span>}
         <button
           className={styles.exportButton}
           type="button"
           disabled={isExporting}
-          onClick={() => exportSales({ vendor: selectedVendor, weekKey: selectedWeek })}
+          onClick={() => exportSales({ vendor: selectedVendor, weekKey: selectedWeek, segment: selectedSegment })}
         >
           <DownloadIcon />
           {isExporting ? "Exportando..." : "Exportar"}

@@ -242,6 +242,7 @@ export function buildSalesInsights(sales, weekKey, now = new Date()) {
 
   return {
     activeSales,
+    campaignTotal: sumValues(campaignSales),
     kpis: buildKpis(campaignSales, weekKey),
     ticket: {
       bySegment: ticketBySegment(activeSales),

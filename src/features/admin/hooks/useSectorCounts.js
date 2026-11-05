@@ -1,11 +1,13 @@
+import { useCallback } from "react";
 import { useSuspenseQuery } from "@tanstack/react-query";
 
+import { filterSalesBySegment } from "../utils/segments";
 import { countBySector } from "../utils/sectorCounts";
 import { adminSalesQuery } from "./adminQueries";
 
-const selectSectorCounts = ({ sales }) => countBySector(sales);
+export function useSectorCounts(segment = "") {
+  const selectSectorCounts = useCallback(({ sales }) => countBySector(filterSalesBySegment(sales, segment)), [segment]);
 
-export function useSectorCounts() {
   const { data } = useSuspenseQuery({ ...adminSalesQuery(""), select: selectSectorCounts });
 
   return { counts: data };
