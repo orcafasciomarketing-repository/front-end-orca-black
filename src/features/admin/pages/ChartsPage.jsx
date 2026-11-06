@@ -33,7 +33,6 @@ import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
 import { ALL_PERIODS, resolvePeriod } from "../utils/periods";
 import { getSegmentOptions, SEGMENT_OPTIONS } from "../utils/segments";
 
-const THEME_KEY = "admin-charts-theme";
 const KPIS_TITLE = "Indicadores";
 
 const CHARTS = [
@@ -59,28 +58,11 @@ const PRINT_ITEMS = [KPIS_TITLE, ...CHARTS.map((chart) => chart.title)];
 
 const printDateFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
-function readTheme() {
-  try {
-    return localStorage.getItem(THEME_KEY) === "dark";
-  } catch {
-    return false;
-  }
-}
-
-function saveTheme(isDark) {
-  try {
-    localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
-  } catch {
-    return;
-  }
-}
-
 export default function ChartsPage() {
   const [periodSelection, setPeriodSelection] = useState(ALL_PERIODS);
   // b2b e b2g abrem (e ficam) no próprio setor
   const { segment: userSegment } = usePermissions();
   const [selectedSegment, setSelectedSegment] = useState(userSegment);
-  const [isDark, setIsDark] = useState(readTheme);
   const [isChoosing, setIsChoosing] = useState(false);
   const [printItems, setPrintItems] = useState(null);
   const period = useMemo(() => resolvePeriod(periodSelection), [periodSelection]);
@@ -97,11 +79,6 @@ export default function ChartsPage() {
     return () => window.removeEventListener("afterprint", finishPrinting);
   }, [printItems]);
 
-  const toggleTheme = () => {
-    setIsDark(!isDark);
-    saveTheme(!isDark);
-  };
-
   const startPrinting = (items) => {
     setIsChoosing(false);
     setPrintItems({ titles: new Set(items), generatedAt: new Date() });
@@ -113,7 +90,7 @@ export default function ChartsPage() {
   const segmentLabel = SEGMENT_OPTIONS.find((option) => option.value === selectedSegment)?.label;
 
   return (
-    <div className={`${styles.page} ${isDark && !printItems ? styles.dark : ""}`}>
+    <div className={styles.page}>
       {printItems && (
         <div className={styles.printHeader}>
           <p className={styles.printTitle}>Relatório de vendas · Black Friday</p>
@@ -128,10 +105,6 @@ export default function ChartsPage() {
           <button className={styles.actionButton} type="button" onClick={() => setIsChoosing(true)}>
             <DownloadIcon />
             Gerar PDF
-          </button>
-          <button className={styles.actionButton} type="button" aria-pressed={isDark} onClick={toggleTheme}>
-            <span aria-hidden="true">{isDark ? "☀" : "☾"}</span>
-            Modo escuro
           </button>
           <PeriodFilter
             selection={periodSelection}

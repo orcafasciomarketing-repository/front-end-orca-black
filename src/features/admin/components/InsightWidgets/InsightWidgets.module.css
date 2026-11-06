@@ -76,7 +76,7 @@
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  color: #ffffff;
+  color: var(--color-surface);
   font-size: 12px;
   font-weight: 700;
 }

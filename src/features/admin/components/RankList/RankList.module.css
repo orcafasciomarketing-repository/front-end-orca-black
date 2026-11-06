@@ -30,18 +30,18 @@
 }
 
 .position1 {
-  background: #fef3c7;
-  color: #b45309;
+  background: var(--rank-1-background);
+  color: var(--rank-1-text);
 }
 
 .position2 {
-  background: #f1f5f9;
-  color: #475569;
+  background: var(--rank-2-background);
+  color: var(--rank-2-text);
 }
 
 .position3 {
-  background: #ffedd5;
-  color: #c2410c;
+  background: var(--rank-3-background);
+  color: var(--rank-3-text);
 }
 
 .person {

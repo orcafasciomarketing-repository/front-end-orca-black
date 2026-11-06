@@ -166,7 +166,7 @@
   align-self: flex-start;
   border: none;
   background: var(--color-primary);
-  color: var(--color-surface);
+  color: var(--color-on-primary);
 }
 
 .primaryButton:hover:not(:disabled) {

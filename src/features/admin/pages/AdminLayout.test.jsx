@@ -1,8 +1,9 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 
 import { AuthContext } from "../../auth/context/AuthContext";
+import ThemeContextProvider from "../../../shared/context/ThemeContext";
 import AdminLayout from "./AdminLayout";
 
 const renderAt = (path) => {
@@ -105,5 +106,70 @@ describe("AdminLayout", () => {
         expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Previsão"]);
       });
     }
+  });
+
+  describe("modo escuro", () => {
+    const renderWithTheme = (path = "/admin") => {
+      const router = createMemoryRouter(
+        [{ path: "/admin", element: <AdminLayout />, children: [{ index: true, element: <p>Página dashboard</p> }] }],
+        { initialEntries: [path] },
+      );
+
+      return render(
+        <ThemeContextProvider>
+          <RouterProvider router={router} />
+        </ThemeContextProvider>,
+      );
+    };
+
+    const layout = () => screen.getByRole("navigation", { name: "Menu principal" }).closest("[data-theme]");
+
+    afterEach(() => {
+      localStorage.clear();
+    });
+
+    it("o botão fica no menu lateral, começa no claro, liga e desliga o tema do admin inteiro", () => {
+      renderWithTheme();
+
+      const toggle = within(screen.getByRole("complementary")).getByRole("button", { name: "Modo escuro" });
+      expect(toggle).toHaveAttribute("aria-pressed", "false");
+      expect(layout()).toHaveAttribute("data-theme", "light");
+
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute("aria-pressed", "true");
+      expect(layout()).toHaveAttribute("data-theme", "dark");
+      expect(screen.getByText("Página dashboard").closest("[data-theme]")).toHaveAttribute("data-theme", "dark");
+
+      fireEvent.click(toggle);
+      expect(layout()).toHaveAttribute("data-theme", "light");
+    });
+
+    it("a escolha fica salva e volta ao abrir de novo", () => {
+      const { unmount } = renderWithTheme();
+      fireEvent.click(screen.getByRole("button", { name: "Modo escuro" }));
+      expect(localStorage.getItem("admin-theme")).toBe("dark");
+
+      unmount();
+      renderWithTheme();
+
+      expect(screen.getByRole("button", { name: "Modo escuro" })).toHaveAttribute("aria-pressed", "true");
+      expect(layout()).toHaveAttribute("data-theme", "dark");
+    });
+
+    it("aproveita a escolha salva pelo antigo botão da aba Gráficos", () => {
+      localStorage.setItem("admin-charts-theme", "dark");
+
+      renderWithTheme();
+
+      expect(layout()).toHaveAttribute("data-theme", "dark");
+      expect(localStorage.getItem("admin-theme")).toBe("dark");
+    });
+
+    it("sem o provider (componente solto), fica no claro e o botão não quebra", () => {
+      renderAt("/admin");
+
+      fireEvent.click(screen.getByRole("button", { name: "Modo escuro" }));
+      expect(layout()).toHaveAttribute("data-theme", "light");
+    });
   });
 });

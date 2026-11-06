@@ -2,8 +2,18 @@ import styles from "./AdminLayout.module.css";
 
 import { NavLink, Outlet } from "react-router";
 
+import useTheme from "../../../shared/hooks/useTheme";
 import usePermissions from "../../auth/hooks/usePermissions";
-import { AlertIcon, ChartIcon, DashboardIcon, ForecastIcon, UploadIcon, UsersIcon } from "../components/Icons/Icons";
+import {
+  AlertIcon,
+  ChartIcon,
+  DashboardIcon,
+  ForecastIcon,
+  MoonIcon,
+  SunIcon,
+  UploadIcon,
+  UsersIcon,
+} from "../components/Icons/Icons";
 
 // allow: permissão de getPermissions que mostra o item (sem ela, a rota também manda de volta para o dashboard)
 const NAV_ITEMS = [
@@ -20,9 +30,10 @@ const navLinkClass = ({ isActive }) => `${styles.navLink} ${isActive ? styles.na
 export default function AdminLayout() {
   const permissions = usePermissions();
   const navItems = NAV_ITEMS.filter((item) => !item.allow || permissions[item.allow]);
+  const { theme, isDark, toggleTheme } = useTheme();
 
   return (
-    <div className={`container ${styles.layout}`}>
+    <div className={`container ${styles.layout}`} data-theme={theme}>
       <aside className={styles.sidebar}>
         <img className={styles.logo} src="/orca-black-logo.png" alt="Orça Black" />
         <nav aria-label="Menu principal">
@@ -37,6 +48,10 @@ export default function AdminLayout() {
             ))}
           </ul>
         </nav>
+        <button className={styles.themeToggle} type="button" aria-pressed={isDark} onClick={toggleTheme}>
+          {isDark ? <SunIcon /> : <MoonIcon />}
+          <span>Modo escuro</span>
+        </button>
       </aside>
       <main className={styles.main}>
         <Outlet />

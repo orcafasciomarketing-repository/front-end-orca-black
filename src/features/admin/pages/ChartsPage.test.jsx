@@ -120,22 +120,10 @@ describe("ChartsPage", () => {
     );
   });
 
-  it("o modo escuro liga, desliga e fica salvo", async () => {
-    const { unmount } = renderPage();
-
-    const toggle = screen.getByRole("button", { name: "Modo escuro" });
-    expect(toggle).toHaveAttribute("aria-pressed", "false");
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute("aria-pressed", "true");
-    expect(localStorage.getItem("admin-charts-theme")).toBe("dark");
-
-    unmount();
+  it("a aba Gráficos não tem mais botão próprio de modo escuro: o tema vem do menu lateral", async () => {
     renderPage();
-    expect(screen.getByRole("button", { name: "Modo escuro" })).toHaveAttribute("aria-pressed", "true");
 
-    fireEvent.click(screen.getByRole("button", { name: "Modo escuro" }));
-    expect(localStorage.getItem("admin-charts-theme")).toBe("light");
+    expect(screen.queryByRole("button", { name: "Modo escuro" })).not.toBeInTheDocument();
   });
 
   it("previsão de fechamento mostra o ritmo necessário até o fim da campanha", async () => {
