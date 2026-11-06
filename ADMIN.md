@@ -25,7 +25,7 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 
 | Rota | Página | Conteúdo |
 |---|---|---|
-| `/admin` | `AdminPanel` (Dashboard) | Filtros, Vendas cadastradas, Rank dos vendedores e Rank das passagens |
+| `/admin` | `AdminPanel` (Dashboard) | Filtros, Vendas cadastradas, Rank dos vendedores, Rank das passagens e Pontos por pessoa |
 | `/admin/previsao` | `ForecastPage` (Previsão) | Forecast: cenários, indicadores, trajetórias, cálculo do ritmo e semana |
 | `/admin/graficos` | `ChartsPage` (Gráficos) | Filtro de semana e os sete gráficos de acompanhamento das vendas |
 | `/admin/importacao` | `ImportPage` (Importação) | Importar vendas por CSV (vendas fora da planilha principal) |
@@ -89,6 +89,7 @@ Seletor **Setor** com "Todos" (padrão), "B2B" e "B2G". As opções ficam em `SE
 | Meta da Black Friday | Compara com a **meta do setor** (B2B 2 mi, B2G 1 mi, de `goal.segments`): "de R$ 1.000.000,00 (meta B2G)", o percentual na barra e "Faltam R$ X" (ou "Meta batida!"). Para o admin, acrescenta "· B2G representa 56,6% do total vendido"; para b2b/b2g não (seria sempre 100%). Sem meta do setor no backend, volta ao comportamento antigo: contra a meta total, "(meta total)" e só a participação. As listas de vendas, passagens e renovações contam só as vendas do setor |
 | Rank dos vendedores | Vem do backend com `?segment=b2b|b2g` (`GET /analytics/ranking`), com a tabela de pontos real do backend. Sem setor, a chamada é a mesma de sempre |
 | Rank das passagens | Também vem do backend com `?segment=` (`GET /analytics/sdr-ranking`) |
+| Pontos por pessoa | Vem do backend com `?segment=` (`GET /analytics/people-points`): só os pontos das vendas do setor |
 | Todos os gráficos e indicadores | Só as vendas do setor. "Acumulado x meta" e o indicador de meta ("Meta B2B") usam a **meta do setor** e dizem isso na descrição ("B2B contra a meta de B2B"). Sem meta do setor no backend, usam a meta total ("contra a meta total"). O CSV de cada gráfico também leva o setor no nome |
 
 A meta do setor vem de `getSegmentGoal(goal, setor)` ([utils/segments.js](src/features/admin/utils/segments.js)), que devolve `{ value, isTotal }`: `isTotal: true` quando caiu na meta total (sem setor ou sem `goal.segments`).
@@ -688,7 +689,7 @@ O card "Comparar períodos". Guarda o atalho e os dois períodos no próprio est
 
 ## Novidades: tempo real, perfis, pontos e meta semanal
 
-Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-60, RN-61 e RN-62). Sem os parâmetros novos, as rotas antigas respondem igual, então as TVs não mudam.
+Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-60 a RN-63). Sem os parâmetros novos, as rotas antigas respondem igual, então as TVs não mudam.
 
 - **Uma previsão só:** o "Acumulado x meta" e o "Forecast" usam `GET /analytics/forecast` (o card "Previsão de fechamento" saiu). Com setor, a meta é a do setor quando o backend tem.
 - **Meta semanal automática** (`weekGoal` do forecast): card **Meta da semana** no Dashboard ([WeekGoalWidget](src/features/admin/components/WeekGoalWidget/WeekGoalWidget.jsx)), com vendido, meta, percentual, quanto falta, ritmo necessário por dia, cenário realista da semana e dias produtivos restantes. A meta é (meta − vendido antes da segunda) ÷ dias produtivos até 01/12 × dias produtivos da semana, e fica fixa durante a semana.
@@ -696,6 +697,11 @@ Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-
 - **Fotos:** [Avatar](src/features/admin/components/Avatar/Avatar.jsx) mostra a `imageUrl` ou, sem foto (ou se ela não carrega), as iniciais. As iniciais vêm pelo CSS (`data-initials`), então não entram no texto lido por leitores de tela. Aparece nos rankings, em "Vendas por pessoa", "Passagens por pessoa", "Pontos por equipe", no aviso e no perfil.
 - **Rankings com período e movimento:** [RankPeriodTabs](src/features/admin/components/RankPeriodTabs/RankPeriodTabs.jsx) troca entre **Campanha**, **Esta semana** e **Semana passada** (`?period=week` e as rotas `last-week`). Em "Esta semana", cada pessoa mostra o movimento em relação à semana passada (`withMovement`, [utils/rankMovement.js](src/features/admin/utils/rankMovement.js)): ▲ subiu, ▼ caiu, = igual, "novo". O ranking da campanha não tem movimento porque o backend não guarda como ele estava antes.
 - **Pontos por equipe** e **Evolução dos pontos** (Gráficos › Pessoas e equipes): usam `GET /analytics/points-history`, com venda, renovação e passagem por dia; seguem o filtro de período e de setor ([utils/teamPoints.js](src/features/admin/utils/teamPoints.js)).
+- **Pontos por pessoa** ([PeoplePoints](src/features/admin/components/PeoplePoints/PeoplePoints.jsx)): classificação de **todo mundo** (vendedores e pessoas de passagem), do maior para o menor, com posição, foto, nome, equipe e cargo, uma barra dividida em venda (azul), renovação (laranja) e passagem (verde) e o total. Passando o mouse em cada parte da barra aparece quantos pontos ela vale. Quem ainda não pontuou aparece no fim, com 0.
+  - **Seletor de equipe** ("Todas as equipes" ou uma equipe): filtra a lista e as posições são recontadas dentro da equipe (1º da equipe, 2º...). A lista rola dentro do card (até 480 px de altura); no PDF sai inteira.
+  - **No Dashboard** (`PeoplePointsWidget`, abaixo dos rankings, largura toda): abas **Campanha / Esta semana / Semana passada**, como os rankings, e segue o filtro de setor. A equipe escolhida continua ao trocar de aba.
+  - **Nos Gráficos** (`PeoplePointsChart`, em Pessoas e equipes, largura toda): segue o filtro de período (mandado como `from`/`to`) e de setor, tem o botão CSV (posição, pessoa, equipe, cargo, venda, renovação, passagem e total, só da equipe escolhida) e entra na escolha do PDF.
+  - Os pontos vêm prontos do backend (`GET /analytics/people-points`, [usePeoplePoints](src/features/admin/hooks/usePeoplePoints.js)), com a mesma tabela de pontos do placar das TVs, então somando as pessoas de uma equipe dá o total da equipe. O front só filtra pela equipe e numera ([utils/peoplePoints.js](src/features/admin/utils/peoplePoints.js)). Atualiza sozinho com as vendas ao vivo (a chave começa com `admin-`).
 - **Perfil do vendedor:** clicar no nome em "Vendas por pessoa" ou no ranking de vendedores abre o painel lateral [VendorProfile](src/features/admin/components/VendorProfile/VendorProfile.jsx): foto, cargo, posição, esta semana x semana passada, sequência de dias seguidos com venda (🔥), total, vendas, ticket, vendas novas, renovações, canceladas, valor acumulado e as últimas 5 vendas. Fecha no X, com Esc ou clicando fora. Contas em [utils/vendorProfile.js](src/features/admin/utils/vendorProfile.js).
 - **Seções na aba Gráficos:** Visão geral, Vendas, Pessoas e equipes e Análises, com um menu fixo no topo que rola até cada uma. O PDF continua com a mesma escolha de widgets (o menu não sai na impressão).
 - **Acabamento:**
@@ -707,7 +713,7 @@ Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-
 - **Mudanças pequenas em arquivos que já existiam:**
   - o `ErrorBoundary` aceita `fallback` (só muda algo quando passado);
   - o `renderWithQuery` dos testes também devolve o `queryClient`;
-  - o backend falso (`src/shared/mocks`) aceita `segment` nos rankings, tem `points-history` e a meta semanal no forecast. Ele continua com a pontuação simplificada.
+  - o backend falso (`src/shared/mocks`) aceita `segment` nos rankings, tem `points-history`, `people-points` e a meta semanal no forecast. Ele continua com a pontuação simplificada.
 
 ## 8. Testes
 
@@ -728,6 +734,8 @@ Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-
 | `utils/companyLink.test.js` | Link com https, http e sem protocolo; nome comum continua texto; recusa `javascript:`, `mailto:`, `data:` e endereço sem domínio |
 | `utils/vendorProfile.test.js` | Sequência de dias vendendo; perfil com totais, posição, semanas, evolução e últimas vendas; vendedor sem vendas |
 | `utils/teamPoints.test.js` | Pontos por equipe somados por tipo e por período; evolução acumulada |
+| `utils/peoplePoints.test.js` | Ordem do backend com posições; filtro por equipe recontando as posições; equipe vazia; linhas do CSV com a divisão dos pontos |
+| `components/PeoplePoints/PeoplePoints.test.jsx` | Dashboard: lista com equipe, cargo, divisão e total; seletor de equipe; abas de período mantendo a equipe e mandando o setor; Gráficos: período da página como `from`/`to` e CSV só da equipe escolhida; aviso de equipe sem ninguém |
 | `components/SaleToasts/SaleToasts.test.jsx` | Aviso de venda nova e de renovação, atualiza só os dados do admin, venda alterada sem aviso, fecha no X e sozinho, no máximo 3, para de escutar ao sair |
 | `components/Avatar/Avatar.test.jsx` | Foto; iniciais quando não há foto ou ela não carrega |
 | `components/WeekGoalWidget/WeekGoalWidget.test.jsx` | Meta da semana com percentual, falta, ritmo e cenário; setor; meta batida; sem meta fora da campanha |

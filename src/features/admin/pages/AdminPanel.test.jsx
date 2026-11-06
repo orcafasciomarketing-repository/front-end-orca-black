@@ -25,6 +25,9 @@ vi.mock("../components/WeekGoalWidget/WeekGoalWidget", () => ({
 vi.mock("../components/SdrRankWidget/SdrRankWidget", () => ({
   default: () => <p>Rank das passagens</p>,
 }));
+vi.mock("../components/PeoplePoints/PeoplePoints", () => ({
+  PeoplePointsWidget: () => <p>Pontos por pessoa</p>,
+}));
 vi.mock("../../../shared/errorLogger", () => ({
   reportError: vi.fn(),
 }));

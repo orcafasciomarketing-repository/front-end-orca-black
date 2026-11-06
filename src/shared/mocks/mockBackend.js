@@ -231,3 +231,48 @@ export function getPointsHistory(db, segment, now = new Date()) {
   };
 }
 
+export function getPeoplePoints(db, { period = "all", segment = null, from = null, to = null } = {}, now = new Date()) {
+  const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
+  const sales = findActiveByPeriod(db, period, now).filter((sale) => {
+    const day = mockDayKey(sale.realizedAt);
+    return inSegment(sale, validSegment) && (!from || day >= from) && (!to || day <= to);
+  });
+
+  const emptyPoints = () => ({ sales: 0, farm: 0, passage: 0 });
+  const vendorPoints = new Map(db.vendors.map((vendor) => [vendor._id, emptyPoints()]));
+  const sdrPoints = new Map(db.sdrs.map((sdr) => [sdr._id, emptyPoints()]));
+
+  for (const sale of sales) {
+    const vendor = vendorPoints.get(sale.vendorId);
+    if (vendor) vendor[sale.funnelType] += POINTS[sale.funnelType];
+    for (const sdrId of sale.sdrIds) {
+      const sdr = sdrPoints.get(sdrId);
+      if (sdr) sdr.passage += POINTS.passage;
+    }
+  }
+
+  const toPerson = (kind, person, name, points) => ({
+    personId: person._id,
+    kind,
+    name,
+    job: person.job,
+    imageUrl: person.imageUrl,
+    teamId: person.teamId ?? null,
+    ...points,
+    total: points.sales + points.farm + points.passage,
+  });
+
+  return {
+    segment: validSegment,
+    period,
+    from,
+    to,
+    teams: db.teams
+      .map((team) => ({ teamId: team._id, teamName: team.name, teamShirt: team.imageUrl }))
+      .sort((a, b) => a.teamName.localeCompare(b.teamName, "pt-BR")),
+    people: [
+      ...db.vendors.map((vendor) => toPerson("vendor", vendor, vendor.vendorName, vendorPoints.get(vendor._id))),
+      ...db.sdrs.map((sdr) => toPerson("sdr", sdr, sdr.name, sdrPoints.get(sdr._id))),
+    ].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "pt-BR")),
+  };
+}

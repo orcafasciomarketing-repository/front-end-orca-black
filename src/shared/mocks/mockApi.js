@@ -5,6 +5,7 @@ import {
   getForecast,
   getGoalProgress,
   getScoreboard,
+  getPeoplePoints,
   getPointsHistory,
   getSdrRanking,
   getVendorRanking,
@@ -43,6 +44,20 @@ const ROUTES = [
   {
     pattern: /^\/analytics\/points-history$/,
     handle: ({ db, now, params }) => getPointsHistory(db, params.segment, now),
+  },
+  {
+    pattern: /^\/analytics\/people-points$/,
+    handle: ({ db, now, params }) =>
+      getPeoplePoints(
+        db,
+        {
+          period: ["week", "lastWeek"].includes(params.period) ? params.period : "all",
+          segment: toSegment(params.segment),
+          from: params.from ?? null,
+          to: params.to ?? null,
+        },
+        now,
+      ),
   },
   { pattern: /^\/sales\/admin$/, handle: ({ db }) => findAllSales(db) },
   { pattern: /^\/sales\/get$/, handle: ({ db, now }) => findActiveSalesOfCurrentWeek(db, now) },

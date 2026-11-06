@@ -15,6 +15,7 @@ import {
 } from "../components/InsightWidgets/InsightWidgets";
 import { ForecastSummary } from "../components/ForecastWidgets/ForecastWidgets";
 import PageHeader from "../components/PageHeader/PageHeader";
+import { PeoplePointsChart } from "../components/PeoplePoints/PeoplePoints";
 import PeriodComparison from "../components/PeriodComparison/PeriodComparison";
 import PeriodFilter from "../components/PeriodFilter/PeriodFilter";
 import PrintDialog from "../components/PrintDialog/PrintDialog";
@@ -65,6 +66,7 @@ const SECTIONS = [
       { title: "Passagens por pessoa", Chart: PassageChart },
       { title: "Pontos por equipe", Chart: TeamPointsChart },
       { title: "Evolução dos pontos", Chart: TeamPointsEvolution },
+      { title: "Pontos por pessoa", Chart: PeoplePointsChart, className: "full" },
       { title: "Ticket médio", Chart: TicketChart, className: "full" },
     ],
   },

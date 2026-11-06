@@ -264,14 +264,17 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
     await waitFor(() =>
       expect(vendorRank()).toEqual(["1ºGustavo RochaB2G Sales6 pontos", "2ºFernanda MeloB2G Sales2 pontos"]),
     );
-    const passageRank = within(sectionOf("Rank das passagens"))
-      .getAllByRole("listitem")
-      .map((item) => item.textContent);
-    expect(passageRank).toEqual([
-      "1ºCaio MartinsCS1 ponto",
-      "2ºJulia TomazSuporte1 ponto",
-      "3ºLucas DanielSDR1 ponto",
-    ]);
+    const passageRank = () =>
+      within(sectionOf("Rank das passagens"))
+        .getAllByRole("listitem")
+        .map((item) => item.textContent);
+    await waitFor(() =>
+      expect(passageRank()).toEqual([
+        "1ºCaio MartinsCS1 ponto",
+        "2ºJulia TomazSuporte1 ponto",
+        "3ºLucas DanielSDR1 ponto",
+      ]),
+    );
 
     fireEvent.click(within(sectionOf("Rank dos vendedores")).getByRole("tab", { name: "Renovação" }));
     await waitFor(() => expect(vendorRank()).toEqual(["1ºJoice PereiraB2G Farmer1 ponto"]));

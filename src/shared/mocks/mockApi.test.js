@@ -51,6 +51,36 @@ describe("mockApi", () => {
     expect(get("/sdr/list").data.data).toHaveLength(4);
   });
 
+  it("/analytics/people-points devolve todas as pessoas com o time e os pontos, como o backend", () => {
+    const data = get("/analytics/people-points").data.data;
+    const person = (name) => data.people.find((item) => item.name === name);
+
+    expect(data.period).toBe("all");
+    expect(data.teams.map((team) => team.teamName)).toEqual(["Orçawinx", "Sem freio", "Wizards of sales"]);
+    expect(data.people).toHaveLength(15);
+    expect(person("Gustavo Rocha")).toEqual(
+      expect.objectContaining({ kind: "vendor", teamId: "team-orcawinx", sales: 6, farm: 0, passage: 0, total: 6 }),
+    );
+    expect(person("Caio Martins")).toEqual(expect.objectContaining({ kind: "sdr", passage: 3, total: 3 }));
+    expect(data.people.map((item) => item.total)).toEqual([...data.people.map((item) => item.total)].sort((a, b) => b - a));
+
+    const scoreboard = get("/analytics/scoreboard").data.data;
+    for (const team of scoreboard) {
+      const sum = data.people.filter((item) => item.teamId === team.teamId).reduce((total, item) => total + item.total, 0);
+      expect(sum).toBe(team.total);
+    }
+  });
+
+  it("/analytics/people-points respeita period, segment e from/to", () => {
+    const total = (params, name) =>
+      get("/analytics/people-points", params).data.data.people.find((item) => item.name === name).total;
+
+    expect(total({ segment: "b2b" }, "Gustavo Rocha")).toBe(0);
+    expect(total({ period: "week" }, "Gustavo Rocha")).toBe(2);
+    expect(total({ from: "2026-10-21", to: "2026-10-21" }, "Brenda Lima")).toBeGreaterThan(0);
+    expect(total({ from: "2026-12-01" }, "Brenda Lima")).toBe(0);
+  });
+
   it("rota que não existe devolve 404", () => {
     expect(get("/nao-existe").status).toBe(404);
   });

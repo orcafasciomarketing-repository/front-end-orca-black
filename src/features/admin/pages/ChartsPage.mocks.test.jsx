@@ -68,6 +68,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "Passagens por pessoa",
       "Pontos por equipe",
       "Evolução dos pontos",
+      "Pontos por pessoa",
       "Ticket médio",
       "Comparar períodos",
       "Participação por setor",

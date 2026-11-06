@@ -6,6 +6,7 @@ import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundar
 import usePermissions from "../../auth/hooks/usePermissions";
 import GoalWidget from "../components/GoalWidget/GoalWidget";
 import PageHeader from "../components/PageHeader/PageHeader";
+import { PeoplePointsWidget } from "../components/PeoplePoints/PeoplePoints";
 import RankWidget from "../components/RankWidget/RankWidget";
 import SaleWidget from "../components/SaleWidget/SaleWidget";
 import SalesFilters from "../components/SalesFilters/SalesFilters";
@@ -68,6 +69,11 @@ export default function AdminPanel() {
             <SdrRankWidget segment={selectedSegment} />
           </Suspense>
         </ErrorBoundary>
+        <div className={styles.full}>
+          <ErrorBoundary location="Admin › pontos por pessoa">
+            <PeoplePointsWidget segment={selectedSegment} />
+          </ErrorBoundary>
+        </div>
       </div>
       {profileVendor && (
         <VendorProfile vendor={profileVendor} segment={selectedSegment} onClose={() => setProfileVendor(null)} />

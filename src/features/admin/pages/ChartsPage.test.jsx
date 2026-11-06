@@ -150,6 +150,7 @@ describe("ChartsPage", () => {
       "Passagens por pessoa",
       "Pontos por equipe",
       "Evolução dos pontos",
+      "Pontos por pessoa",
       "Ticket médio",
       "Comparar períodos",
       "Participação por setor",
@@ -157,7 +158,7 @@ describe("ChartsPage", () => {
       "Cancelamentos",
     ]);
     expect(selectAll).toBeChecked();
-    expect(within(dialog).getByText("18 de 18")).toBeInTheDocument();
+    expect(within(dialog).getByText("19 de 19")).toBeInTheDocument();
 
     fireEvent.click(selectAll);
     expect(within(dialog).getByRole("button", { name: "Gerar PDF" })).toBeDisabled();
