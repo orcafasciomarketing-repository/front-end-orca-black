@@ -3,12 +3,13 @@ import styles from "./AdminLayout.module.css";
 import { NavLink, Outlet } from "react-router";
 
 import usePermissions from "../../auth/hooks/usePermissions";
-import { AlertIcon, ChartIcon, DashboardIcon, UploadIcon, UsersIcon } from "../components/Icons/Icons";
+import { AlertIcon, ChartIcon, DashboardIcon, ForecastIcon, UploadIcon, UsersIcon } from "../components/Icons/Icons";
 
 // allow: permissão de getPermissions que mostra o item (sem ela, a rota também manda de volta para o dashboard)
 const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", end: true, Icon: DashboardIcon },
   { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon },
+  { to: "/admin/previsao", label: "Previsão", end: false, Icon: ForecastIcon },
   { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
   { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
   { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },

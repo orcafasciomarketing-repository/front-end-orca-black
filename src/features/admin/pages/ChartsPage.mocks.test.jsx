@@ -59,6 +59,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "Comparar períodos",
       "Acumulado x meta",
       "Previsão de fechamento",
+      "Forecast",
       "Vendas acumuladas",
       "Vendas acumuladas por setor",
       "Vendas x renovações por dia",

@@ -9,6 +9,7 @@ import AdminLayout from "../features/admin/pages/AdminLayout";
 import AdminPanel from "../features/admin/pages/AdminPanel";
 import ChartsPage from "../features/admin/pages/ChartsPage";
 import ErrorsPage from "../features/admin/pages/ErrorsPage";
+import ForecastPage from "../features/admin/pages/ForecastPage";
 import ImportPage from "../features/admin/pages/ImportPage";
 import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminPanel /> },
           { path: "graficos", element: <ChartsPage /> },
+          { path: "previsao", element: <ForecastPage /> },
           {
             element: <RestrictedRoute allow="isMaster" />,
             children: [

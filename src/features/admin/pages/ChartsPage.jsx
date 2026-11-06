@@ -14,6 +14,7 @@ import {
   TicketChart,
   WeeklySalesChart,
 } from "../components/InsightWidgets/InsightWidgets";
+import { ForecastSummary } from "../components/ForecastWidgets/ForecastWidgets";
 import PageHeader from "../components/PageHeader/PageHeader";
 import PeriodComparison from "../components/PeriodComparison/PeriodComparison";
 import PeriodFilter from "../components/PeriodFilter/PeriodFilter";
@@ -39,6 +40,7 @@ const CHARTS = [
   { title: "Comparar períodos", Chart: PeriodComparison, className: "full" },
   { title: "Acumulado x meta", Chart: GoalTrackChart },
   { title: "Previsão de fechamento", Chart: ForecastCard },
+  { title: "Forecast", Chart: ForecastSummary },
   { title: "Vendas acumuladas", Chart: TotalSalesChart },
   { title: "Vendas acumuladas por setor", Chart: SegmentSalesChart },
   { title: "Vendas x renovações por dia", Chart: FunnelSalesChart },

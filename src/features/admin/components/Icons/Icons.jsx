@@ -70,3 +70,13 @@ export function UsersIcon() {
     </svg>
   );
 }
+
+export function ForecastIcon() {
+  return (
+    <svg {...iconProps}>
+      <line x1="4" y1="20" x2="20" y2="20" />
+      <polyline points="4 16 9 12 12 14" />
+      <polyline points="12 14 20 6" strokeDasharray="2 3" />
+    </svg>
+  );
+}

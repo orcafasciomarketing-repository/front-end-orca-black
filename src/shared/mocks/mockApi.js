@@ -2,6 +2,7 @@ import {
   findActiveSalesOfCurrentWeek,
   findAllSales,
   findSalesByVendor,
+  getForecast,
   getGoalProgress,
   getScoreboard,
   getSdrRanking,
@@ -16,6 +17,7 @@ const toFunnel = (value) => (value === "farm" ? "farm" : "sales");
 
 const ROUTES = [
   { pattern: /^\/analytics\/goal$/, handle: ({ db }) => getGoalProgress(db) },
+  { pattern: /^\/analytics\/forecast$/, handle: ({ db, now, params }) => getForecast(db, params.segment, now) },
   { pattern: /^\/analytics\/scoreboard\/last-week$/, handle: ({ db, now }) => getScoreboard(db, "lastWeek", now) },
   { pattern: /^\/analytics\/scoreboard$/, handle: ({ db, now, params }) => getScoreboard(db, toPeriod(params.period), now) },
   {

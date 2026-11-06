@@ -1,0 +1,129 @@
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+/* Cenário realista em destaque */
+.tileMain {
+  border-color: var(--color-primary);
+  background: var(--color-primary-field);
+}
+
+.tileLabel {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.tileValue {
+  color: var(--color-text);
+  font-size: 22px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.tileNote {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-background);
+}
+
+.fact dt {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.factValue {
+  color: var(--color-text);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.factNote {
+  color: var(--color-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.heroLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.hero {
+  color: var(--color-text);
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.range {
+  margin-top: 8px;
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.paceTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.paceTable th,
+.paceTable td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-align: right;
+}
+
+.paceTable th:first-child {
+  text-align: left;
+  font-weight: 500;
+}
+
+.paceTable thead th {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.paceTable tfoot th,
+.paceTable tfoot td {
+  border-bottom: none;
+  font-weight: 700;
+}

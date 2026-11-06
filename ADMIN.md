@@ -26,6 +26,7 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 | Rota | Página | Conteúdo |
 |---|---|---|
 | `/admin` | `AdminPanel` (Dashboard) | Filtros, Vendas cadastradas, Rank dos vendedores e Rank das passagens |
+| `/admin/previsao` | `ForecastPage` (Previsão) | Forecast: cenários, indicadores, trajetórias, cálculo do ritmo e semana |
 | `/admin/graficos` | `ChartsPage` (Gráficos) | Filtro de semana e os sete gráficos de acompanhamento das vendas |
 | `/admin/importacao` | `ImportPage` (Importação) | Importar vendas por CSV (vendas fora da planilha principal) |
 | `/admin/erros` | `ErrorsPage` (Erros) | Logs de erro e Logs de teste |
@@ -287,6 +288,22 @@ O `AdminLayout` é uma rota sem `path` (rota de layout): ele envolve as filhas s
 4. Depois de importar, `useImportSales` ([hooks/useImportSales.js](src/features/admin/hooks/useImportSales.js)) invalida vendas, meta e rankings do admin. As TVs atualizam pelo SSE (`sale-updated`, sem popup).
 
 Com `VITE_USE_MOCKS=true` a importação não chama o backend e mostra o erro "A importação não funciona com os dados de demonstração".
+
+### `ForecastPage()` (Previsão)
+
+[src/features/admin/pages/ForecastPage.jsx](src/features/admin/pages/ForecastPage.jsx). Todos os perfis (b2b/b2g com o setor travado). O cálculo é do backend (`GET /analytics/forecast`, regras no `ROTAS.md` do backend); o front só exibe. Widgets em [ForecastWidgets.jsx](src/features/admin/components/ForecastWidgets/ForecastWidgets.jsx), todos com `useForecast(setor)` ([hooks/useForecast.js](src/features/admin/hooks/useForecast.js), chave `["admin-forecast", setor]`):
+
+| Widget | Mostra |
+|---|---|
+| `ForecastScenarios` (Cenários da campanha) | Realista (em destaque), Pessimista, Otimista e Meta (do setor ou total), com o % da meta |
+| `ForecastTrajectoryChart` (Trajetórias do forecast) | Vendido acumulado até hoje e as 3 trajetórias até 01/12, com a meta de referência. Eixo só com dias produtivos |
+| `ForecastIndicators` (Indicadores do forecast) | Ritmo atual, ritmo necessário, cobertura (com o aviso de que não é chance), gap e chance de bater a meta ("Sem histórico suficiente" se o backend mandar `null`) |
+| `ForecastPace` (Como o ritmo é calculado) | As médias de 7, 30 dias e da campanha com os pesos, e o ritmo resultante |
+| `WeekForecast` (Forecast da semana) | Vendido na semana e os 3 cenários (sem meta semanal) |
+
+Na tela Gráficos, o widget **Forecast** (`ForecastSummary`) fica ao lado da **Previsão de fechamento**, que continua igual (média simples, dias corridos). Os dois dão números diferentes de propósito.
+
+Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src/shared/mocks/mockForecast.js), uma cópia do cálculo do backend (o `mockForecast.test.js` confere os números do PDF). **Se mudar a regra no backend, mude a cópia também.**
 
 ### `UsersPage()` (Usuários)
 

@@ -1,3 +1,5 @@
+import { buildForecast } from "./mockForecast";
+
 export const POINTS = { sales: 2, farm: 1, passage: 1 };
 export const BLACK_FRIDAY_GOAL = 3000000;
 // Metas de setor (somam a meta total), como no backend
@@ -163,4 +165,14 @@ export function getSdrRanking(db, period, now = new Date()) {
     }))
     .sort((a, b) => b.points - a.points)
     .slice(0, 3);
+}
+
+// Igual ao GET /analytics/forecast: segment "b2b"/"b2g" usa as vendas e a meta do setor
+export function getForecast(db, segment, now = new Date()) {
+  const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
+  const sales = db.sales.filter((sale) => isActive(sale) && (!validSegment || sale.segment === validSegment));
+  const segmentGoal = validSegment ? SEGMENT_GOALS[validSegment] : 0;
+  const goal = segmentGoal > 0 ? segmentGoal : BLACK_FRIDAY_GOAL;
+
+  return { segment: validSegment, goalIsTotal: !(segmentGoal > 0), ...buildForecast({ sales, goal, now }) };
 }

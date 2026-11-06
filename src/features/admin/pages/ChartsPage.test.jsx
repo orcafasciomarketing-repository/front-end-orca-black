@@ -2,7 +2,9 @@ import { configure, fireEvent, render, screen, waitFor, within } from "@testing-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getForecast } from "../api/forecastApi";
 import { getAdminSales, getGoal, getTeams } from "../api/slidesApi";
+import { buildForecast } from "../../../shared/mocks/mockForecast";
 import { downloadFile } from "../utils/downloadFile";
 import ChartsPage from "./ChartsPage";
 
@@ -14,6 +16,9 @@ vi.mock("../api/slidesApi", () => ({
   getVendors: vi.fn(),
   getGoal: vi.fn(),
   getTeams: vi.fn(),
+}));
+vi.mock("../api/forecastApi", () => ({
+  getForecast: vi.fn(),
 }));
 vi.mock("../utils/downloadFile", () => ({
   downloadFile: vi.fn(),
@@ -50,6 +55,7 @@ describe("ChartsPage", () => {
     getGoal.mockResolvedValue({ goal: 3000000, total: 1000, percent: 0.03 });
     getTeams.mockResolvedValue([{ teamId: "t1", teamName: "Wizards" }]);
     getAdminSales.mockResolvedValue({ sales: [sale], total: 1 });
+    getForecast.mockResolvedValue({ segment: null, goalIsTotal: true, ...buildForecast({ sales: [], goal: 3000000 }) });
   });
 
   afterEach(() => {
@@ -157,6 +163,7 @@ describe("ChartsPage", () => {
       "Comparar períodos",
       "Acumulado x meta",
       "Previsão de fechamento",
+      "Forecast",
       "Vendas acumuladas",
       "Vendas acumuladas por setor",
       "Vendas x renovações por dia",
@@ -171,7 +178,7 @@ describe("ChartsPage", () => {
       "Calendário de vendas",
     ]);
     expect(selectAll).toBeChecked();
-    expect(within(dialog).getByText("16 de 16")).toBeInTheDocument();
+    expect(within(dialog).getByText("17 de 17")).toBeInTheDocument();
 
     fireEvent.click(selectAll);
     expect(within(dialog).getByRole("button", { name: "Gerar PDF" })).toBeDisabled();
