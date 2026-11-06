@@ -91,4 +91,69 @@ describe("GoalWidget", () => {
     expect(screen.getByText("Nenhuma passagem")).toBeInTheDocument();
     expect(screen.getByText("Nenhuma renovação")).toBeInTheDocument();
   });
+
+  describe("com setor selecionado", () => {
+    // Só conta venda ativa com data (isActiveSale)
+    const realizedAt = "2026-11-27T13:00:00.000Z";
+    const sales = [
+      makeSale({ segment: "b2b", value: 500000, realizedAt }),
+      makeSale({ segment: "b2g", value: 250000, realizedAt }),
+      makeSale({ segment: "b2g", value: 50000, dealStatus: "cancelada", realizedAt }),
+    ];
+    const goalWithSegments = {
+      goal: 3000000,
+      total: 750000,
+      percent: 25,
+      segments: {
+        b2b: { goal: 2000000, total: 500000, percent: 25 },
+        b2g: { goal: 1000000, total: 250000, percent: 25 },
+      },
+    };
+    const textOf = () => document.body.textContent.replace(/\u00a0/g, " ");
+
+    it("compara com a meta do setor e mostra quanto falta e a participação", async () => {
+      getGoal.mockResolvedValue(goalWithSegments);
+      getAdminSales.mockResolvedValue({ sales, total: sales.length });
+
+      renderWithQuery(<GoalWidget segment="B2G" />);
+
+      expect(await screen.findByText("25%")).toBeInTheDocument();
+      expect(textOf()).toContain("R$ 250.000,00de R$ 1.000.000,00 (meta B2G)");
+      expect(textOf()).toContain("Faltam R$ 750.000,00 · B2G representa 33,3% do total vendido");
+    });
+
+    it("quem só vê o próprio setor (b2b/b2g) não vê a participação de 100%", async () => {
+      const onlyB2b = sales.filter((sale) => sale.segment === "b2b");
+      getGoal.mockResolvedValue(goalWithSegments);
+      getAdminSales.mockResolvedValue({ sales: onlyB2b, total: onlyB2b.length });
+
+      renderWithQuery(<GoalWidget segment="B2B" />);
+
+      expect(await screen.findByText("25%")).toBeInTheDocument();
+      expect(textOf()).toContain("de R$ 2.000.000,00 (meta B2B)");
+      expect(textOf()).toContain("Faltam R$ 1.500.000,00");
+      expect(textOf()).not.toContain("representa");
+    });
+
+    it("meta do setor batida", async () => {
+      getGoal.mockResolvedValue(goalWithSegments);
+      getAdminSales.mockResolvedValue({ sales: [makeSale({ segment: "b2g", value: 1200000, realizedAt })], total: 1 });
+
+      renderWithQuery(<GoalWidget segment="B2G" />);
+
+      expect(await screen.findByText("Meta batida!")).toBeInTheDocument();
+      expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+    });
+
+    it("backend sem meta por setor: continua contra a meta total, como antes", async () => {
+      getGoal.mockResolvedValue({ goal: 3000000, total: 750000, percent: 25 });
+      getAdminSales.mockResolvedValue({ sales, total: sales.length });
+
+      renderWithQuery(<GoalWidget segment="B2G" />);
+
+      expect(await screen.findByText(/B2G representa 33,3% do total vendido/)).toBeInTheDocument();
+      expect(textOf()).toContain("de R$ 3.000.000,00 (meta total)");
+      expect(textOf()).not.toContain("Faltam");
+    });
+  });
 });

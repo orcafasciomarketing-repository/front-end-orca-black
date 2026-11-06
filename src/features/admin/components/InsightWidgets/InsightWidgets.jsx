@@ -7,6 +7,7 @@ import { useSalesInsights } from "../../hooks/useSalesInsights";
 import { CAMPAIGN_END_DAY } from "../../utils/campaign";
 import { CHART_COLORS, segmentColor } from "../../utils/chartColors";
 import { formatDay } from "../../utils/chartData";
+import { getSegmentGoal } from "../../utils/segments";
 import { formatPercent, formatSalesCount, formatVariation } from "../../utils/chartScale";
 import { comparisonLabel } from "../../utils/periods";
 import { WEEKDAYS, forecast, variation } from "../../utils/salesInsights";
@@ -50,6 +51,7 @@ function Delta({ current, previous, period }) {
 export function SalesKpis({ period, segment }) {
   const { kpis, campaignTotal } = useSalesInsights(period, segment);
   const { goal } = useGoal();
+  const segmentGoal = getSegmentGoal(goal, segment);
   const { current, previous } = kpis;
 
   const tiles = [
@@ -85,12 +87,16 @@ export function SalesKpis({ period, segment }) {
         </dl>
       ))}
       <dl className={`widget ${styles.tile}`}>
-        <dt className={styles.tileLabel}>{segment ? `${segment} na meta da campanha` : "Meta da campanha"}</dt>
+        <dt className={styles.tileLabel}>
+          {!segment ? "Meta da campanha" : segmentGoal.isTotal ? `${segment} na meta da campanha` : `Meta ${segment}`}
+        </dt>
         <dd className={styles.tileValue}>
-          {formatPercent(segment ? (goal.goal ? campaignTotal / goal.goal : 0) : (goal.percent ?? 0) / 100)}
+          {formatPercent(
+            segment ? (segmentGoal.value ? campaignTotal / segmentGoal.value : 0) : (goal.percent ?? 0) / 100,
+          )}
         </dd>
         <dd className={styles.tileDelta}>
-          <span className={styles.deltaNeutral}>de {formatCurrency(goal.goal)}</span>
+          <span className={styles.deltaNeutral}>de {formatCurrency(segmentGoal.value)}</span>
         </dd>
       </dl>
     </section>
@@ -100,7 +106,9 @@ export function SalesKpis({ period, segment }) {
 export function ForecastCard({ segment }) {
   const { goal } = useGoal();
   const { campaign } = useSalesCharts(null, segment);
-  const plan = forecast(campaign, goal.goal, CAMPAIGN_END_DAY);
+  const segmentGoal = getSegmentGoal(goal, segment);
+  const goalLabel = segmentGoal.isTotal ? "meta total" : `meta de ${segment}`;
+  const plan = forecast(campaign, segmentGoal.value, CAMPAIGN_END_DAY);
   const title = "Previsão de fechamento";
   const endLabel = formatDay(CAMPAIGN_END_DAY);
 
@@ -116,7 +124,7 @@ export function ForecastCard({ segment }) {
       title={title}
       description={
         segment
-          ? `Se o ritmo atual de ${segment} continuar até ${endLabel}, contra a meta total`
+          ? `Se o ritmo atual de ${segment} continuar até ${endLabel}, contra a ${goalLabel}`
           : `Se o ritmo atual continuar até ${endLabel}`
       }
       segment={segment}

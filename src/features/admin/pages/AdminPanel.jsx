@@ -3,6 +3,7 @@ import styles from "./AdminPanel.module.css";
 import { Suspense, useMemo, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
+import usePermissions from "../../auth/hooks/usePermissions";
 import GoalWidget from "../components/GoalWidget/GoalWidget";
 import PageHeader from "../components/PageHeader/PageHeader";
 import RankWidget from "../components/RankWidget/RankWidget";
@@ -15,7 +16,9 @@ import { ALL_PERIODS, resolvePeriod } from "../utils/periods";
 export default function AdminPanel() {
   const [selectedVendorId, setSelectedVendorId] = useState("");
   const [periodSelection, setPeriodSelection] = useState(ALL_PERIODS);
-  const [selectedSegment, setSelectedSegment] = useState("");
+  // b2b e b2g abrem (e ficam) no próprio setor
+  const { segment: userSegment } = usePermissions();
+  const [selectedSegment, setSelectedSegment] = useState(userSegment);
 
   const period = useMemo(() => resolvePeriod(periodSelection), [periodSelection]);
 

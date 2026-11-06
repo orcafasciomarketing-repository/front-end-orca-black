@@ -7,6 +7,7 @@ import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import { useGoal } from "../../hooks/useGoal";
 import { useSectorCounts } from "../../hooks/useSectorCounts";
 import { useSegmentTotal } from "../../hooks/useSegmentTotal";
+import { getSegmentGoal } from "../../utils/segments";
 
 const percentFormatter = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 });
 
@@ -41,22 +42,44 @@ export default function GoalWidget({ segment = "" }) {
 
 function SegmentGoal({ goal, segment }) {
   const { total, allSegments } = useSegmentTotal(segment);
-  const percent = goal.goal > 0 ? (total / goal.goal) * 100 : 0;
+  const segmentGoal = getSegmentGoal(goal, segment);
+  const percent = segmentGoal.value > 0 ? (total / segmentGoal.value) * 100 : 0;
   const share = allSegments > 0 ? total / allSegments : 0;
+  const shareNote = `${segment} representa ${shareFormatter.format(share)} do total vendido`;
+
+  // Sem meta do setor: compara com a meta total e mostra a participação, como antes
+  if (segmentGoal.isTotal) {
+    return (
+      <GoalCard
+        goal={goal.goal}
+        total={total}
+        percent={percent}
+        segment={segment}
+        note={shareNote}
+        reached={false}
+        isTotalGoal
+      />
+    );
+  }
+
+  const remaining = Math.max(segmentGoal.value - total, 0);
+  const remainingNote = remaining === 0 ? "Meta batida!" : `Faltam ${formatCurrency(remaining)}`;
+  // Quem só enxerga o próprio setor (b2b/b2g) teria sempre 100%: aí a participação não aparece
+  const note = allSegments > total ? `${remainingNote} · ${shareNote}` : remainingNote;
 
   return (
     <GoalCard
-      goal={goal.goal}
+      goal={segmentGoal.value}
       total={total}
       percent={percent}
       segment={segment}
-      note={`${segment} representa ${shareFormatter.format(share)} do total vendido`}
-      reached={false}
+      note={note}
+      reached={remaining === 0}
     />
   );
 }
 
-function GoalCard({ goal, total, percent, segment, note, reached }) {
+function GoalCard({ goal, total, percent, segment, note, reached, isTotalGoal = false }) {
   const fillWidth = Math.min(Math.max(percent, 0), 100);
 
   return (
@@ -72,7 +95,7 @@ function GoalCard({ goal, total, percent, segment, note, reached }) {
             <strong className={styles.total}>{formatCurrency(total)}</strong>
             <span className={styles.goal}>
               de {formatCurrency(goal)}
-              {segment && " (meta total)"}
+              {segment && (isTotalGoal ? " (meta total)" : ` (meta ${segment})`)}
             </span>
           </p>
           <div

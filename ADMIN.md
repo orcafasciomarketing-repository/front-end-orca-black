@@ -29,8 +29,9 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 | `/admin/graficos` | `ChartsPage` (Gráficos) | Filtro de semana e os sete gráficos de acompanhamento das vendas |
 | `/admin/importacao` | `ImportPage` (Importação) | Importar vendas por CSV (vendas fora da planilha principal) |
 | `/admin/erros` | `ErrorsPage` (Erros) | Logs de erro e Logs de teste |
+| `/admin/usuarios` | `UsersPage` (Usuários) | Cadastrar usuários, trocar perfil e senha, excluir |
 
-As quatro páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos`, `/admin/importacao` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
+Importação, Erros e Usuários são **só do perfil admin** (ver "Perfis" abaixo). As cinco páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos`, `/admin/importacao` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
 
 ### Filtros
 
@@ -57,17 +58,37 @@ As quatro páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Tr
 
 - Semana e vendedor valem **só para a lista de vendas e para a exportação**. Os rankings mostram a campanha inteira, porque o backend só filtra ranking por "semana atual" ou "tudo", e não por semana específica nem por vendedor.
 
+### Perfis
+
+Três perfis fixos, que vêm do backend em `user.role` (login e refresh):
+
+| Perfil | Menu | Filtro de setor | Vendas que chegam do backend |
+|---|---|---|---|
+| `admin` | Dashboard, Gráficos, Importação, Erros, Usuários | Todos, B2B e B2G | todas |
+| `b2b` | Dashboard e Gráficos | travado em B2B | só B2B |
+| `b2g` | Dashboard e Gráficos | travado em B2G | só B2G |
+
+- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isAdmin, segment }`. Sem perfil (usuário antigo ou backend sem perfis) = admin, como era antes.
+- `usePermissions()` ([auth/hooks/usePermissions.js](src/features/auth/hooks/usePermissions.js)) lê o usuário do `AuthContext` e soma o `userId`. Fora do provider (teste de componente solto) vale como admin.
+- `AdminOnlyRoute` ([app/AdminOnlyRoute.jsx](src/app/AdminOnlyRoute.jsx)) envolve Importação, Erros e Usuários: b2b/b2g abrindo pelo endereço voltam para `/admin`.
+- **A segurança de verdade é do backend**: ele filtra as vendas pelo setor e responde 403 nas rotas do admin. O front só esconde o que a pessoa não pode usar.
+- As TVs (`/`) não usam login e continuam públicas.
+
 ### Filtro de setor (Dashboard e Gráficos)
+
+Para b2b/b2g o seletor já abre no setor do usuário, desabilitado e só com essa opção (`getSegmentOptions(setorDoUsuário)`).
 
 Seletor **Setor** com "Todos" (padrão), "B2B" e "B2G". As opções ficam em `SEGMENT_OPTIONS` ([utils/segments.js](src/features/admin/utils/segments.js)) e `filterSalesBySegment(vendas, setor)` filtra pelo campo `segment` da venda (sem diferenciar maiúsculas). Com "Todos" nada é filtrado e tudo fica como antes. Cada página tem o seu estado: filtrar o Dashboard não muda os Gráficos.
 
 | Widget | Com B2B ou B2G |
 |---|---|
 | Vendas cadastradas e exportação | Só as vendas do setor. O arquivo ganha o setor no nome: `vendas-todos-b2g-2026-10-22.csv` |
-| Meta da Black Friday | Mostra a **contribuição do setor**: a etiqueta do setor, quanto ele vendeu contra a meta total ("de R$ 3.000.000,00 (meta total)"), o percentual disso na barra e "B2G representa 56,6% do total vendido" no lugar de "Faltam". As listas de vendas, passagens e renovações contam só as vendas do setor |
+| Meta da Black Friday | Compara com a **meta do setor** (B2B 2 mi, B2G 1 mi, de `goal.segments`): "de R$ 1.000.000,00 (meta B2G)", o percentual na barra e "Faltam R$ X" (ou "Meta batida!"). Para o admin, acrescenta "· B2G representa 56,6% do total vendido"; para b2b/b2g não (seria sempre 100%). Sem meta do setor no backend, volta ao comportamento antigo: contra a meta total, "(meta total)" e só a participação. As listas de vendas, passagens e renovações contam só as vendas do setor |
 | Rank dos vendedores | **Calculado no front** a partir das vendas ativas do setor, com a mesma tabela de pontos do backend (`SALE_POINTS`): venda B2G = 3, renovação B2G = 2, venda B2B = 2, renovação B2B = 1. Top 3. Com "Todos" continua vindo do backend |
 | Rank das passagens | Também calculado no front: cada pessoa da passagem ganha, por venda ativa do setor, os pontos do **cargo dela** (`PASSAGE_POINTS`): B2G SDR = 2, B2B SDR = 1, CS = 1, Suporte = 2; cargo fora da tabela vale 0 (e a pessoa aparece com 0, como no backend). Top 3 |
-| Todos os gráficos e indicadores | Só as vendas do setor. "Acumulado x meta", "Previsão de fechamento" e o cartão de meta comparam o setor com a **meta total** e dizem isso na descrição ("B2B contra a meta total"). O CSV de cada gráfico também leva o setor no nome |
+| Todos os gráficos e indicadores | Só as vendas do setor. "Acumulado x meta", "Previsão de fechamento" e o indicador de meta ("Meta B2B") usam a **meta do setor** e dizem isso na descrição ("B2B contra a meta de B2B"). Sem meta do setor no backend, usam a meta total ("contra a meta total"). O CSV de cada gráfico também leva o setor no nome |
+
+A meta do setor vem de `getSegmentGoal(goal, setor)` ([utils/segments.js](src/features/admin/utils/segments.js)), que devolve `{ value, isTotal }`: `isTotal: true` quando caiu na meta total (sem setor ou sem `goal.segments`).
 
 Os rankings por setor usam [utils/segmentRanking.js](src/features/admin/utils/segmentRanking.js) (`rankVendorsFromSales(vendas, tipo)` e `rankSdrsFromSales(vendas)`) pelos hooks `useSegmentRankVendors` e `useSegmentRankSdrs` ([hooks/useSegmentRanks.js](src/features/admin/hooks/useSegmentRanks.js)). A meta do setor usa `useSegmentTotal(setor)` ([hooks/useSegmentTotal.js](src/features/admin/hooks/useSegmentTotal.js)), que devolve `{ total, allSegments }`. Todos leem o mesmo cache de `/sales/admin`, então trocar de setor não faz requisição nova. **Atenção:** o backend não tem rota de ranking por setor nem rota que devolva a tabela de pontos (ela vem das variáveis `POINTS_*` do `.env` do backend). Por isso `SALE_POINTS` e `PASSAGE_POINTS` copiam os valores documentados no `ROTAS.md` do backend, e o cargo é comparado do mesmo jeito (sem acento, sem diferença de maiúscula, espaços juntados). **Se mudar a pontuação no backend, mude também esses dois objetos.** O backend falso (`src/shared/mocks`) usa uma pontuação simplificada (venda 2, renovação 1, passagem 1), então em modo mock os pontos de "Todos" e os de um setor não somam igual; no backend real eles batem.
 
@@ -204,7 +225,7 @@ Se der erro, o `onError` registra o log em `Admin › exportação de vendas` (a
 [src/features/admin/pages/AdminLayout.jsx](src/features/admin/pages/AdminLayout.jsx)
 
 A moldura de todas as páginas do admin: menu lateral à esquerda e a página atual à direita (`<Outlet />`).
-- `NAV_ITEMS` lista os itens do menu: `to` (rota), `label`, `end` e `Icon`. Para criar uma aba nova, acrescente um item aqui e a rota filha em `app/Router.jsx`.
+- `NAV_ITEMS` lista os itens do menu: `to` (rota), `label`, `end`, `Icon` e `adminOnly` (b2b/b2g não veem). Para criar uma aba nova, acrescente um item aqui e a rota filha em `app/Router.jsx`.
 - Cada item é um `NavLink`. O React Router marca o item da rota atual com `aria-current="page"`, e `navLinkClass` aplica `.navLinkActive` nele.
 - `end: true` no Dashboard: sem isso, `/admin` também ficaria marcado em `/admin/erros`, porque `/admin` é o começo do caminho.
 
@@ -214,7 +235,11 @@ A moldura de todas as páginas do admin: menu lateral à esquerda e a página at
   { element: <AdminLayout />, children: [
     { index: true, element: <AdminPanel /> },
     { path: "graficos", element: <ChartsPage /> },
-    { path: "erros", element: <ErrorsPage /> },
+    { element: <AdminOnlyRoute />, children: [
+      { path: "importacao", element: <ImportPage /> },
+      { path: "erros", element: <ErrorsPage /> },
+      { path: "usuarios", element: <UsersPage /> },
+    ] },
   ] },
 ] }
 ```
@@ -258,6 +283,16 @@ O `AdminLayout` é uma rota sem `path` (rota de layout): ele envolve as filhas s
 4. Depois de importar, `useImportSales` ([hooks/useImportSales.js](src/features/admin/hooks/useImportSales.js)) invalida vendas, meta e rankings do admin. As TVs atualizam pelo SSE (`sale-updated`, sem popup).
 
 Com `VITE_USE_MOCKS=true` a importação não chama o backend e mostra o erro "A importação não funciona com os dados de demonstração".
+
+### `UsersPage()` (Usuários)
+
+[src/features/admin/pages/UsersPage.jsx](src/features/admin/pages/UsersPage.jsx) com o widget [UsersWidget](src/features/admin/components/UsersWidget/UsersWidget.jsx). Só admin. Substitui o antigo cadastro aberto (`/auth/register`, removido do backend).
+
+- **Cadastrar usuário**: email, perfil (Admin, B2B, B2G), senha e confirmação. Confere no front senha com 6+ caracteres e senhas iguais; erros do backend aparecem com a mensagem dele ("Cadastro já realizado").
+- **Lista**: cada pessoa com o seletor de perfil (salva na hora), **Trocar senha** (abre o formulário na linha; a pessoa sai das sessões abertas) e **Excluir** (pede confirmação; perde o acesso na hora).
+- O próprio usuário aparece com "(você)", sem trocar o perfil e sem Excluir, para nunca ficar sem admin (o backend também bloqueia).
+- API em [api/usersApi.js](src/features/admin/api/usersApi.js) (`getUsers`, `createUser`, `updateUser`, `deleteUser`) e hooks em [hooks/useUsers.js](src/features/admin/hooks/useUsers.js) (chave `["admin-users"]`). Erros 4xx (digitação) não vão para os logs de erro; falha de rede ou 5xx vão.
+- Com `VITE_USE_MOCKS=true` a lista vem vazia e gravar mostra "O cadastro de usuários não funciona com os dados de demonstração".
 
 ---
 

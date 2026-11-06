@@ -242,7 +242,15 @@ describe("mockBackend › rankings", () => {
 
 describe("mockBackend › meta e vendas do admin", () => {
   it("meta soma só as vendas ativas de todas as semanas", () => {
-    expect(getGoalProgress(db)).toEqual({ goal: 3000000, total: 212000, percent: 7.07 });
+    expect(getGoalProgress(db)).toEqual({
+      goal: 3000000,
+      total: 212000,
+      percent: 7.07,
+      segments: {
+        b2b: { goal: 2000000, total: 92000, percent: 4.6 },
+        b2g: { goal: 1000000, total: 120000, percent: 12 },
+      },
+    });
   });
 
   it("/sales/admin traz todas as vendas, inclusive canceladas, da mais nova para a mais antiga, populadas", () => {

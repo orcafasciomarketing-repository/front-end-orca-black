@@ -3,6 +3,7 @@ import styles from "./ChartsPage.module.css";
 import { Suspense, useEffect, useMemo, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
+import usePermissions from "../../auth/hooks/usePermissions";
 import {
   CancellationChart,
   ConcentrationChart,
@@ -29,7 +30,7 @@ import {
 import { DownloadIcon } from "../components/Icons/Icons";
 import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
 import { ALL_PERIODS, resolvePeriod } from "../utils/periods";
-import { SEGMENT_OPTIONS } from "../utils/segments";
+import { getSegmentOptions, SEGMENT_OPTIONS } from "../utils/segments";
 
 const THEME_KEY = "admin-charts-theme";
 const KPIS_TITLE = "Indicadores";
@@ -74,7 +75,9 @@ function saveTheme(isDark) {
 
 export default function ChartsPage() {
   const [periodSelection, setPeriodSelection] = useState(ALL_PERIODS);
-  const [selectedSegment, setSelectedSegment] = useState("");
+  // b2b e b2g abrem (e ficam) no próprio setor
+  const { segment: userSegment } = usePermissions();
+  const [selectedSegment, setSelectedSegment] = useState(userSegment);
   const [isDark, setIsDark] = useState(readTheme);
   const [isChoosing, setIsChoosing] = useState(false);
   const [printItems, setPrintItems] = useState(null);
@@ -139,9 +142,10 @@ export default function ChartsPage() {
               className={styles.select}
               aria-label="Filtrar gráficos por setor"
               value={selectedSegment}
+              disabled={!!userSegment}
               onChange={(event) => setSelectedSegment(event.target.value)}
             >
-              {SEGMENT_OPTIONS.map((option) => (
+              {getSegmentOptions(userSegment).map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>

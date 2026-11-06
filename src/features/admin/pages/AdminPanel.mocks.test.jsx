@@ -2,6 +2,7 @@ import { configure, fireEvent, render, screen, waitFor, within } from "@testing-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AuthContext } from "../../auth/context/AuthContext";
 import { downloadFile } from "../utils/downloadFile";
 import AdminPanel from "./AdminPanel";
 
@@ -251,8 +252,10 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
 
     const goal = sectionOf("Meta da Black Friday");
     await waitFor(() => expect(goal).toHaveTextContent("B2G representa 56,6% do total vendido"));
-    expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("B2GR$ 120.000,00de R$ 3.000.000,00 (meta total)");
-    expect(within(goal).getByText("4%")).toBeInTheDocument();
+    // Meta do B2G (1 milhão), não mais a meta total
+    expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("B2GR$ 120.000,00de R$ 1.000.000,00 (meta B2G)");
+    expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("Faltam R$ 880.000,00");
+    expect(within(goal).getByText("12%")).toBeInTheDocument();
 
     const vendorRank = () =>
       within(sectionOf("Rank dos vendedores"))
@@ -280,5 +283,30 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Filtrar por setor" }), { target: { value: "" } });
     await expectListToShow(ALL_DEALS);
     await waitFor(() => expect(sectionOf("Meta da Black Friday")).toHaveTextContent("Faltam"));
+  });
+
+  it("usuário b2g: abre no B2G, sem poder trocar o setor, e a meta é a do B2G", async () => {
+    render(
+      <AuthContext value={{ state: { user: { _id: "1", email: "b2g@teste.com", role: "b2g" }, token: "t" } }}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <AdminPanel />
+        </QueryClientProvider>
+      </AuthContext>,
+    );
+    await ready();
+
+    const segmentSelect = screen.getByRole("combobox", { name: "Filtrar por setor" });
+    expect(segmentSelect).toBeDisabled();
+    expect(within(segmentSelect).getAllByRole("option").map((option) => option.textContent)).toEqual(["B2G"]);
+
+    await expectListToShow([
+      "Prefeitura de Campinas",
+      "Secretaria de Obras SP",
+      "Governo do Estado MG",
+      "Câmara Municipal BH",
+      "Prefeitura de Santos",
+    ]);
+    const goal = sectionOf("Meta da Black Friday");
+    await waitFor(() => expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("de R$ 1.000.000,00 (meta B2G)"));
   });
 });

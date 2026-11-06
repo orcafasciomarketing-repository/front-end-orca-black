@@ -10,6 +10,7 @@ import { formatDay, totalsByTeam } from "../../utils/chartData";
 import { formatCompactCurrency, formatPassages } from "../../utils/chartScale";
 import { downloadFile } from "../../utils/downloadFile";
 import { goalTrack } from "../../utils/salesInsights";
+import { getSegmentGoal } from "../../utils/segments";
 import { barRows, buildChartFileName, tableToCsv, timeSeriesRows } from "../../utils/tableCsv";
 import BarChart from "../charts/BarChart";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
@@ -103,7 +104,9 @@ export function GoalTrackChart({ segment }) {
   const { goal } = useGoal();
   const { campaign } = useSalesCharts("", segment);
   const title = "Acumulado x meta";
-  const track = goalTrack(campaign, goal.goal, CAMPAIGN_END_DAY);
+  const segmentGoal = getSegmentGoal(goal, segment);
+  const goalLabel = segmentGoal.isTotal ? "meta total" : `meta de ${segment}`;
+  const track = goalTrack(campaign, segmentGoal.value, CAMPAIGN_END_DAY);
   const series = [
     {
       key: "actual",
@@ -132,7 +135,7 @@ export function GoalTrackChart({ segment }) {
       title={title}
       description={
         segment
-          ? `${segment} contra a meta total, até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
+          ? `${segment} contra a ${goalLabel}, até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
           : `Campanha inteira até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
       }
       csvRows={dayRows(track.days, series)}
@@ -146,8 +149,8 @@ export function GoalTrackChart({ segment }) {
           days={track.days}
           series={series}
           reference={{
-            value: goal.goal,
-            label: `Meta ${formatCompactCurrency(goal.goal)}`,
+            value: segmentGoal.value,
+            label: `Meta ${formatCompactCurrency(segmentGoal.value)}`,
           }}
           formatValue={formatCurrency}
         />

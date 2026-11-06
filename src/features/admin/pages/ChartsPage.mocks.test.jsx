@@ -2,6 +2,7 @@ import { configure, fireEvent, render, screen, waitFor, within } from "@testing-
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { AuthContext } from "../../auth/context/AuthContext";
 import ChartsPage from "./ChartsPage";
 
 configure({ asyncUtilTimeout: 10000 });
@@ -236,7 +237,8 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
 
     await waitFor(() => expect(lastRowOf("Vendas acumuladas")).toEqual(["21/10", "R$ 92.000,00"]));
     expect(rowOf("Acumulado x meta", "21/10")[1]).toBe("R$ 92.000,00");
-    expect(textOf(widget("Acumulado x meta"))).toContain("B2B contra a meta total");
+    expect(textOf(widget("Acumulado x meta"))).toContain("B2B contra a meta de B2B");
+    expect(textOf(widget("Acumulado x meta"))).toContain("Meta R$ 2 mi");
     expect(barsOf("Participação por setor")).toEqual(["B2B100%R$ 92.000,00"]);
     expect(barsOf("Ticket médio", "Ticket médio por setor")).toEqual(["B2B11 vendasR$ 8.363,64"]);
     expect(barsOf("Vendas por pessoa").map((bar) => bar.split("R$")[0])).not.toContain("Gustavo Rocha");
@@ -247,7 +249,8 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
 
     const kpis = screen.getByRole("region", { name: "Indicadores" });
     expect(textOf(kpis)).toContain("Total vendidoR$ 92.000,00");
-    expect(textOf(kpis)).toContain("B2B na meta da campanha3,1%");
+    // Meta do B2B (2 milhões), não mais a meta total
+    expect(textOf(kpis)).toContain("Meta B2B4,6%de R$ 2.000.000,00");
   });
 
   it("com os últimos 7 dias, os indicadores comparam com os 7 dias anteriores", async () => {
@@ -301,5 +304,23 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
       "custom",
     );
   });
-});
 
+  it("usuário b2b: abre no B2B, sem poder trocar o setor, contra a meta do B2B", async () => {
+    render(
+      <AuthContext value={{ state: { user: { _id: "1", email: "b2b@teste.com", role: "b2b" }, token: "t" } }}>
+        <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+          <ChartsPage />
+        </QueryClientProvider>
+      </AuthContext>,
+    );
+    await ready();
+
+    const segmentSelect = screen.getByRole("combobox", { name: "Filtrar gráficos por setor" });
+    expect(segmentSelect).toBeDisabled();
+    expect(within(segmentSelect).getAllByRole("option").map((option) => option.textContent)).toEqual(["B2B"]);
+
+    await waitFor(() => expect(lastRowOf("Vendas acumuladas")).toEqual(["21/10", "R$ 92.000,00"]));
+    expect(textOf(widget("Acumulado x meta"))).toContain("B2B contra a meta de B2B");
+    expect(barsOf("Participação por setor")).toEqual(["B2B100%R$ 92.000,00"]);
+  });
+});

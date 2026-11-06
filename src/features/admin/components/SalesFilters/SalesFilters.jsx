@@ -1,8 +1,9 @@
 import styles from "./SalesFilters.module.css";
 
+import usePermissions from "../../../auth/hooks/usePermissions";
 import { useExportSales } from "../../hooks/useExportSales";
 import { getVendorLabel, useVendors } from "../../hooks/useVendors";
-import { SEGMENT_OPTIONS } from "../../utils/segments";
+import { getSegmentOptions } from "../../utils/segments";
 import { DownloadIcon } from "../Icons/Icons";
 import PeriodFilter from "../PeriodFilter/PeriodFilter";
 
@@ -17,6 +18,7 @@ export default function SalesFilters({
 }) {
   const { vendors, vendorsFailed } = useVendors();
   const { exportSales, isExporting, exportFailed } = useExportSales();
+  const { segment: userSegment } = usePermissions();
 
   const selectedVendor = vendors.find((vendor) => vendor._id === selectedVendorId) ?? null;
 
@@ -50,9 +52,10 @@ export default function SalesFilters({
           className={styles.select}
           aria-label="Filtrar por setor"
           value={selectedSegment}
+          disabled={!!userSegment}
           onChange={(event) => onSegmentChange(event.target.value)}
         >
-          {SEGMENT_OPTIONS.map((option) => (
+          {getSegmentOptions(userSegment).map((option) => (
             <option key={option.value} value={option.value}>
               {option.label}
             </option>

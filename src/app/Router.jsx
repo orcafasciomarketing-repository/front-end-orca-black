@@ -1,5 +1,6 @@
 import { createBrowserRouter } from "react-router";
 
+import AdminOnlyRoute from "./AdminOnlyRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 import RouteErrorScreen from "./RouteErrorScreen";
@@ -9,6 +10,7 @@ import AdminPanel from "../features/admin/pages/AdminPanel";
 import ChartsPage from "../features/admin/pages/ChartsPage";
 import ErrorsPage from "../features/admin/pages/ErrorsPage";
 import ImportPage from "../features/admin/pages/ImportPage";
+import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
 
 const router = createBrowserRouter([
@@ -27,8 +29,14 @@ const router = createBrowserRouter([
         children: [
           { index: true, element: <AdminPanel /> },
           { path: "graficos", element: <ChartsPage /> },
-          { path: "importacao", element: <ImportPage /> },
-          { path: "erros", element: <ErrorsPage /> },
+          {
+            element: <AdminOnlyRoute />,
+            children: [
+              { path: "importacao", element: <ImportPage /> },
+              { path: "erros", element: <ErrorsPage /> },
+              { path: "usuarios", element: <UsersPage /> },
+            ],
+          },
         ],
       },
     ],

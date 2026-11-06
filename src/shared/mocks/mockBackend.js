@@ -1,5 +1,7 @@
 export const POINTS = { sales: 2, farm: 1, passage: 1 };
 export const BLACK_FRIDAY_GOAL = 3000000;
+// Metas de setor (somam a meta total), como no backend
+export const SEGMENT_GOALS = { b2b: 2000000, b2g: 1000000 };
 
 const SAO_PAULO_OFFSET_MS = 3 * 60 * 60 * 1000;
 
@@ -72,7 +74,19 @@ export function getGoalProgress(db) {
   const total = db.sales.filter(isActive).reduce((sum, sale) => sum + sale.value, 0);
   const percent = BLACK_FRIDAY_GOAL > 0 ? Math.round((total / BLACK_FRIDAY_GOAL) * 10000) / 100 : 0;
 
-  return { goal: BLACK_FRIDAY_GOAL, total, percent };
+  const segments = {};
+  for (const [segment, goal] of Object.entries(SEGMENT_GOALS)) {
+    const segmentTotal = db.sales
+      .filter((sale) => isActive(sale) && sale.segment === segment)
+      .reduce((sum, sale) => sum + sale.value, 0);
+    segments[segment] = {
+      goal,
+      total: segmentTotal,
+      percent: Math.round((segmentTotal / goal) * 10000) / 100,
+    };
+  }
+
+  return { goal: BLACK_FRIDAY_GOAL, total, percent, segments };
 }
 
 export function getScoreboard(db, period, now = new Date()) {

@@ -2,6 +2,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
 import { describe, expect, it } from "vitest";
 
+import { AuthContext } from "../../auth/context/AuthContext";
 import AdminLayout from "./AdminLayout";
 
 const renderAt = (path) => {
@@ -60,5 +61,43 @@ describe("AdminLayout", () => {
     expect(screen.getByText("Página gráficos")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Gráficos" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+  });
+
+  describe("perfis", () => {
+    const menuLinks = () =>
+      screen.getAllByRole("link").map((link) => link.textContent);
+
+    const renderAs = (role) => {
+      const router = createMemoryRouter(
+        [{ path: "/admin", element: <AdminLayout />, children: [{ index: true, element: <p>Página dashboard</p> }] }],
+        { initialEntries: ["/admin"] },
+      );
+
+      return render(
+        <AuthContext value={{ state: { user: { _id: "1", email: "x@teste.com", role }, token: "t" } }}>
+          <RouterProvider router={router} />
+        </AuthContext>,
+      );
+    };
+
+    it("admin vê todas as telas, inclusive Importação, Erros e Usuários", () => {
+      renderAs("admin");
+
+      expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Importação", "Erros", "Usuários"]);
+    });
+
+    it("usuário antigo, sem perfil, continua vendo tudo", () => {
+      renderAs(undefined);
+
+      expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Importação", "Erros", "Usuários"]);
+    });
+
+    for (const role of ["b2b", "b2g"]) {
+      it(`${role} só vê Dashboard e Gráficos`, () => {
+        renderAs(role);
+
+        expect(menuLinks()).toEqual(["Dashboard", "Gráficos"]);
+      });
+    }
   });
 });

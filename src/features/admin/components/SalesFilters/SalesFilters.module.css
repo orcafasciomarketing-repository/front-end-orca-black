@@ -49,6 +49,17 @@
   outline-width: 3px;
 }
 
+/* Setor travado no perfil do usuário (b2b/b2g): sem a seta, não abre */
+.select:disabled {
+  background-image: none;
+  color: var(--color-muted);
+  cursor: not-allowed;
+}
+
+.select:disabled:hover {
+  border-color: var(--color-border);
+}
+
 .exportButton {
   height: 40px;
   display: inline-flex;
