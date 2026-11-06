@@ -1,6 +1,6 @@
 # Painel admin
 
-Como funciona o painel admin (`/admin`): o layout com menu lateral, as três páginas (Dashboard, Gráficos e Erros), os widgets, os filtros por semana e por vendedor e a exportação.
+Como funciona o painel admin (`/admin`): o layout com menu lateral, as quatro páginas (Dashboard, Gráficos, Importação e Erros), os widgets, os filtros por semana e por vendedor e a exportação.
 
 O código não tem comentários de propósito. Toda explicação fica neste documento. Os widgets de logs de erro e de teste estão em [ERROS_E_LOGS.md](ERROS_E_LOGS.md).
 
@@ -27,9 +27,10 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 |---|---|---|
 | `/admin` | `AdminPanel` (Dashboard) | Filtros, Vendas cadastradas, Rank dos vendedores e Rank das passagens |
 | `/admin/graficos` | `ChartsPage` (Gráficos) | Filtro de semana e os sete gráficos de acompanhamento das vendas |
+| `/admin/importacao` | `ImportPage` (Importação) | Importar vendas por CSV (vendas fora da planilha principal) |
 | `/admin/erros` | `ErrorsPage` (Erros) | Logs de erro e Logs de teste |
 
-As três páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
+As quatro páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos`, `/admin/importacao` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
 
 ### Filtros
 
@@ -244,6 +245,19 @@ O `AdminLayout` é uma rota sem `path` (rota de layout): ele envolve as filhas s
 [src/features/admin/pages/ErrorsPage.jsx](src/features/admin/pages/ErrorsPage.jsx)
 
 `PageHeader` com o título "Erros" e uma grade de 2 colunas com **Logs de erro** e **Logs de teste**, que ocupam a altura da tela e rolam por dentro. Detalhes dos dois widgets em [ERROS_E_LOGS.md](ERROS_E_LOGS.md).
+
+### `ImportPage()` (Importação)
+
+[src/features/admin/pages/ImportPage.jsx](src/features/admin/pages/ImportPage.jsx)
+
+`PageHeader` com o título "Importação" e o widget **Importar vendas** ([ImportSalesWidget](src/features/admin/components/ImportSalesWidget/ImportSalesWidget.jsx)). É a única ação do admin que grava no banco. Regras completas no `projeto.md` (4.11) e no `ROTAS.md` do backend.
+
+1. Escolher o CSV (baixado do Sheets ou do Excel). `readCsvFile` ([api/importApi.js](src/features/admin/api/importApi.js)) lê em UTF-8 e, se não for, em Windows-1252 (CSV do Excel em português), para não quebrar os acentos.
+2. A prévia (`previewImport` → `POST /sales/import/preview`, nunca grava) mostra as vendas importadas hoje, o que o arquivo traz (quantidade, valor, com e sem vendedor) e as listas de **erros**, **possíveis duplicadas**, **avisos** e **linhas ignoradas**, sempre com o número da linha do arquivo.
+3. **Confirmar importação** (`importSales` → `POST /sales/import`) fica desabilitado se houver erro ou se o arquivo não tiver vendas. O arquivo **substitui** todas as vendas importadas antes; as da planilha principal nunca mudam. Se o backend recusar (400 com o resumo), a tela mostra "nada foi importado" e os erros.
+4. Depois de importar, `useImportSales` ([hooks/useImportSales.js](src/features/admin/hooks/useImportSales.js)) invalida vendas, meta e rankings do admin. As TVs atualizam pelo SSE (`sale-updated`, sem popup).
+
+Com `VITE_USE_MOCKS=true` a importação não chama o backend e mostra o erro "A importação não funciona com os dados de demonstração".
 
 ---
 

@@ -2,11 +2,12 @@ import styles from "./AdminLayout.module.css";
 
 import { NavLink, Outlet } from "react-router";
 
-import { AlertIcon, ChartIcon, DashboardIcon } from "../components/Icons/Icons";
+import { AlertIcon, ChartIcon, DashboardIcon, UploadIcon } from "../components/Icons/Icons";
 
 const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", end: true, Icon: DashboardIcon },
   { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon },
+  { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon },
   { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon },
 ];
 
