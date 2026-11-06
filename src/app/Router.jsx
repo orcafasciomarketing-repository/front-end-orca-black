@@ -1,6 +1,6 @@
 import { createBrowserRouter } from "react-router";
 
-import AdminOnlyRoute from "./AdminOnlyRoute";
+import RestrictedRoute from "./RestrictedRoute";
 import PrivateRoute from "./PrivateRoute";
 import PublicRoute from "./PublicRoute";
 import RouteErrorScreen from "./RouteErrorScreen";
@@ -30,12 +30,15 @@ const router = createBrowserRouter([
           { index: true, element: <AdminPanel /> },
           { path: "graficos", element: <ChartsPage /> },
           {
-            element: <AdminOnlyRoute />,
+            element: <RestrictedRoute allow="isMaster" />,
             children: [
               { path: "importacao", element: <ImportPage /> },
               { path: "erros", element: <ErrorsPage /> },
-              { path: "usuarios", element: <UsersPage /> },
             ],
+          },
+          {
+            element: <RestrictedRoute allow="canSeeUsers" />,
+            children: [{ path: "usuarios", element: <UsersPage /> }],
           },
         ],
       },

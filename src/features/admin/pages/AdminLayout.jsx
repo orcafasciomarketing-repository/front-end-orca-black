@@ -5,20 +5,20 @@ import { NavLink, Outlet } from "react-router";
 import usePermissions from "../../auth/hooks/usePermissions";
 import { AlertIcon, ChartIcon, DashboardIcon, UploadIcon, UsersIcon } from "../components/Icons/Icons";
 
-// adminOnly: b2b e b2g não veem no menu (e a rota manda de volta para o dashboard)
+// allow: permissão de getPermissions que mostra o item (sem ela, a rota também manda de volta para o dashboard)
 const NAV_ITEMS = [
   { to: "/admin", label: "Dashboard", end: true, Icon: DashboardIcon },
   { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon },
-  { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, adminOnly: true },
-  { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, adminOnly: true },
-  { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, adminOnly: true },
+  { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
+  { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
+  { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },
 ];
 
 const navLinkClass = ({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`;
 
 export default function AdminLayout() {
-  const { isAdmin } = usePermissions();
-  const navItems = NAV_ITEMS.filter((item) => isAdmin || !item.adminOnly);
+  const permissions = usePermissions();
+  const navItems = NAV_ITEMS.filter((item) => !item.allow || permissions[item.allow]);
 
   return (
     <div className={`container ${styles.layout}`}>

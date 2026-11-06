@@ -124,6 +124,15 @@
   font-weight: 500;
 }
 
+.role {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--color-primary-field);
+  color: var(--color-primary);
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

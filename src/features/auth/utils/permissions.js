@@ -1,21 +1,29 @@
-// Perfis fixos do admin. As telas das TVs não usam login e continuam públicas
+// Perfis do admin. As telas das TVs não usam login e continuam públicas
 const SEGMENT_BY_ROLE = { b2b: "B2B", b2g: "B2G" };
+const KNOWN_ROLES = ["master", "admin", "b2b", "b2g"];
 
+// Perfis que dá para escolher no cadastro. O master não aparece: é definido no backend (MASTER_EMAIL)
 export const ROLE_OPTIONS = [
-  { value: "admin", label: "Admin (tudo)" },
+  { value: "admin", label: "Admin" },
   { value: "b2b", label: "B2B" },
   { value: "b2g", label: "B2G" },
 ];
 
-// Sem perfil (usuário antigo ou backend sem perfis) = admin, como era antes.
+export const ROLE_LABELS = { master: "Master admin", admin: "Admin", b2b: "B2B", b2g: "B2G" };
+
+// Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
 // A segurança de verdade fica no backend: aqui é só o que aparece na tela
 export function getPermissions(role) {
-  const segment = SEGMENT_BY_ROLE[role] ?? "";
+  const knownRole = KNOWN_ROLES.includes(role) ? role : "master";
+  const isMaster = knownRole === "master";
 
   return {
-    role: segment ? role : "admin",
-    isAdmin: !segment,
-    // Setor fixo do usuário ("B2B"/"B2G"); vazio para o admin, que vê todos
-    segment,
+    role: knownRole,
+    // Importação, Erros, trocar perfil/senha e excluir usuários
+    isMaster,
+    // Tela de Usuários (ver e cadastrar)
+    canSeeUsers: isMaster || knownRole === "admin",
+    // Setor fixo do usuário ("B2B"/"B2G"); vazio para master e admin, que veem todos
+    segment: SEGMENT_BY_ROLE[knownRole] ?? "",
   };
 }

@@ -31,7 +31,7 @@ O código não tem comentários de propósito. Toda explicação fica neste docu
 | `/admin/erros` | `ErrorsPage` (Erros) | Logs de erro e Logs de teste |
 | `/admin/usuarios` | `UsersPage` (Usuários) | Cadastrar usuários, trocar perfil e senha, excluir |
 
-Importação, Erros e Usuários são **só do perfil admin** (ver "Perfis" abaixo). As cinco páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos`, `/admin/importacao` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
+Importação e Erros são **só do master**; Usuários, do master e do admin (ver "Perfis" abaixo). As cinco páginas ficam dentro do `AdminLayout`, que desenha o menu lateral. Trocar de aba é navegação interna do React Router: a página não recarrega, o menu continua no lugar e só o conteúdo da direita muda (SPA). Os endereços `/admin`, `/admin/graficos`, `/admin/importacao` e `/admin/erros` também podem ser abertos direto ou salvos nos favoritos.
 
 ### Filtros
 
@@ -60,17 +60,19 @@ Importação, Erros e Usuários são **só do perfil admin** (ver "Perfis" abaix
 
 ### Perfis
 
-Três perfis fixos, que vêm do backend em `user.role` (login e refresh):
+Quatro perfis, que vêm do backend em `user.role` (login e refresh):
 
-| Perfil | Menu | Filtro de setor | Vendas que chegam do backend |
-|---|---|---|---|
-| `admin` | Dashboard, Gráficos, Importação, Erros, Usuários | Todos, B2B e B2G | todas |
-| `b2b` | Dashboard e Gráficos | travado em B2B | só B2B |
-| `b2g` | Dashboard e Gráficos | travado em B2G | só B2G |
+| Perfil | Menu | Filtro de setor | Vendas que chegam do backend | Tela Usuários |
+|---|---|---|---|---|
+| `master` | Dashboard, Gráficos, Importação, Erros, Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
+| `admin` | Dashboard, Gráficos, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
+| `b2b` | Dashboard e Gráficos | travado em B2B | só B2B | — |
+| `b2g` | Dashboard e Gráficos | travado em B2G | só B2G | — |
 
-- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isAdmin, segment }`. Sem perfil (usuário antigo ou backend sem perfis) = admin, como era antes.
+- O `master` é definido no backend pela variável `MASTER_EMAIL`. Sem ela, o backend manda todo admin como `master` (como era antes).
+- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isMaster, canSeeUsers, segment }`. Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
 - `usePermissions()` ([auth/hooks/usePermissions.js](src/features/auth/hooks/usePermissions.js)) lê o usuário do `AuthContext` e soma o `userId`. Fora do provider (teste de componente solto) vale como admin.
-- `AdminOnlyRoute` ([app/AdminOnlyRoute.jsx](src/app/AdminOnlyRoute.jsx)) envolve Importação, Erros e Usuários: b2b/b2g abrindo pelo endereço voltam para `/admin`.
+- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários. Sem a permissão, abrir pelo endereço volta para `/admin`.
 - **A segurança de verdade é do backend**: ele filtra as vendas pelo setor e responde 403 nas rotas do admin. O front só esconde o que a pessoa não pode usar.
 - As TVs (`/`) não usam login e continuam públicas.
 
@@ -225,7 +227,7 @@ Se der erro, o `onError` registra o log em `Admin › exportação de vendas` (a
 [src/features/admin/pages/AdminLayout.jsx](src/features/admin/pages/AdminLayout.jsx)
 
 A moldura de todas as páginas do admin: menu lateral à esquerda e a página atual à direita (`<Outlet />`).
-- `NAV_ITEMS` lista os itens do menu: `to` (rota), `label`, `end`, `Icon` e `adminOnly` (b2b/b2g não veem). Para criar uma aba nova, acrescente um item aqui e a rota filha em `app/Router.jsx`.
+- `NAV_ITEMS` lista os itens do menu: `to` (rota), `label`, `end`, `Icon` e `allow` (permissão de `getPermissions` que mostra o item: `isMaster` ou `canSeeUsers`). Para criar uma aba nova, acrescente um item aqui e a rota filha em `app/Router.jsx`.
 - Cada item é um `NavLink`. O React Router marca o item da rota atual com `aria-current="page"`, e `navLinkClass` aplica `.navLinkActive` nele.
 - `end: true` no Dashboard: sem isso, `/admin` também ficaria marcado em `/admin/erros`, porque `/admin` é o começo do caminho.
 
@@ -235,9 +237,11 @@ A moldura de todas as páginas do admin: menu lateral à esquerda e a página at
   { element: <AdminLayout />, children: [
     { index: true, element: <AdminPanel /> },
     { path: "graficos", element: <ChartsPage /> },
-    { element: <AdminOnlyRoute />, children: [
+    { element: <RestrictedRoute allow="isMaster" />, children: [
       { path: "importacao", element: <ImportPage /> },
       { path: "erros", element: <ErrorsPage /> },
+    ] },
+    { element: <RestrictedRoute allow="canSeeUsers" />, children: [
       { path: "usuarios", element: <UsersPage /> },
     ] },
   ] },
@@ -286,11 +290,11 @@ Com `VITE_USE_MOCKS=true` a importação não chama o backend e mostra o erro "A
 
 ### `UsersPage()` (Usuários)
 
-[src/features/admin/pages/UsersPage.jsx](src/features/admin/pages/UsersPage.jsx) com o widget [UsersWidget](src/features/admin/components/UsersWidget/UsersWidget.jsx). Só admin. Substitui o antigo cadastro aberto (`/auth/register`, removido do backend).
+[src/features/admin/pages/UsersPage.jsx](src/features/admin/pages/UsersPage.jsx) com o widget [UsersWidget](src/features/admin/components/UsersWidget/UsersWidget.jsx). Master e admin. Substitui o antigo cadastro aberto (`/auth/register`, removido do backend).
 
-- **Cadastrar usuário**: email, perfil (Admin, B2B, B2G), senha e confirmação. Confere no front senha com 6+ caracteres e senhas iguais; erros do backend aparecem com a mensagem dele ("Cadastro já realizado").
-- **Lista**: cada pessoa com o seletor de perfil (salva na hora), **Trocar senha** (abre o formulário na linha; a pessoa sai das sessões abertas) e **Excluir** (pede confirmação; perde o acesso na hora).
-- O próprio usuário aparece com "(você)", sem trocar o perfil e sem Excluir, para nunca ficar sem admin (o backend também bloqueia).
+- **Cadastrar usuário** (master e admin): email, perfil (Admin, B2B, B2G; Master não aparece), senha e confirmação. Confere no front senha com 6+ caracteres e senhas iguais; erros do backend aparecem com a mensagem dele ("Cadastro já realizado").
+- **Lista**: para o master, cada pessoa tem o seletor de perfil (salva na hora), **Trocar senha** (abre o formulário na linha; a pessoa sai das sessões abertas) e **Excluir** (pede confirmação; perde o acesso na hora). Para o admin, a lista só mostra o perfil, sem botões.
+- O master aparece como "Master admin", sem seletor e sem Excluir. O próprio usuário aparece com "(você)"; o master troca a própria senha, mas não o perfil (o backend também bloqueia).
 - API em [api/usersApi.js](src/features/admin/api/usersApi.js) (`getUsers`, `createUser`, `updateUser`, `deleteUser`) e hooks em [hooks/useUsers.js](src/features/admin/hooks/useUsers.js) (chave `["admin-users"]`). Erros 4xx (digitação) não vão para os logs de erro; falha de rede ou 5xx vão.
 - Com `VITE_USE_MOCKS=true` a lista vem vazia e gravar mostra "O cadastro de usuários não funciona com os dados de demonstração".
 

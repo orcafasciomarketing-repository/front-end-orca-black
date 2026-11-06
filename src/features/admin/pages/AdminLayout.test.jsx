@@ -80,13 +80,19 @@ describe("AdminLayout", () => {
       );
     };
 
-    it("admin vê todas as telas, inclusive Importação, Erros e Usuários", () => {
-      renderAs("admin");
+    it("master vê todas as telas, inclusive Importação, Erros e Usuários", () => {
+      renderAs("master");
 
       expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Importação", "Erros", "Usuários"]);
     });
 
-    it("usuário antigo, sem perfil, continua vendo tudo", () => {
+    it("admin vê Usuários, mas não Importação nem Erros", () => {
+      renderAs("admin");
+
+      expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Usuários"]);
+    });
+
+    it("sem perfil (backend antigo) continua vendo tudo", () => {
       renderAs(undefined);
 
       expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Importação", "Erros", "Usuários"]);

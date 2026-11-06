@@ -17,15 +17,17 @@ vi.mock("../../api/usersApi", async (importOriginal) => ({
 vi.mock("../../../../shared/errorLogger", () => ({ reportError: vi.fn() }));
 
 const USERS = [
+  { _id: "u-master", email: "master@empresa.com", role: "master" },
   { _id: "u-admin", email: "admin@empresa.com", role: "admin" },
   { _id: "u-b2b", email: "b2b@empresa.com", role: "b2b" },
   // Usuário antigo, sem perfil
   { _id: "u-antigo", email: "antigo@empresa.com" },
 ];
 
-const renderWidget = () =>
+// Padrão: logado como master. renderWidget(USERS[1]) = logado como admin
+const renderWidget = (loggedUser = USERS[0]) =>
   renderWithQuery(
-    <AuthContext value={{ state: { user: USERS[0], token: "t" } }}>
+    <AuthContext value={{ state: { user: loggedUser, token: "t" } }}>
       <UsersWidget />
     </AuthContext>,
   );
@@ -57,17 +59,44 @@ describe("UsersWidget", () => {
 
     expect(await screen.findByText("b2b@empresa.com")).toBeInTheDocument();
     expect(screen.getByRole("combobox", { name: "Perfil de b2b@empresa.com" })).toHaveValue("b2b");
+    expect(screen.getByRole("combobox", { name: "Perfil de admin@empresa.com" })).toHaveValue("admin");
     expect(screen.getByRole("combobox", { name: "Perfil de antigo@empresa.com" })).toHaveValue("admin");
   });
 
-  it("o próprio usuário aparece como (você), sem trocar o perfil nem excluir", async () => {
+  it("master: aparece como (você) e Master admin, troca a própria senha, mas não muda o perfil nem se exclui", async () => {
     renderWidget();
-    await screen.findByText("admin@empresa.com");
+    await screen.findByText("master@empresa.com");
 
-    const me = itemOf("admin@empresa.com");
+    const me = itemOf("master@empresa.com");
     expect(me).toHaveTextContent("(você)");
-    expect(within(me).getByRole("combobox")).toBeDisabled();
+    expect(me).toHaveTextContent("Master admin");
+    expect(within(me).queryByRole("combobox")).not.toBeInTheDocument();
+    expect(within(me).getByRole("button", { name: "Trocar senha" })).toBeInTheDocument();
     expect(within(me).queryByRole("button", { name: "Excluir" })).not.toBeInTheDocument();
+  });
+
+  it("admin: vê a lista e cadastra, mas não troca perfil, senha nem exclui ninguém", async () => {
+    createUser.mockResolvedValue({ _id: "novo", email: "novo@empresa.com", role: "b2b" });
+    renderWidget(USERS[1]);
+    await screen.findByText("b2b@empresa.com");
+
+    expect(screen.queryAllByRole("combobox", { name: /^Perfil de/ })).toHaveLength(0);
+    expect(itemOf("b2b@empresa.com")).toHaveTextContent("B2B");
+    expect(itemOf("master@empresa.com")).toHaveTextContent("Master admin");
+    expect(screen.queryByRole("button", { name: "Trocar senha" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Excluir" })).not.toBeInTheDocument();
+
+    fillCreateForm({ email: "novo@empresa.com", role: "b2b", password: "123456" });
+    fireEvent.click(within(createForm()).getByRole("button", { name: "Cadastrar" }));
+    expect(await screen.findByText("Usuário cadastrado")).toBeInTheDocument();
+  });
+
+  it("o cadastro não oferece o perfil master", async () => {
+    renderWidget();
+    await screen.findByText("b2b@empresa.com");
+
+    const options = within(within(createForm()).getByLabelText("Perfil")).getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Admin", "B2B", "B2G"]);
   });
 
   it("cadastra com email, perfil e senha e limpa o formulário", async () => {
@@ -129,7 +158,7 @@ describe("UsersWidget", () => {
     expect(reportError).toHaveBeenCalled();
   });
 
-  it("trocar o perfil salva na hora", async () => {
+  it("master: trocar o perfil salva na hora", async () => {
     updateUser.mockResolvedValue({});
     renderWidget();
     await screen.findByText("b2b@empresa.com");
@@ -139,7 +168,7 @@ describe("UsersWidget", () => {
     await waitFor(() => expect(updateUser).toHaveBeenCalledWith({ id: "u-b2b", changes: { role: "b2g" } }));
   });
 
-  it("trocar a senha de outro usuário", async () => {
+  it("master: trocar a senha de outro usuário", async () => {
     updateUser.mockResolvedValue({});
     renderWidget();
     await screen.findByText("b2b@empresa.com");
@@ -159,7 +188,7 @@ describe("UsersWidget", () => {
     await waitFor(() => expect(item.queryByLabelText("Nova senha")).not.toBeInTheDocument());
   });
 
-  it("excluir pede confirmação; cancelando, nada acontece", async () => {
+  it("master: excluir pede confirmação; cancelando, nada acontece", async () => {
     deleteUser.mockResolvedValue();
     renderWidget();
     await screen.findByText("b2b@empresa.com");

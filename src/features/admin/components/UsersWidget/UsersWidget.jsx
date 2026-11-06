@@ -3,7 +3,7 @@ import styles from "./UsersWidget.module.css";
 import { useState } from "react";
 
 import usePermissions from "../../../auth/hooks/usePermissions";
-import { ROLE_OPTIONS } from "../../../auth/utils/permissions";
+import { ROLE_LABELS, ROLE_OPTIONS } from "../../../auth/utils/permissions";
 import { getUserErrorMessage } from "../../api/usersApi";
 import { useUserMutations, useUsers } from "../../hooks/useUsers";
 
@@ -12,7 +12,7 @@ const EMPTY_FORM = { email: "", password: "", passwordConfirmation: "", role: "b
 export default function UsersWidget() {
   const { users } = useUsers();
   const { create, update, remove } = useUserMutations();
-  const { userId } = usePermissions();
+  const { userId, isMaster } = usePermissions();
 
   return (
     <section className="widget">
@@ -22,8 +22,8 @@ export default function UsersWidget() {
       </header>
       <div className={styles.body}>
         <p className={styles.help}>
-          Admin vê tudo. B2B e B2G veem só as vendas do próprio setor, no Dashboard e nos Gráficos. As telas das TVs
-          continuam públicas.
+          Master admin faz tudo. Admin vê todos os setores e cadastra usuários, mas não troca perfil, senha nem exclui.
+          B2B e B2G veem só as vendas do próprio setor, no Dashboard e nos Gráficos. As telas das TVs continuam públicas.
         </p>
 
         <CreateUserForm create={create} />
@@ -36,7 +36,14 @@ export default function UsersWidget() {
         ) : (
           <ul className={styles.list} aria-label="Usuários cadastrados">
             {users.map((user) => (
-              <UserItem key={user._id} user={user} isMe={user._id === userId} update={update} remove={remove} />
+              <UserItem
+                key={user._id}
+                user={user}
+                isMe={user._id === userId}
+                canEdit={isMaster}
+                update={update}
+                remove={remove}
+              />
             ))}
           </ul>
         )}
@@ -121,9 +128,12 @@ function CreateUserForm({ create }) {
   );
 }
 
-function UserItem({ user, isMe, update, remove }) {
+// canEdit: só o master troca perfil e senha e exclui. O perfil do master nunca muda pela tela
+function UserItem({ user, isMe, canEdit, update, remove }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const isBusy = update.isPending || remove.isPending;
+  const role = user.role ?? "admin";
+  const canChangeRole = canEdit && !isMe && role !== "master";
 
   const handleRoleChange = (event) => {
     update.mutate({ id: user._id, changes: { role: event.target.value } });
@@ -143,28 +153,36 @@ function UserItem({ user, isMe, update, remove }) {
           {isMe && <span className={styles.me}> (você)</span>}
         </strong>
         <div className={styles.actions}>
-          <select
-            className={styles.input}
-            aria-label={`Perfil de ${user.email}`}
-            value={user.role ?? "admin"}
-            disabled={isMe || isBusy}
-            onChange={handleRoleChange}
-          >
-            {ROLE_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-          <button
-            className={styles.secondaryButton}
-            type="button"
-            aria-expanded={isChangingPassword}
-            onClick={() => setIsChangingPassword(!isChangingPassword)}
-          >
-            Trocar senha
-          </button>
-          {!isMe && (
+          {canChangeRole ? (
+            <select
+              className={styles.input}
+              aria-label={`Perfil de ${user.email}`}
+              value={role}
+              disabled={isBusy}
+              onChange={handleRoleChange}
+            >
+              {ROLE_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <span className={styles.role} aria-label={`Perfil de ${user.email}`}>
+              {ROLE_LABELS[role] ?? role}
+            </span>
+          )}
+          {canEdit && (
+            <button
+              className={styles.secondaryButton}
+              type="button"
+              aria-expanded={isChangingPassword}
+              onClick={() => setIsChangingPassword(!isChangingPassword)}
+            >
+              Trocar senha
+            </button>
+          )}
+          {canChangeRole && (
             <button className={styles.dangerButton} type="button" disabled={isBusy} onClick={handleDelete}>
               Excluir
             </button>
