@@ -1,15 +1,31 @@
 import styles from "./BarChart.module.css";
 
-export default function BarChart({ title, items, color, formatValue }) {
+import Avatar from "../Avatar/Avatar";
+
+export default function BarChart({ title, items, color, formatValue, showAvatar = false, onSelect }) {
   const maxValue = Math.max(...items.map((item) => item.value), 0);
 
   return (
     <ol className={styles.bars} aria-label={title}>
       {items.map((item) => (
         <li key={item.key} className={styles.row}>
-          <span className={styles.label}>
-            <span className={styles.name}>{item.label}</span>
-            {item.detail && <span className={styles.detail}>{item.detail}</span>}
+          <span className={styles.person}>
+            {showAvatar && <Avatar name={item.label} imageUrl={item.imageUrl} size="small" />}
+            <span className={styles.label}>
+              {onSelect && item.selectable !== false ? (
+                <button
+                  className={`${styles.name} ${styles.nameButton}`}
+                  type="button"
+                  title="Ver perfil"
+                  onClick={() => onSelect(item)}
+                >
+                  {item.label}
+                </button>
+              ) : (
+                <span className={styles.name}>{item.label}</span>
+              )}
+              {item.detail && <span className={styles.detail}>{item.detail}</span>}
+            </span>
           </span>
           <span className={styles.track}>
             <span

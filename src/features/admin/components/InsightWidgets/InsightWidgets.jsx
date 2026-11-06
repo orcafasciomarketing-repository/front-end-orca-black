@@ -2,18 +2,17 @@ import styles from "./InsightWidgets.module.css";
 
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import { useGoal } from "../../hooks/useGoal";
-import { useSalesCharts } from "../../hooks/useSalesCharts";
 import { useSalesInsights } from "../../hooks/useSalesInsights";
-import { CAMPAIGN_END_DAY } from "../../utils/campaign";
 import { CHART_COLORS, segmentColor } from "../../utils/chartColors";
 import { formatDay } from "../../utils/chartData";
 import { getSegmentGoal } from "../../utils/segments";
 import { formatPercent, formatSalesCount, formatVariation } from "../../utils/chartScale";
 import { comparisonLabel } from "../../utils/periods";
-import { WEEKDAYS, forecast, variation } from "../../utils/salesInsights";
+import { WEEKDAYS, variation } from "../../utils/salesInsights";
 import { barRows, formatCsvNumber, timeSeriesRows } from "../../utils/tableCsv";
 import BarChart from "../charts/BarChart";
 import SalesCalendar from "../charts/SalesCalendar";
+import Sparkline from "../charts/Sparkline";
 import ShareBar from "../charts/ShareBar";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
 import { ChartCard } from "../SalesChartWidgets/SalesChartWidgets";
@@ -49,7 +48,7 @@ function Delta({ current, previous, period }) {
 }
 
 export function SalesKpis({ period, segment }) {
-  const { kpis, campaignTotal } = useSalesInsights(period, segment);
+  const { kpis, campaignTotal, trend } = useSalesInsights(period, segment);
   const { goal } = useGoal();
   const segmentGoal = getSegmentGoal(goal, segment);
   const { current, previous } = kpis;
@@ -60,18 +59,21 @@ export function SalesKpis({ period, segment }) {
       value: formatCurrency(current.total),
       now: current.total,
       before: previous?.total,
+      trend: trend.total,
     },
     {
       label: "Vendas fechadas",
       value: current.count,
       now: current.count,
       before: previous?.count,
+      trend: trend.count,
     },
     {
       label: "Ticket médio",
       value: formatCurrency(current.average),
       now: current.average,
       before: previous?.average,
+      trend: trend.average,
     },
   ];
 
@@ -80,7 +82,14 @@ export function SalesKpis({ period, segment }) {
       {tiles.map((tile) => (
         <dl key={tile.label} className={`widget ${styles.tile}`}>
           <dt className={styles.tileLabel}>{tile.label}</dt>
-          <dd className={styles.tileValue}>{tile.value}</dd>
+          <dd className={styles.tileValue}>
+            <span key={tile.value} className={styles.animatedValue}>
+              {tile.value}
+            </span>
+            <span className={styles.trend} title="Últimos 7 dias">
+              <Sparkline values={tile.trend} />
+            </span>
+          </dd>
           <dd className={styles.tileDelta}>
             <Delta current={tile.now} previous={tile.before} period={period} />
           </dd>
@@ -100,66 +109,6 @@ export function SalesKpis({ period, segment }) {
         </dd>
       </dl>
     </section>
-  );
-}
-
-export function ForecastCard({ segment }) {
-  const { goal } = useGoal();
-  const { campaign } = useSalesCharts(null, segment);
-  const segmentGoal = getSegmentGoal(goal, segment);
-  const goalLabel = segmentGoal.isTotal ? "meta total" : `meta de ${segment}`;
-  const plan = forecast(campaign, segmentGoal.value, CAMPAIGN_END_DAY);
-  const title = "Previsão de fechamento";
-  const endLabel = formatDay(CAMPAIGN_END_DAY);
-
-  const rows = [
-    ["Média por dia até hoje", formatCurrency(plan.dailyAverage)],
-    ["Ritmo necessário por dia", plan.reached ? "Meta batida" : formatCurrency(plan.requiredPerDay)],
-    ["Dias restantes até " + endLabel, plan.ended ? "Encerrada" : plan.daysLeft],
-    ["Falta para a meta", formatCurrency(plan.remaining)],
-  ];
-
-  return (
-    <ChartCard
-      title={title}
-      description={
-        segment
-          ? `Se o ritmo atual de ${segment} continuar até ${endLabel}, contra a ${goalLabel}`
-          : `Se o ritmo atual continuar até ${endLabel}`
-      }
-      segment={segment}
-      csvRows={[
-        ["Indicador", "Valor"],
-        ["Projeção (R$)", formatCsvNumber(plan.projection)],
-        ["Meta (R$)", formatCsvNumber(plan.goal)],
-        ["Média por dia (R$)", formatCsvNumber(plan.dailyAverage)],
-        ["Ritmo necessário por dia (R$)", formatCsvNumber(plan.requiredPerDay)],
-        ["Dias restantes", String(plan.daysLeft)],
-      ]}
-    >
-      <div className={styles.forecast}>
-        <div>
-          <p className={styles.heroLabel}>{plan.ended ? "Fechou em" : "Projeção para " + endLabel}</p>
-          <p className={styles.hero}>{formatCurrency(plan.ended ? plan.sold : plan.projection)}</p>
-          <p className={styles.status}>
-            <span className={plan.willHit ? styles.statusGood : styles.statusBad} aria-hidden="true">
-              {plan.willHit ? "✓" : "!"}
-            </span>
-            {plan.willHit
-              ? "No ritmo atual, a meta é batida"
-              : `No ritmo atual, ficam faltando ${formatCurrency(plan.goal - plan.projection)}`}
-          </p>
-        </div>
-        <dl className={styles.facts}>
-          {rows.map(([label, value]) => (
-            <div key={label} className={styles.fact}>
-              <dt>{label}</dt>
-              <dd>{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </ChartCard>
   );
 }
 

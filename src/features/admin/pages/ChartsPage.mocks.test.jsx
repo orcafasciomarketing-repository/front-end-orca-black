@@ -56,22 +56,23 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
 
     expect(screen.getByRole("region", { name: "Indicadores" })).toBeInTheDocument();
     expect(screen.getAllByRole("heading", { level: 2 }).map((heading) => heading.textContent)).toEqual([
-      "Comparar períodos",
       "Acumulado x meta",
-      "Previsão de fechamento",
       "Forecast",
       "Vendas acumuladas",
       "Vendas acumuladas por setor",
       "Vendas x renovações por dia",
       "Vendas por semana",
+      "Calendário de vendas",
       "Vendas por pessoa",
       "Vendas por equipe",
       "Passagens por pessoa",
+      "Pontos por equipe",
+      "Evolução dos pontos",
       "Ticket médio",
+      "Comparar períodos",
       "Participação por setor",
       "Concentração",
       "Cancelamentos",
-      "Calendário de vendas",
     ]);
   });
 
@@ -81,7 +82,9 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
 
     expect(lastRowOf("Vendas acumuladas")).toEqual(["21/10", "R$ 212.000,00"]);
     expect(rowOf("Acumulado x meta", "21/10")).toEqual(["21/10", "R$ 212.000,00", "R$ 212.000,00", "R$ 212.000,00"]);
-    expect(lastRowOf("Acumulado x meta")).toEqual(["01/12", "—", "R$ 589.913,04", "R$ 3.000.000,00"]);
+    expect(lastRowOf("Acumulado x meta")).toEqual(["01/12", "—", "R$ 212.000,00", "R$ 3.000.000,00"]);
+    expect(textOf(widget("Acumulado x meta"))).toContain("Cenário realista");
+    expect(textOf(widget("Acumulado x meta"))).toContain("com o forecast do backend");
     expect(within(widget("Acumulado x meta")).getByText("Meta R$ 3 mi")).toBeInTheDocument();
     expect(lastRowOf("Vendas acumuladas por setor")).toEqual(["21/10", "R$ 92.000,00", "R$ 120.000,00"]);
   });
@@ -149,12 +152,6 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     const kpis = screen.getByRole("region", { name: "Indicadores" });
     expect(textOf(kpis)).toContain("Total vendidoR$ 212.000,00Campanha inteira");
     expect(textOf(kpis)).toContain("Meta da campanha7,1%de R$ 3.000.000,00");
-
-    const forecastCard = textOf(widget("Previsão de fechamento"));
-    expect(forecastCard).toContain("R$ 589.913,04");
-    expect(forecastCard).toContain("No ritmo atual, ficam faltando R$ 2.410.086,96");
-    expect(forecastCard).toContain("Ritmo necessário por diaR$ 68.000,00");
-    expect(forecastCard).toContain("Dias restantes até 01/1241");
 
     expect(
       within(widget("Vendas por semana"))
@@ -237,7 +234,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     });
 
     await waitFor(() => expect(lastRowOf("Vendas acumuladas")).toEqual(["21/10", "R$ 92.000,00"]));
-    expect(rowOf("Acumulado x meta", "21/10")[1]).toBe("R$ 92.000,00");
+    await waitFor(() => expect(rowOf("Acumulado x meta", "21/10")[1]).toBe("R$ 92.000,00"));
     expect(textOf(widget("Acumulado x meta"))).toContain("B2B contra a meta de B2B");
     expect(textOf(widget("Acumulado x meta"))).toContain("Meta R$ 2 mi");
     expect(barsOf("Participação por setor")).toEqual(["B2B100%R$ 92.000,00"]);
@@ -324,4 +321,50 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     expect(textOf(widget("Acumulado x meta"))).toContain("B2B contra a meta de B2B");
     expect(barsOf("Participação por setor")).toEqual(["B2B100%R$ 92.000,00"]);
   });
+
+  it("seções com menu, pontos por equipe e evolução dos pontos", async () => {
+    renderPage();
+    await ready();
+
+    const nav = screen.getByRole("navigation", { name: "Seções dos gráficos" });
+    expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "Visão geral",
+      "Vendas",
+      "Pessoas e equipes",
+      "Análises",
+    ]);
+    expect(within(screen.getByRole("region", { name: "Pessoas e equipes" })).getByRole("heading", { name: "Pontos por equipe" })).toBeInTheDocument();
+
+    await waitFor(() => expect(within(widget("Pontos por equipe")).getAllByRole("listitem")).toHaveLength(3));
+    const teams = within(widget("Pontos por equipe"))
+      .getAllByRole("listitem")
+      .map((item) => textOf(item));
+    expect(teams[0]).toMatch(/^Orçawinx\d+ pontos/);
+    expect(teams.every((team) => /venda \d+, renovação \d+, passagem \d+/.test(team))).toBe(true);
+    expect(within(widget("Evolução dos pontos")).getByRole("img")).toBeInTheDocument();
+    expect(lastRowOf("Evolução dos pontos")[0]).toBe("21/10");
+  });
+
+  it("clicar num vendedor abre o perfil dele; Esc e o X fecham", async () => {
+    renderPage();
+    await ready();
+
+    fireEvent.click(within(widget("Vendas por pessoa")).getByRole("button", { name: "Gustavo Rocha" }));
+
+    const profile = await screen.findByRole("dialog", { name: "Perfil de Gustavo Rocha" });
+    await waitFor(() => expect(textOf(profile)).toContain("Total vendidoR$ 90.000,00"));
+    expect(textOf(profile)).toContain("1º de 11 em valor vendido");
+    expect(textOf(profile)).toContain("Vendas concluídas3");
+    expect(textOf(profile)).toContain("Esta semanaR$ 45.000,00");
+    expect(within(profile).getByRole("heading", { name: "Últimas vendas" })).toBeInTheDocument();
+    expect(textOf(profile)).toContain("Prefeitura de Campinas");
+
+    fireEvent.keyDown(profile, { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Perfil de Gustavo Rocha" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(widget("Vendas por pessoa")).getByRole("button", { name: "Brenda Lima" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Fechar perfil" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
 });
+

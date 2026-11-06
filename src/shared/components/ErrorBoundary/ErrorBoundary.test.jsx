@@ -90,4 +90,16 @@ describe("ErrorBoundary", () => {
 
     expect(screen.getByRole("alert")).toHaveClass("por-cima");
   });
+
+  it("com fallback, mostra o fallback no lugar da tela de erro e continua registrando o erro", () => {
+    render(
+      <ErrorBoundary location="Teste › silencioso" fallback={<p>Sem dados</p>}>
+        <Broken />
+      </ErrorBoundary>,
+    );
+
+    expect(screen.getByText("Sem dados")).toBeInTheDocument();
+    expect(reportError).toHaveBeenCalledWith(expect.any(Error), expect.objectContaining({ location: "Teste › silencioso" }));
+  });
 });
+

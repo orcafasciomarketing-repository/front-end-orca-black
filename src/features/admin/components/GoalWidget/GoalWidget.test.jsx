@@ -1,6 +1,7 @@
-import { screen, within } from "@testing-library/react";
+import { act, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getForecast } from "../../api/forecastApi";
 import { getAdminSales, getGoal } from "../../api/slidesApi";
 import { renderWithQuery } from "../../../../test/renderWithQuery";
 import GoalWidget from "./GoalWidget";
@@ -9,6 +10,9 @@ vi.mock("../../api/slidesApi", () => ({
   getGoal: vi.fn(),
   getAdminSales: vi.fn(),
   getVendors: vi.fn(),
+}));
+vi.mock("../../api/forecastApi", () => ({
+  getForecast: vi.fn(),
 }));
 vi.mock("../../../../shared/errorLogger", () => ({
   reportError: vi.fn(),
@@ -31,6 +35,7 @@ const itemsOf = (groupName) =>
 describe("GoalWidget", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getForecast.mockResolvedValue({ campaign: { productiveDays: { elapsed: 6, remaining: 18 } } });
     getAdminSales.mockResolvedValue({ sales: [], total: 0 });
   });
 
@@ -156,4 +161,43 @@ describe("GoalWidget", () => {
       expect(textOf()).not.toContain("Faltam");
     });
   });
+
+  describe("marcos, ritmo esperado e comemoração", () => {
+    it("marca onde a meta deveria estar hoje pelos dias produtivos que já passaram", async () => {
+      getGoal.mockResolvedValue({ goal: 100000, total: 10000, percent: 10 });
+      getAdminSales.mockResolvedValue({ sales: [], total: 0 });
+
+      renderWithQuery(<GoalWidget />);
+
+      expect(await screen.findByText("Hoje deveria estar em R$ 25.000,00 (25%)")).toBeInTheDocument();
+    });
+
+    it("sem marca de ritmo antes ou depois da campanha, e se o forecast falhar a barra continua", async () => {
+      getGoal.mockResolvedValue({ goal: 100000, total: 10000, percent: 10 });
+      getAdminSales.mockResolvedValue({ sales: [], total: 0 });
+      getForecast.mockRejectedValue(new Error("forecast fora do ar"));
+
+      renderWithQuery(<GoalWidget />);
+
+      expect(await screen.findByRole("progressbar", { name: "Progresso da meta" })).toBeInTheDocument();
+      await act(async () => {});
+      expect(screen.queryByText(/Hoje deveria estar/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Algo deu errado|Não foi possível/)).not.toBeInTheDocument();
+    });
+
+    it("comemora quando o percentual cruza um marco com a página aberta, e não ao carregar", async () => {
+      getGoal.mockResolvedValue({ goal: 100000, total: 49000, percent: 49 });
+      getAdminSales.mockResolvedValue({ sales: [], total: 0 });
+
+      const { queryClient } = renderWithQuery(<GoalWidget />);
+      await screen.findByText("49%");
+      expect(screen.queryByText(/da meta alcançados/)).not.toBeInTheDocument();
+
+      getGoal.mockResolvedValue({ goal: 100000, total: 51000, percent: 51 });
+      await act(() => queryClient.invalidateQueries());
+
+      expect(await screen.findByText("50% da meta alcançados!")).toBeInTheDocument();
+    });
+  });
 });
+

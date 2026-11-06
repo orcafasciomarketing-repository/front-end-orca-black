@@ -14,6 +14,7 @@ import {
   UploadIcon,
   UsersIcon,
 } from "../components/Icons/Icons";
+import SaleToasts from "../components/SaleToasts/SaleToasts";
 
 // allow: permissão de getPermissions que mostra o item (sem ela, a rota também manda de volta para o dashboard)
 const NAV_ITEMS = [
@@ -56,6 +57,7 @@ export default function AdminLayout() {
       <main className={styles.main}>
         <Outlet />
       </main>
+      <SaleToasts />
     </div>
   );
 }

@@ -196,17 +196,24 @@ export function ForecastPace({ segment }) {
   );
 }
 
-// Semana atual (segunda a sábado): sem meta semanal, só os cenários
+// Semana atual (segunda a sábado): cenários e, quando o backend manda, a meta semanal automática
 export function WeekForecast({ segment }) {
   const { forecast } = useForecast(segment);
-  const { week } = forecast;
+  const { week, weekGoal } = forecast;
   const title = "Forecast da semana";
+  const goalNote = weekGoal
+    ? `Meta da semana: ${formatCurrency(weekGoal.goal)}`
+    : "Não existe meta semanal: só a projeção";
 
   return (
     <ChartCard
       title={title}
-      description={`${formatDay(week.start)} a ${formatDay(week.end)} · faltam ${week.remainingDays} dias produtivos. Não existe meta semanal: só a projeção`}
-      csvRows={[...scenarioRows(week.scenarios), ["Vendido na semana", formatCsvNumber(week.sold)]]}
+      description={`${formatDay(week.start)} a ${formatDay(week.end)} · faltam ${week.remainingDays} dias produtivos. ${goalNote}`}
+      csvRows={[
+        ...scenarioRows(week.scenarios),
+        ["Vendido na semana", formatCsvNumber(week.sold)],
+        ...(weekGoal ? [["Meta da semana", formatCsvNumber(weekGoal.goal)]] : []),
+      ]}
       segment={segment}
     >
       <ul className={styles.tiles} aria-label="Cenários da semana">
@@ -226,7 +233,7 @@ export function WeekForecast({ segment }) {
   );
 }
 
-// Resumo para a tela Gráficos, ao lado da "Previsão de fechamento" (que continua com a média simples)
+// Resumo para a tela Gráficos (a única previsão de lá: o antigo card de média simples saiu)
 export function ForecastSummary({ segment }) {
   const { forecast } = useForecast(segment);
   const { campaign } = forecast;

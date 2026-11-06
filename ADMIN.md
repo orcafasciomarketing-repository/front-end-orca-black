@@ -87,13 +87,13 @@ Seletor **Setor** com "Todos" (padrão), "B2B" e "B2G". As opções ficam em `SE
 |---|---|
 | Vendas cadastradas e exportação | Só as vendas do setor. O arquivo ganha o setor no nome: `vendas-todos-b2g-2026-10-22.csv` |
 | Meta da Black Friday | Compara com a **meta do setor** (B2B 2 mi, B2G 1 mi, de `goal.segments`): "de R$ 1.000.000,00 (meta B2G)", o percentual na barra e "Faltam R$ X" (ou "Meta batida!"). Para o admin, acrescenta "· B2G representa 56,6% do total vendido"; para b2b/b2g não (seria sempre 100%). Sem meta do setor no backend, volta ao comportamento antigo: contra a meta total, "(meta total)" e só a participação. As listas de vendas, passagens e renovações contam só as vendas do setor |
-| Rank dos vendedores | **Calculado no front** a partir das vendas ativas do setor, com a mesma tabela de pontos do backend (`SALE_POINTS`): venda B2G = 3, renovação B2G = 2, venda B2B = 2, renovação B2B = 1. Top 3. Com "Todos" continua vindo do backend |
-| Rank das passagens | Também calculado no front: cada pessoa da passagem ganha, por venda ativa do setor, os pontos do **cargo dela** (`PASSAGE_POINTS`): B2G SDR = 2, B2B SDR = 1, CS = 1, Suporte = 2; cargo fora da tabela vale 0 (e a pessoa aparece com 0, como no backend). Top 3 |
-| Todos os gráficos e indicadores | Só as vendas do setor. "Acumulado x meta", "Previsão de fechamento" e o indicador de meta ("Meta B2B") usam a **meta do setor** e dizem isso na descrição ("B2B contra a meta de B2B"). Sem meta do setor no backend, usam a meta total ("contra a meta total"). O CSV de cada gráfico também leva o setor no nome |
+| Rank dos vendedores | Vem do backend com `?segment=b2b|b2g` (`GET /analytics/ranking`), com a tabela de pontos real do backend. Sem setor, a chamada é a mesma de sempre |
+| Rank das passagens | Também vem do backend com `?segment=` (`GET /analytics/sdr-ranking`) |
+| Todos os gráficos e indicadores | Só as vendas do setor. "Acumulado x meta" e o indicador de meta ("Meta B2B") usam a **meta do setor** e dizem isso na descrição ("B2B contra a meta de B2B"). Sem meta do setor no backend, usam a meta total ("contra a meta total"). O CSV de cada gráfico também leva o setor no nome |
 
 A meta do setor vem de `getSegmentGoal(goal, setor)` ([utils/segments.js](src/features/admin/utils/segments.js)), que devolve `{ value, isTotal }`: `isTotal: true` quando caiu na meta total (sem setor ou sem `goal.segments`).
 
-Os rankings por setor usam [utils/segmentRanking.js](src/features/admin/utils/segmentRanking.js) (`rankVendorsFromSales(vendas, tipo)` e `rankSdrsFromSales(vendas)`) pelos hooks `useSegmentRankVendors` e `useSegmentRankSdrs` ([hooks/useSegmentRanks.js](src/features/admin/hooks/useSegmentRanks.js)). A meta do setor usa `useSegmentTotal(setor)` ([hooks/useSegmentTotal.js](src/features/admin/hooks/useSegmentTotal.js)), que devolve `{ total, allSegments }`. Todos leem o mesmo cache de `/sales/admin`, então trocar de setor não faz requisição nova. **Atenção:** o backend não tem rota de ranking por setor nem rota que devolva a tabela de pontos (ela vem das variáveis `POINTS_*` do `.env` do backend). Por isso `SALE_POINTS` e `PASSAGE_POINTS` copiam os valores documentados no `ROTAS.md` do backend, e o cargo é comparado do mesmo jeito (sem acento, sem diferença de maiúscula, espaços juntados). **Se mudar a pontuação no backend, mude também esses dois objetos.** O backend falso (`src/shared/mocks`) usa uma pontuação simplificada (venda 2, renovação 1, passagem 1), então em modo mock os pontos de "Todos" e os de um setor não somam igual; no backend real eles batem.
+Os rankings por setor deixaram de ser calculados no front (a cópia da tabela de pontos, `segmentRanking.js`, saiu): o backend passou a aceitar `?segment=` nas rotas de ranking. A meta do setor usa `useSegmentTotal(setor)` ([hooks/useSegmentTotal.js](src/features/admin/hooks/useSegmentTotal.js)), que devolve `{ total, allSegments }`.
 
 **Data das vendas:** a "Data da venda" vem da planilha pelo Apps Script como data à meia-noite no fuso da planilha, e o backend espera meia-noite de São Paulo (`2026-10-03T03:00:00.000Z`, nos testes e no `ROTAS.md`), com semanas no fuso de São Paulo (RN-29 do `projeto.md`). O front usa a mesma regra (`getDayKey` converte para São Paulo), então dia, semana e período batem com os rankings do backend. Isso depende de a planilha estar no fuso **(GMT-03:00) São Paulo** (Arquivo → Configurações); se estiver em outro fuso, o front e o backend erram o dia do mesmo jeito.
 
@@ -313,7 +313,7 @@ Com `VITE_USE_MOCKS=true` a importação não chama o backend e mostra o erro "A
 | `ForecastPace` (Como o ritmo é calculado) | As médias de 7, 30 dias e da campanha com os pesos, e o ritmo resultante |
 | `WeekForecast` (Forecast da semana) | Vendido na semana e os 3 cenários (sem meta semanal) |
 
-Na tela Gráficos, o widget **Forecast** (`ForecastSummary`) fica ao lado da **Previsão de fechamento**, que continua igual (média simples, dias corridos). Os dois dão números diferentes de propósito.
+Na tela Gráficos, o widget **Forecast** (`ForecastSummary`) é a única previsão: o antigo card "Previsão de fechamento" (média simples, dias corridos) saiu, porque dava um número diferente para a mesma pergunta. O "Acumulado x meta" também desenha o cenário realista e o ritmo necessário a partir deste forecast. O card **Forecast da semana** mostra a meta semanal automática (`weekGoal`) quando o backend manda.
 
 Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src/shared/mocks/mockForecast.js), uma cópia do cálculo do backend (o `mockForecast.test.js` confere os números do PDF). **Se mudar a regra no backend, mude a cópia também.**
 
@@ -540,7 +540,7 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 - `CHARTS` lista os gráficos na ordem da grade: `title` (usado no carregamento e no erro), `Chart` (o componente) e `className` opcional.
 - Cada gráfico fica dentro de um `ErrorBoundary` e de um `Suspense` com `WidgetFallback`, como no Dashboard. Se um gráfico der erro (por exemplo, as equipes não carregam), só ele mostra o erro.
 - Todos os gráficos usam **só as vendas ativas**, como a meta e os rankings. A exceção é "Cancelamentos", que olha as canceladas.
-- **Fim da campanha:** [utils/campaign.js](src/features/admin/utils/campaign.js) guarda `CAMPAIGN_END_DAY = "2026-12-01"` (Cyber Monday). A previsão, o ritmo necessário e as linhas tracejadas do "Acumulado x meta" usam essa data. Para outra campanha, é só trocar ali.
+- **Fim da campanha:** vem do backend (`forecast.campaign.end`, `config/campaign.js` de lá). O front não tem mais a data no código.
 - **Modo escuro:** vem do botão do menu lateral (veja `AdminLayout`). A aba não tem mais botão próprio; as cores dos gráficos acompanham o `data-theme` do layout.
 - **Exportar CSV:** cada card tem um botão "CSV" no canto que baixa os dados daquele gráfico (com a semana no nome do arquivo quando filtrada).
 - **Gerar PDF:** o botão "Gerar PDF" abre o [PrintDialog](src/features/admin/components/PrintDialog/PrintDialog.jsx), com uma caixinha para os Indicadores e para cada gráfico, e "Selecionar todos" (já marcado ao abrir; fica "meio marcado" quando só alguns estão escolhidos, e o contador mostra "3 de 15"). Sem nada marcado, o botão de gerar fica desativado. Ao gerar, a página guarda os títulos escolhidos e a hora em `printItems`, chama `window.print()` e o navegador abre a janela de impressão, onde se escolhe "Salvar como PDF". Quando a janela fecha (evento `afterprint`), tudo volta ao normal. Cancelar, clicar fora ou apertar Esc fecha sem imprimir.
@@ -555,7 +555,7 @@ Já existia. Formata a data e a hora no padrão brasileiro. É usada na lista de
 | Vendas acumuladas | Linha | Valor vendido somado dia a dia (vendas + renovações) | Sim |
 | Vendas acumuladas por setor | Linhas | Uma linha por segmento (B2B, B2G), somando dia a dia | Sim |
 | Acumulado x meta | Linha + linha da meta | O acumulado da campanha com a meta como linha horizontal. O eixo vai até o fim da campanha e, a partir de hoje, saem duas linhas tracejadas: **projeção no ritmo atual** (azul) e **ritmo necessário** para bater a meta (laranja, some quando a meta já foi batida) | **Não**: a meta é da campanha inteira |
-| Previsão de fechamento | Números | Projeção para o fim da campanha, se bate ou não a meta (com ✓ ou !), média por dia até hoje, ritmo necessário por dia, dias restantes e quanto falta | **Não** |
+
 | Vendas por semana | Colunas | Total de cada semana, vendas e renovações lado a lado, da primeira semana com venda até a atual | **Não**: é a comparação entre semanas |
 | Vendas x renovações por dia | Colunas | Valor vendido em cada dia, vendas e renovações lado a lado (não acumula) | Sim |
 | Vendas por pessoa | Barras | Total de cada vendedor, do maior para o menor | Sim |
@@ -678,13 +678,36 @@ O card "Comparar períodos". Guarda o atalho e os dois períodos no próprio est
 | `segmentShare(ativas)` / `shareOf(itens)` | Valor e fração do total de cada segmento / de cada item |
 | `concentration(ativas)` | `{ top, topShare, rest }`: os 3 maiores vendedores e o resto (`rest.items` traz cada um dos demais com a sua %) |
 | `weeklyTotals(ativas, agora)` | `{ weeks, sales, renewals }` da primeira semana com venda até a atual, semanas vazias com 0 |
-| `forecast(campanha, meta, fim, agora)` | Média por dia (do primeiro dia com venda até hoje), dias restantes depois de hoje, projeção (vendido + média × dias restantes), ritmo necessário (falta ÷ dias restantes), se já bateu e se vai bater |
-| `goalTrack(campanha, meta, fim, agora)` | Os dias até o fim da campanha e as três séries do "Acumulado x meta" (vendido, projeção, ritmo necessário), com `null` onde a linha não existe |
+| `forecastTrack(campanha, forecast)` | As séries do "Acumulado x meta" a partir do forecast do backend: o vendido dia a dia até hoje, o **cenário realista** (`trajectory.realistic`; em domingo e feriado repete o último valor) e o **ritmo necessário** (do vendido de hoje até a meta, dividido igualmente pelos dias produtivos que faltam, terminando exatamente na meta). Sem linhas tracejadas depois do fim ou com a meta batida |
+| `lastDaysTrend(ativas, hoje)` | Os últimos 7 dias (terminando hoje): total, quantidade e ticket por dia, para os mini gráficos dos indicadores |
 | `buildSalesInsights(vendas, semana, agora)` | Junta tudo para o `useSalesInsights` |
 
 [utils/tableCsv.js](src/features/admin/utils/tableCsv.js): `tableToCsv(linhas)` (mesmo formato do CSV de vendas: BOM, `;` e escape), `timeSeriesRows` e `barRows` (montam as linhas a partir dos dados dos gráficos), `formatCsvNumber` (vírgula decimal) e `buildChartFileName({ title, period, segment })` ("grafico-ticket-medio-b2b-semana-2026-10-19-2026-10-22.csv"). `toSlug` foi exportado do `salesCsv.js` para ser reaproveitado aqui.
 
 ---
+
+## Novidades: tempo real, perfis, pontos e meta semanal
+
+Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-60, RN-61 e RN-62). Sem os parâmetros novos, as rotas antigas respondem igual, então as TVs não mudam.
+
+- **Uma previsão só:** o "Acumulado x meta" e o "Forecast" usam `GET /analytics/forecast` (o card "Previsão de fechamento" saiu). Com setor, a meta é a do setor quando o backend tem.
+- **Meta semanal automática** (`weekGoal` do forecast): card **Meta da semana** no Dashboard ([WeekGoalWidget](src/features/admin/components/WeekGoalWidget/WeekGoalWidget.jsx)), com vendido, meta, percentual, quanto falta, ritmo necessário por dia, cenário realista da semana e dias produtivos restantes. A meta é (meta − vendido antes da segunda) ÷ dias produtivos até 01/12 × dias produtivos da semana, e fica fixa durante a semana.
+- **Tempo real no admin:** [SaleToasts](src/features/admin/components/SaleToasts/SaleToasts.jsx), montado no `AdminLayout`, escuta o mesmo `GET /sales/events` da TV (`useLiveSales`). A cada evento, atualiza todos os dados do admin (consultas com chave começando em `admin-`); venda nova também mostra um aviso no canto (foto, nome, cargo, passagem), que some em 8 s ou no X, no máximo 3 de cada vez. Sem provider de dados (testes soltos) ou sem `EventSource`, não escuta.
+- **Fotos:** [Avatar](src/features/admin/components/Avatar/Avatar.jsx) mostra a `imageUrl` ou, sem foto (ou se ela não carrega), as iniciais. As iniciais vêm pelo CSS (`data-initials`), então não entram no texto lido por leitores de tela. Aparece nos rankings, em "Vendas por pessoa", "Passagens por pessoa", "Pontos por equipe", no aviso e no perfil.
+- **Rankings com período e movimento:** [RankPeriodTabs](src/features/admin/components/RankPeriodTabs/RankPeriodTabs.jsx) troca entre **Campanha**, **Esta semana** e **Semana passada** (`?period=week` e as rotas `last-week`). Em "Esta semana", cada pessoa mostra o movimento em relação à semana passada (`withMovement`, [utils/rankMovement.js](src/features/admin/utils/rankMovement.js)): ▲ subiu, ▼ caiu, = igual, "novo". O ranking da campanha não tem movimento porque o backend não guarda como ele estava antes.
+- **Pontos por equipe** e **Evolução dos pontos** (Gráficos › Pessoas e equipes): usam `GET /analytics/points-history`, com venda, renovação e passagem por dia; seguem o filtro de período e de setor ([utils/teamPoints.js](src/features/admin/utils/teamPoints.js)).
+- **Perfil do vendedor:** clicar no nome em "Vendas por pessoa" ou no ranking de vendedores abre o painel lateral [VendorProfile](src/features/admin/components/VendorProfile/VendorProfile.jsx): foto, cargo, posição, esta semana x semana passada, sequência de dias seguidos com venda (🔥), total, vendas, ticket, vendas novas, renovações, canceladas, valor acumulado e as últimas 5 vendas. Fecha no X, com Esc ou clicando fora. Contas em [utils/vendorProfile.js](src/features/admin/utils/vendorProfile.js).
+- **Seções na aba Gráficos:** Visão geral, Vendas, Pessoas e equipes e Análises, com um menu fixo no topo que rola até cada uma. O PDF continua com a mesma escolha de widgets (o menu não sai na impressão).
+- **Acabamento:**
+  - mini gráfico dos últimos 7 dias nos indicadores ([Sparkline](src/features/admin/components/charts/Sparkline.jsx));
+  - os valores dos indicadores entram com uma animação curta quando mudam (o número em si não "conta", para o texto continuar sempre certo);
+  - a barra da meta tem marcas em 25%, 50% e 75% e uma marca de **onde deveria estar hoje** (dias produtivos que passaram ÷ total, vindo do forecast). Essa marca tem o próprio `ErrorBoundary` com `fallback={null}`: se o forecast falhar, a barra continua normal;
+  - quando o percentual cruza 25%, 50%, 75% ou 100% com a página aberta (por exemplo, por uma venda ao vivo), aparece "🎉 50% da meta alcançados!" por 6 s. Ao abrir a página não comemora;
+  - as animações respeitam o "reduzir movimento" do sistema.
+- **Mudanças pequenas em arquivos que já existiam:**
+  - o `ErrorBoundary` aceita `fallback` (só muda algo quando passado);
+  - o `renderWithQuery` dos testes também devolve o `queryClient`;
+  - o backend falso (`src/shared/mocks`) aceita `segment` nos rankings, tem `points-history` e a meta semanal no forecast. Ele continua com a pontuação simplificada.
 
 ## 8. Testes
 
@@ -703,7 +726,11 @@ O card "Comparar períodos". Guarda o atalho e os dois períodos no próprio est
 | `utils/comparison.test.js` | Atalhos a partir de uma quarta (dia, semana, 7 dias, mês, sem passar do fim do mês); resumo do período; acumulado por dia parando no fim e em hoje; canceladas fora e tamanho do maior período |
 | `utils/dateRange.test.js` | Dias de cada mês (inclusive fevereiro de ano bissexto), virada de ano, meses entre duas datas; nomes em português |
 | `utils/companyLink.test.js` | Link com https, http e sem protocolo; nome comum continua texto; recusa `javascript:`, `mailto:`, `data:` e endereço sem domínio |
-| `utils/segmentRanking.test.js` | Filtro de setor sem diferenciar maiúsculas; pontos da venda pela tabela do backend (setor + tipo); pontos da passagem pelo cargo, ignorando acento, maiúscula e espaços; ranking de vendedores só com ativas, do tipo da aba, top 3; passagens com os pontos do cargo |
+| `utils/vendorProfile.test.js` | Sequência de dias vendendo; perfil com totais, posição, semanas, evolução e últimas vendas; vendedor sem vendas |
+| `utils/teamPoints.test.js` | Pontos por equipe somados por tipo e por período; evolução acumulada |
+| `components/SaleToasts/SaleToasts.test.jsx` | Aviso de venda nova e de renovação, atualiza só os dados do admin, venda alterada sem aviso, fecha no X e sozinho, no máximo 3, para de escutar ao sair |
+| `components/Avatar/Avatar.test.jsx` | Foto; iniciais quando não há foto ou ela não carrega |
+| `components/WeekGoalWidget/WeekGoalWidget.test.jsx` | Meta da semana com percentual, falta, ritmo e cenário; setor; meta batida; sem meta fora da campanha |
 | `pages/ChartsPage.test.jsx` | Sem vendas, cada gráfico mostra o aviso; se as equipes não carregam, só o gráfico de equipes some; as setas do teclado mostram o dia e o valor na dica, e ela some ao sair do foco; o botão CSV baixa os dados certos; não tem mais botão próprio de modo escuro; a previsão mostra os dias restantes e o ritmo necessário ; Gerar PDF lista os 15 itens com todos marcados, "Selecionar todos" desmarca tudo e desativa o botão, escolher alguns deixa "meio marcado", imprime só os escolhidos com o cabeçalho e volta ao normal no `afterprint`; Cancelar e Esc fecham sem imprimir; todos marcados imprime tudo |
 | `pages/ChartsPage.mocks.test.jsx` | Com os dados falsos: os indicadores e os catorze gráficos na ordem; previsão (R$ 589.913,04 projetados, R$ 68.000,00 por dia em 41 dias); vendas por semana; ticket médio por setor; participação B2B 43,4% / B2G 56,6%; concentração de 64,9% nos 3 maiores; cancelamentos 11,1% (2 de 18, R$ 27.000,00); calendário com setembro e outubro inteiros (dias futuros "ainda não chegou", totais por dia da semana); comparar períodos (esta semana x semana passada, atalho de quarta x quarta e escolha pelo calendário); "Demais (8)" abre a lista do 4º ao 11º com a %; com os últimos 7 dias, 7 dias no eixo e comparação "vs período anterior"; com a semana atual, indicadores com variação (+5,1%, +20%, -12,4%) e cancelamentos de 14,3%; acumulado e acumulado x meta chegam em R$ 212 mil (sem as canceladas) com a meta de R$ 3 mi; B2B R$ 92 mil e B2G R$ 120 mil; vendas por pessoa, por equipe e passagens da campanha; filtrando a semana atual, os valores mudam (R$ 82 mil) e o acumulado x meta continua na campanha inteira; com o setor B2B, tudo mostra só B2B (R$ 92 mil, participação 100%, 3,1% da meta) |
 | `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!"; lista vendas, passagens e renovações por setor, sem as canceladas; avisa em cada coluna quando não tem nada |

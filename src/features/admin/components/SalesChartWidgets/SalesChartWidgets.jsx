@@ -1,16 +1,14 @@
 import styles from "./SalesChartWidgets.module.css";
 
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
-import { useGoal } from "../../hooks/useGoal";
+import { useForecast } from "../../hooks/useForecast";
 import { useSalesCharts } from "../../hooks/useSalesCharts";
 import { useTeams } from "../../hooks/useTeams";
 import { CHART_COLORS, segmentColor } from "../../utils/chartColors";
-import { CAMPAIGN_END_DAY } from "../../utils/campaign";
 import { formatDay, totalsByTeam } from "../../utils/chartData";
 import { formatCompactCurrency, formatPassages } from "../../utils/chartScale";
 import { downloadFile } from "../../utils/downloadFile";
-import { goalTrack } from "../../utils/salesInsights";
-import { getSegmentGoal } from "../../utils/segments";
+import { forecastTrack } from "../../utils/salesInsights";
 import { barRows, buildChartFileName, tableToCsv, timeSeriesRows } from "../../utils/tableCsv";
 import BarChart from "../charts/BarChart";
 import TimeSeriesChart from "../charts/TimeSeriesChart";
@@ -101,25 +99,19 @@ export function SegmentSalesChart({ period, segment }) {
 }
 
 export function GoalTrackChart({ segment }) {
-  const { goal } = useGoal();
-  const { campaign } = useSalesCharts("", segment);
+  const { forecast } = useForecast(segment);
+  const { campaign } = useSalesCharts(null, segment);
   const title = "Acumulado x meta";
-  const segmentGoal = getSegmentGoal(goal, segment);
-  const goalLabel = segmentGoal.isTotal ? "meta total" : `meta de ${segment}`;
-  const track = goalTrack(campaign, segmentGoal.value, CAMPAIGN_END_DAY);
+  const goalLabel = segment && !forecast.goalIsTotal ? `meta de ${segment}` : "meta total";
+  const track = forecastTrack(campaign, forecast);
   const series = [
-    {
-      key: "actual",
-      label: "Vendido",
-      color: CHART_COLORS.blue,
-      values: track.actual,
-    },
-    track.projection && {
-      key: "projection",
-      label: "Projeção no ritmo atual",
+    { key: "actual", label: "Vendido", color: CHART_COLORS.blue, values: track.actual },
+    track.realistic && {
+      key: "realistic",
+      label: "Cenário realista",
       color: CHART_COLORS.blue,
       dashed: true,
-      values: track.projection,
+      values: track.realistic,
     },
     track.required && {
       key: "required",
@@ -129,14 +121,15 @@ export function GoalTrackChart({ segment }) {
       values: track.required,
     },
   ].filter(Boolean);
+  const endLabel = formatDay(forecast.campaign.end);
 
   return (
     <ChartCard
       title={title}
       description={
         segment
-          ? `${segment} contra a ${goalLabel}, até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
-          : `Campanha inteira até ${formatDay(CAMPAIGN_END_DAY)}, sem o filtro de período`
+          ? `${segment} contra a ${goalLabel}, até ${endLabel}, com o forecast do backend, sem o filtro de período`
+          : `Campanha inteira até ${endLabel}, com o forecast do backend, sem o filtro de período`
       }
       csvRows={dayRows(track.days, series)}
       segment={segment}
@@ -148,10 +141,7 @@ export function GoalTrackChart({ segment }) {
           title={title}
           days={track.days}
           series={series}
-          reference={{
-            value: segmentGoal.value,
-            label: `Meta ${formatCompactCurrency(segmentGoal.value)}`,
-          }}
+          reference={{ value: forecast.goal, label: `Meta ${formatCompactCurrency(forecast.goal)}` }}
           formatValue={formatCurrency}
         />
       )}
@@ -194,7 +184,7 @@ export function FunnelSalesChart({ period, segment }) {
   );
 }
 
-export function VendorSalesChart({ period, segment }) {
+export function VendorSalesChart({ period, segment, onSelectVendor }) {
   const { byVendor } = useSalesCharts(period, segment);
   const title = "Vendas por pessoa";
 
@@ -209,7 +199,14 @@ export function VendorSalesChart({ period, segment }) {
       {byVendor.length === 0 ? (
         <Empty text={NO_SALES} />
       ) : (
-        <BarChart title={title} items={byVendor} color={CHART_COLORS.blue} formatValue={formatCurrency} />
+        <BarChart
+          title={title}
+          items={byVendor.map((item) => ({ ...item, selectable: item.label !== "Sem nome" }))}
+          color={CHART_COLORS.blue}
+          formatValue={formatCurrency}
+          showAvatar
+          onSelect={onSelectVendor && ((item) => onSelectVendor({ id: item.key, name: item.label }))}
+        />
       )}
     </ChartCard>
   );
@@ -258,7 +255,7 @@ export function PassageChart({ period, segment }) {
       {passages.length === 0 ? (
         <Empty text="Nenhuma passagem no período" />
       ) : (
-        <BarChart title={title} items={passages} color={CHART_COLORS.blue} formatValue={formatPassages} />
+        <BarChart title={title} items={passages} color={CHART_COLORS.blue} formatValue={formatPassages} showAvatar />
       )}
     </ChartCard>
   );

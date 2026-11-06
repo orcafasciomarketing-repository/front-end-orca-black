@@ -5,6 +5,7 @@ import {
   getForecast,
   getGoalProgress,
   getScoreboard,
+  getPointsHistory,
   getSdrRanking,
   getVendorRanking,
 } from "./mockBackend";
@@ -14,6 +15,7 @@ const MOCK_DELAY = 300;
 
 const toPeriod = (value) => (value === "week" ? "week" : "all");
 const toFunnel = (value) => (value === "farm" ? "farm" : "sales");
+const toSegment = (value) => (["b2b", "b2g"].includes(String(value ?? "").toLowerCase()) ? String(value).toLowerCase() : null);
 
 const ROUTES = [
   { pattern: /^\/analytics\/goal$/, handle: ({ db }) => getGoalProgress(db) },
@@ -22,14 +24,26 @@ const ROUTES = [
   { pattern: /^\/analytics\/scoreboard$/, handle: ({ db, now, params }) => getScoreboard(db, toPeriod(params.period), now) },
   {
     pattern: /^\/analytics\/ranking\/last-week$/,
-    handle: ({ db, now, params }) => getVendorRanking(db, "lastWeek", toFunnel(params.vendorDepartment), now),
+    handle: ({ db, now, params }) =>
+      getVendorRanking(db, "lastWeek", toFunnel(params.vendorDepartment), now, toSegment(params.segment)),
   },
   {
     pattern: /^\/analytics\/ranking$/,
-    handle: ({ db, now, params }) => getVendorRanking(db, toPeriod(params.period), toFunnel(params.vendorDepartment), now),
+    handle: ({ db, now, params }) =>
+      getVendorRanking(db, toPeriod(params.period), toFunnel(params.vendorDepartment), now, toSegment(params.segment)),
   },
-  { pattern: /^\/analytics\/sdr-ranking\/last-week$/, handle: ({ db, now }) => getSdrRanking(db, "lastWeek", now) },
-  { pattern: /^\/analytics\/sdr-ranking$/, handle: ({ db, now, params }) => getSdrRanking(db, toPeriod(params.period), now) },
+  {
+    pattern: /^\/analytics\/sdr-ranking\/last-week$/,
+    handle: ({ db, now, params }) => getSdrRanking(db, "lastWeek", now, toSegment(params.segment)),
+  },
+  {
+    pattern: /^\/analytics\/sdr-ranking$/,
+    handle: ({ db, now, params }) => getSdrRanking(db, toPeriod(params.period), now, toSegment(params.segment)),
+  },
+  {
+    pattern: /^\/analytics\/points-history$/,
+    handle: ({ db, now, params }) => getPointsHistory(db, params.segment, now),
+  },
   { pattern: /^\/sales\/admin$/, handle: ({ db }) => findAllSales(db) },
   { pattern: /^\/sales\/get$/, handle: ({ db, now }) => findActiveSalesOfCurrentWeek(db, now) },
   { pattern: /^\/sales\/get\/([^/]+)$/, handle: ({ db, match }) => findSalesByVendor(db, match[1]) },

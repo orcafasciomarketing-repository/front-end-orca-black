@@ -4,16 +4,18 @@ import { Suspense, useState } from "react";
 
 import ErrorBoundary from "../../../../shared/components/ErrorBoundary/ErrorBoundary";
 import { useRankVendors } from "../../hooks/useRankVendors";
-import { useSegmentRankVendors } from "../../hooks/useSegmentRanks";
+import { withMovement } from "../../utils/rankMovement";
 import RankList from "../RankList/RankList";
+import RankPeriodTabs from "../RankPeriodTabs/RankPeriodTabs";
 
 const TABS = [
   { type: "sales", label: "Vendas" },
   { type: "farm", label: "Renovação" },
 ];
 
-export default function RankWidget({ segment = "" }) {
+export default function RankWidget({ segment = "", onSelectVendor }) {
   const [activeType, setActiveType] = useState("sales");
+  const [period, setPeriod] = useState("all");
 
   return (
     <section className="widget">
@@ -34,29 +36,44 @@ export default function RankWidget({ segment = "" }) {
           ))}
         </div>
       </header>
-      <ErrorBoundary key={`${activeType}-${segment}`} location={`Admin › rank dos vendedores (${activeType})`}>
+      <RankPeriodTabs value={period} onChange={setPeriod} label="Período do ranking de vendedores" />
+      <ErrorBoundary
+        key={`${activeType}-${period}-${segment}`}
+        location={`Admin › rank dos vendedores (${activeType})`}
+      >
         <Suspense fallback={<p className={styles.loading}>Carregando ranking...</p>}>
-          {segment ? <SegmentVendorRank type={activeType} segment={segment} /> : <VendorRank type={activeType} />}
+          {period === "week" ? (
+            <WeekVendorRank type={activeType} segment={segment} onSelect={onSelectVendor} />
+          ) : (
+            <VendorRank type={activeType} period={period} segment={segment} onSelect={onSelectVendor} />
+          )}
         </Suspense>
       </ErrorBoundary>
     </section>
   );
 }
 
-function VendorRank({ type }) {
-  const { rank } = useRankVendors(type);
+function VendorRank({ type, period, segment, onSelect }) {
+  const { rank } = useRankVendors(type, { period, segment });
 
-  return <VendorRankList rank={rank} />;
+  return <VendorRankList rank={rank} onSelect={onSelect} />;
 }
 
-function SegmentVendorRank({ type, segment }) {
-  const { rank } = useSegmentRankVendors(type, segment);
+function WeekVendorRank({ type, segment, onSelect }) {
+  const { rank } = useRankVendors(type, { period: "week", segment });
+  const { rank: lastWeek } = useRankVendors(type, { period: "lastWeek", segment });
 
-  return <VendorRankList rank={rank} />;
+  return <VendorRankList rank={withMovement(rank, lastWeek, (vendor) => vendor.vendorId)} onSelect={onSelect} />;
 }
 
-function VendorRankList({ rank }) {
+function VendorRankList({ rank, onSelect }) {
   const items = rank.map((vendor) => ({ ...vendor, id: vendor.vendorId }));
 
-  return <RankList items={items} emptyText="Nenhuma venda pontuada ainda" />;
+  return (
+    <RankList
+      items={items}
+      emptyText="Nenhuma venda pontuada ainda"
+      onSelect={onSelect && ((item) => onSelect({ id: String(item.vendorId), name: item.name }))}
+    />
+  );
 }

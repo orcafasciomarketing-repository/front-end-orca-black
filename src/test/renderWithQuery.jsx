@@ -7,9 +7,11 @@ export function renderWithQuery(ui) {
     defaultOptions: { queries: { retry: false } },
   });
 
-  return render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <Suspense fallback={null}>{ui}</Suspense>
     </QueryClientProvider>,
   );
+
+  return { ...result, queryClient };
 }

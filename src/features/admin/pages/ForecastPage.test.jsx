@@ -60,7 +60,7 @@ describe("ForecastPage", () => {
 
     expect(within(screen.getByRole("region", { name: "Trajetórias do forecast" })).getByRole("img")).toBeInTheDocument();
     expect(textOf("Como o ritmo é calculado")).toContain("Últimos 7 dias produtivosR$ 39.248,0050%");
-    expect(textOf("Forecast da semana")).toContain("Não existe meta semanal");
+    expect(textOf("Forecast da semana")).toContain("Meta da semana: R$ 625.000,00");
   });
 
   it("admin troca o setor e o forecast é pedido para o setor", async () => {

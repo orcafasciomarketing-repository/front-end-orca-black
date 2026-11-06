@@ -1,9 +1,10 @@
 import styles from "./GoalWidget.module.css";
 
-import { Suspense } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 
 import ErrorBoundary from "../../../../shared/components/ErrorBoundary/ErrorBoundary";
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
+import { useForecast } from "../../hooks/useForecast";
 import { useGoal } from "../../hooks/useGoal";
 import { useSectorCounts } from "../../hooks/useSectorCounts";
 import { useSegmentTotal } from "../../hooks/useSegmentTotal";
@@ -16,6 +17,11 @@ const SECTOR_GROUPS = [
   { field: "passages", label: "Passagens", emptyText: "Nenhuma passagem" },
   { field: "renewals", label: "Renovações", emptyText: "Nenhuma renovação" },
 ];
+
+const MILESTONES = [25, 50, 75, 100];
+export const CELEBRATION_MS = 6000;
+
+const milestoneOf = (percent) => MILESTONES.filter((milestone) => percent >= milestone).at(-1) ?? 0;
 
 const shareFormatter = new Intl.NumberFormat("pt-BR", { style: "percent", maximumFractionDigits: 1 });
 
@@ -79,6 +85,55 @@ function SegmentGoal({ goal, segment }) {
   );
 }
 
+function ExpectedPace({ segment, goal }) {
+  const { forecast } = useForecast(segment);
+  const { elapsed, remaining } = forecast.campaign.productiveDays;
+  const ratio = elapsed + remaining > 0 ? elapsed / (elapsed + remaining) : 0;
+
+  if (ratio <= 0 || ratio >= 1) {
+    return null;
+  }
+
+  const label = `Hoje deveria estar em ${formatCurrency(goal * ratio)} (${percentFormatter.format(ratio * 100)}%)`;
+
+  return (
+    <span className={styles.expected} style={{ left: `${ratio * 100}%` }} title={label}>
+      <span className={styles.expectedLabel} style={{ transform: `translateX(-${ratio * 100}%)` }}>
+        {label}
+      </span>
+    </span>
+  );
+}
+
+function Celebration({ percent }) {
+  const previous = useRef(null);
+  const [milestone, setMilestone] = useState(null);
+
+  useEffect(() => {
+    const before = previous.current;
+    previous.current = percent;
+
+    if (before === null || milestoneOf(percent) <= milestoneOf(before)) {
+      return undefined;
+    }
+
+    setMilestone(milestoneOf(percent));
+    const timer = setTimeout(() => setMilestone(null), CELEBRATION_MS);
+    return () => clearTimeout(timer);
+  }, [percent]);
+
+  return (
+    <span className={styles.celebrationArea} role="status">
+      {milestone && (
+        <span className={styles.celebration}>
+          <span aria-hidden="true">🎉 </span>
+          {milestone === 100 ? "Meta batida!" : `${milestone}% da meta alcançados!`}
+        </span>
+      )}
+    </span>
+  );
+}
+
 function GoalCard({ goal, total, percent, segment, note, reached, isTotalGoal = false }) {
   const fillWidth = Math.min(Math.max(percent, 0), 100);
 
@@ -86,6 +141,7 @@ function GoalCard({ goal, total, percent, segment, note, reached, isTotalGoal = 
     <section className="widget">
       <header className="header">
         <h2 className="title">Meta da Black Friday</h2>
+        <Celebration percent={percent} />
         <span className={styles.percent}>{percentFormatter.format(percent)}%</span>
       </header>
       <div className={styles.body}>
@@ -98,15 +154,30 @@ function GoalCard({ goal, total, percent, segment, note, reached, isTotalGoal = 
               {segment && (isTotalGoal ? " (meta total)" : ` (meta ${segment})`)}
             </span>
           </p>
-          <div
-            className={styles.track}
-            role="progressbar"
-            aria-label="Progresso da meta"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={fillWidth}
-          >
-            <div className={styles.fill} style={{ width: `${fillWidth}%` }} />
+          <div className={styles.trackArea}>
+            <div
+              className={styles.track}
+              role="progressbar"
+              aria-label="Progresso da meta"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={fillWidth}
+            >
+              <div className={styles.fill} style={{ width: `${fillWidth}%` }} />
+            </div>
+            {MILESTONES.slice(0, -1).map((milestone) => (
+              <span
+                key={milestone}
+                className={`${styles.milestone} ${fillWidth >= milestone ? styles.milestoneDone : ""}`}
+                style={{ left: `${milestone}%` }}
+                aria-hidden="true"
+              />
+            ))}
+            <ErrorBoundary location="Admin › meta (ritmo esperado)" fallback={null}>
+              <Suspense fallback={null}>
+                <ExpectedPace segment={segment} goal={goal} />
+              </Suspense>
+            </ErrorBoundary>
           </div>
           <p className={`${styles.remaining} ${reached ? styles.reached : ""}`}>{note}</p>
         </div>

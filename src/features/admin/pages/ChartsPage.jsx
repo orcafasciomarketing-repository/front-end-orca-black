@@ -7,7 +7,6 @@ import usePermissions from "../../auth/hooks/usePermissions";
 import {
   CancellationChart,
   ConcentrationChart,
-  ForecastCard,
   SalesCalendarChart,
   SalesKpis,
   SegmentShareChart,
@@ -29,32 +28,63 @@ import {
   VendorSalesChart,
 } from "../components/SalesChartWidgets/SalesChartWidgets";
 import { DownloadIcon } from "../components/Icons/Icons";
+import { TeamPointsChart, TeamPointsEvolution } from "../components/TeamPointsWidgets/TeamPointsWidgets";
+import VendorProfile from "../components/VendorProfile/VendorProfile";
 import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
 import { ALL_PERIODS, resolvePeriod } from "../utils/periods";
 import { getSegmentOptions, SEGMENT_OPTIONS } from "../utils/segments";
 
 const KPIS_TITLE = "Indicadores";
 
-const CHARTS = [
-  { title: "Comparar períodos", Chart: PeriodComparison, className: "full" },
-  { title: "Acumulado x meta", Chart: GoalTrackChart },
-  { title: "Previsão de fechamento", Chart: ForecastCard },
-  { title: "Forecast", Chart: ForecastSummary },
-  { title: "Vendas acumuladas", Chart: TotalSalesChart },
-  { title: "Vendas acumuladas por setor", Chart: SegmentSalesChart },
-  { title: "Vendas x renovações por dia", Chart: FunnelSalesChart },
-  { title: "Vendas por semana", Chart: WeeklySalesChart },
-  { title: "Vendas por pessoa", Chart: VendorSalesChart, className: "tall" },
-  { title: "Vendas por equipe", Chart: TeamSalesChart },
-  { title: "Passagens por pessoa", Chart: PassageChart },
-  { title: "Ticket médio", Chart: TicketChart, className: "tall" },
-  { title: "Participação por setor", Chart: SegmentShareChart },
-  { title: "Concentração", Chart: ConcentrationChart },
-  { title: "Cancelamentos", Chart: CancellationChart },
-  { title: "Calendário de vendas", Chart: SalesCalendarChart },
+const SECTIONS = [
+  {
+    id: "visao-geral",
+    title: "Visão geral",
+    charts: [
+      { title: "Acumulado x meta", Chart: GoalTrackChart },
+      { title: "Forecast", Chart: ForecastSummary },
+    ],
+  },
+  {
+    id: "vendas",
+    title: "Vendas",
+    charts: [
+      { title: "Vendas acumuladas", Chart: TotalSalesChart },
+      { title: "Vendas acumuladas por setor", Chart: SegmentSalesChart },
+      { title: "Vendas x renovações por dia", Chart: FunnelSalesChart },
+      { title: "Vendas por semana", Chart: WeeklySalesChart },
+      { title: "Calendário de vendas", Chart: SalesCalendarChart, className: "full" },
+    ],
+  },
+  {
+    id: "pessoas-e-equipes",
+    title: "Pessoas e equipes",
+    charts: [
+      { title: "Vendas por pessoa", Chart: VendorSalesChart, className: "tall" },
+      { title: "Vendas por equipe", Chart: TeamSalesChart },
+      { title: "Passagens por pessoa", Chart: PassageChart },
+      { title: "Pontos por equipe", Chart: TeamPointsChart },
+      { title: "Evolução dos pontos", Chart: TeamPointsEvolution },
+      { title: "Ticket médio", Chart: TicketChart, className: "full" },
+    ],
+  },
+  {
+    id: "analises",
+    title: "Análises",
+    charts: [
+      { title: "Comparar períodos", Chart: PeriodComparison, className: "full" },
+      { title: "Participação por setor", Chart: SegmentShareChart },
+      { title: "Concentração", Chart: ConcentrationChart },
+      { title: "Cancelamentos", Chart: CancellationChart },
+    ],
+  },
 ];
 
+const CHARTS = SECTIONS.flatMap((section) => section.charts);
+
 const PRINT_ITEMS = [KPIS_TITLE, ...CHARTS.map((chart) => chart.title)];
+
+const goToSection = (id) => document.getElementById(id)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
 
 const printDateFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
@@ -65,6 +95,7 @@ export default function ChartsPage() {
   const [selectedSegment, setSelectedSegment] = useState(userSegment);
   const [isChoosing, setIsChoosing] = useState(false);
   const [printItems, setPrintItems] = useState(null);
+  const [profileVendor, setProfileVendor] = useState(null);
   const period = useMemo(() => resolvePeriod(periodSelection), [periodSelection]);
 
   useEffect(() => {
@@ -136,17 +167,34 @@ export default function ChartsPage() {
           </Suspense>
         </ErrorBoundary>
       </div>
-      <div className={styles.grid}>
-        {CHARTS.map(({ title, Chart, className }) => (
-          <div key={title} className={`${className ? styles[className] : ""} ${printClass(title)}`}>
-            <ErrorBoundary location={`Admin › gráficos › ${title.toLowerCase()}`}>
-              <Suspense fallback={<WidgetFallback title={title} />}>
-                <Chart period={period} segment={selectedSegment} />
-              </Suspense>
-            </ErrorBoundary>
-          </div>
+      <nav className={styles.sectionNav} aria-label="Seções dos gráficos">
+        {SECTIONS.map((section) => (
+          <button key={section.id} className={styles.sectionLink} type="button" onClick={() => goToSection(section.id)}>
+            {section.title}
+          </button>
         ))}
-      </div>
+      </nav>
+      {SECTIONS.map((section) => (
+        <section key={section.id} id={section.id} className={styles.section} aria-labelledby={`${section.id}-titulo`}>
+          <p id={`${section.id}-titulo`} className={styles.sectionTitle}>
+            {section.title}
+          </p>
+          <div className={styles.grid}>
+            {section.charts.map(({ title, Chart, className }) => (
+              <div key={title} className={`${className ? styles[className] : ""} ${printClass(title)}`}>
+                <ErrorBoundary location={`Admin › gráficos › ${title.toLowerCase()}`}>
+                  <Suspense fallback={<WidgetFallback title={title} />}>
+                    <Chart period={period} segment={selectedSegment} onSelectVendor={setProfileVendor} />
+                  </Suspense>
+                </ErrorBoundary>
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+      {profileVendor && (
+        <VendorProfile vendor={profileVendor} segment={selectedSegment} onClose={() => setProfileVendor(null)} />
+      )}
       {isChoosing && <PrintDialog items={PRINT_ITEMS} onCancel={() => setIsChoosing(false)} onPrint={startPrinting} />}
     </div>
   );

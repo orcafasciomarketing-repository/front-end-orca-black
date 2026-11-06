@@ -1,7 +1,7 @@
-import { screen, within } from "@testing-library/react";
+import { fireEvent, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { getAdminSales, getRankSdrs } from "../../api/slidesApi";
+import { getRankSdrs } from "../../api/slidesApi";
 import { renderWithQuery } from "../../../../test/renderWithQuery";
 import SdrRankWidget from "./SdrRankWidget";
 
@@ -10,29 +10,6 @@ vi.mock("../../api/slidesApi", () => ({
   getAdminSales: vi.fn(),
   getVendors: vi.fn(),
 }));
-
-const salesFor = (segment) => [
-  {
-    _id: "a",
-    dealStatus: "ativa",
-    funnelType: "sales",
-    segment,
-    value: 1000,
-    realizedAt: "2026-10-20T15:00:00.000Z",
-    vendorId: { _id: "v9", vendorName: "Zeca", job: "B2G Sales" },
-    sdrIds: [{ _id: "s9", name: "Paula", job: "B2B SDR" }],
-  },
-  {
-    _id: "b",
-    dealStatus: "ativa",
-    funnelType: "farm",
-    segment,
-    value: 500,
-    realizedAt: "2026-10-20T16:00:00.000Z",
-    vendorId: { _id: "v8", vendorName: "Yara", job: "B2G Farmer" },
-    sdrIds: [],
-  },
-];
 
 describe("SdrRankWidget", () => {
   beforeEach(() => {
@@ -60,19 +37,26 @@ describe("SdrRankWidget", () => {
     expect(await screen.findByText("Nenhuma passagem ainda")).toBeInTheDocument();
   });
 
-  it("com um setor, conta as passagens só das vendas daquele setor", async () => {
-    getAdminSales.mockResolvedValue({
-      sales: [
-        ...salesFor("b2b"),
-        { ...salesFor("b2g")[0], _id: "c", sdrIds: [{ _id: "s8", name: "Otto", job: "CS" }] },
-      ],
-      total: 3,
-    });
+  it("com um setor, pede o ranking do setor ao backend", async () => {
+    getRankSdrs.mockResolvedValue([{ sdrId: "s9", name: "Paula", job: "B2B SDR", points: 1 }]);
 
     renderWithQuery(<SdrRankWidget segment="B2B" />);
 
     const items = within(await screen.findByRole("list")).getAllByRole("listitem");
-    expect(getRankSdrs).not.toHaveBeenCalled();
+    expect(getRankSdrs).toHaveBeenCalledWith({ period: "all", segment: "B2B" });
     expect(items.map((item) => item.textContent)).toEqual(["1ºPaulaB2B SDR1 ponto"]);
+  });
+
+  it("esta semana mostra o movimento em relação à semana passada", async () => {
+    getRankSdrs.mockImplementation(async (options) => {
+      if (options?.period === "week") return [{ sdrId: "s1", name: "Juliana", job: "SDR", points: 3 }];
+      if (options?.period === "lastWeek") return [{ sdrId: "s1", name: "Juliana", job: "SDR", points: 2 }];
+      return [];
+    });
+    renderWithQuery(<SdrRankWidget />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Esta semana" }));
+
+    expect(await screen.findByText("mesma posição da semana passada")).toBeInTheDocument();
   });
 });

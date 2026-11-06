@@ -4,8 +4,8 @@ import {
   buildKpis,
   cancellationSummary,
   concentration,
-  forecast,
-  goalTrack,
+  forecastTrack,
+  lastDaysTrend,
   calendarRange,
   salesCalendar,
   segmentShare,
@@ -178,56 +178,70 @@ describe("salesInsights", () => {
     });
   });
 
-  it("forecast projeta pela média diária e calcula o ritmo para bater a meta", () => {
-    const campaign = {
-      days: ["2026-10-20", "2026-10-21", "2026-10-22"],
-      total: [1000, 2000, 3000],
-    };
-
-    expect(forecast(campaign, 10000, "2026-10-29", now)).toEqual({
-      sold: 3000,
-      goal: 10000,
-      remaining: 7000,
-      ended: false,
-      reached: false,
-      daysLeft: 7,
-      dailyAverage: 1000,
-      projection: 10000,
-      willHit: true,
-      requiredPerDay: 1000,
-    });
+  const backendForecast = (overrides = {}) => ({
+    today: "2026-11-04",
+    goal: 10000,
+    campaign: { end: "2026-11-09" },
+    trajectory: {
+      days: ["2026-11-03", "2026-11-04", "2026-11-05", "2026-11-06", "2026-11-07", "2026-11-09"],
+      realistic: [null, 2000, 3000, 4000, 5000, 6000],
+    },
+    ...overrides,
   });
 
-  it("forecast depois do fim da campanha não projeta mais nada", () => {
-    const campaign = { days: ["2026-10-20"], total: [5000] };
-    const plan = forecast(campaign, 4000, "2026-10-20", now);
+  it("forecastTrack usa o cenário realista do backend e liga o vendido até a meta nos dias produtivos", () => {
+    const campaign = { days: ["2026-11-03", "2026-11-04"], total: [1000, 2000] };
+    const track = forecastTrack(campaign, backendForecast());
 
-    expect(plan).toMatchObject({
-      ended: true,
-      reached: true,
-      daysLeft: 0,
-      projection: 5000,
-      requiredPerDay: 0,
-    });
+    expect(track.days).toEqual([
+      "2026-11-03",
+      "2026-11-04",
+      "2026-11-05",
+      "2026-11-06",
+      "2026-11-07",
+      "2026-11-08",
+      "2026-11-09",
+    ]);
+    expect(track.actual).toEqual([1000, 2000, null, null, null, null, null]);
+    expect(track.realistic).toEqual([null, 2000, 3000, 4000, 5000, 5000, 6000]);
+    expect(track.required).toEqual([null, 2000, 4000, 6000, 8000, 8000, 10000]);
   });
 
-  it("goalTrack estende os dias até o fim e começa as linhas tracejadas em hoje", () => {
-    const campaign = {
-      days: ["2026-10-21", "2026-10-22"],
-      total: [1000, 2000],
-    };
-    const track = goalTrack(campaign, 6000, "2026-10-24", now);
+  it("forecastTrack sem linhas tracejadas com a meta batida ou depois do fim", () => {
+    const campaign = { days: ["2026-11-03", "2026-11-04"], total: [1000, 12000] };
 
-    expect(track.days).toEqual(["2026-10-21", "2026-10-22", "2026-10-23", "2026-10-24"]);
-    expect(track.actual).toEqual([1000, 2000, null, null]);
-    expect(track.projection).toEqual([null, 2000, 3000, 4000]);
-    expect(track.required).toEqual([null, 2000, 4000, 6000]);
+    expect(forecastTrack(campaign, backendForecast()).required).toBeNull();
+    const ended = forecastTrack(
+      { days: ["2026-11-09", "2026-11-10"], total: [1000, 2000] },
+      backendForecast({ today: "2026-11-10" }),
+    );
+    expect(ended).toMatchObject({ realistic: null, required: null });
+    expect(ended.days).toEqual(["2026-11-09", "2026-11-10"]);
   });
 
-  it("goalTrack sem a linha de ritmo quando a meta já foi batida", () => {
-    const track = goalTrack({ days: ["2026-10-22"], total: [9000] }, 6000, "2026-10-24", now);
+  it("tendência dos últimos 7 dias, terminando hoje, com dias sem venda em 0", () => {
+    const trend = lastDaysTrend(
+      [
+        sale({ realizedAt: "2026-10-22T15:00:00.000Z", value: 3000 }),
+        sale({ realizedAt: "2026-10-22T16:00:00.000Z", value: 1000 }),
+        sale({ realizedAt: "2026-10-16T15:00:00.000Z", value: 500 }),
+        sale({ realizedAt: "2026-10-10T15:00:00.000Z", value: 9999 }),
+      ],
+      "2026-10-22",
+    );
 
-    expect(track.required).toBeNull();
-    expect(track.projection).toEqual([9000, 18000, 27000]);
+    expect(trend.days).toEqual([
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18",
+      "2026-10-19",
+      "2026-10-20",
+      "2026-10-21",
+      "2026-10-22",
+    ]);
+    expect(trend.total).toEqual([500, 0, 0, 0, 0, 0, 4000]);
+    expect(trend.count).toEqual([1, 0, 0, 0, 0, 0, 2]);
+    expect(trend.average).toEqual([500, 0, 0, 0, 0, 0, 2000]);
   });
 });
+

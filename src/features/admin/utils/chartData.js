@@ -92,7 +92,7 @@ export function totalsByVendor(sales) {
   sales.forEach((sale) => {
     const vendor = sale.vendorId;
     const key = vendor?._id ?? NO_NAME;
-    const current = totals.get(key) ?? { key, label: vendor?.vendorName || NO_NAME, value: 0 };
+    const current = totals.get(key) ?? { key, label: vendor?.vendorName || NO_NAME, imageUrl: vendor?.imageUrl, value: 0 };
     totals.set(key, { ...current, value: current.value + (sale.value ?? 0) });
   });
 
@@ -118,7 +118,13 @@ export function passagesByPerson(sales) {
 
   sales.flatMap(getPassagePeople).forEach((person) => {
     const key = person._id ?? person.name ?? NO_NAME;
-    const current = counts.get(key) ?? { key, label: person.name || NO_NAME, detail: person.job, value: 0 };
+    const current = counts.get(key) ?? {
+      key,
+      label: person.name || NO_NAME,
+      detail: person.job,
+      imageUrl: person.imageUrl,
+      value: 0,
+    };
     counts.set(key, { ...current, value: current.value + 1 });
   });
 

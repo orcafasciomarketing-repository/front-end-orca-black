@@ -121,11 +121,13 @@ export function getScoreboard(db, period, now = new Date()) {
     .sort((a, b) => b.total - a.total);
 }
 
-export function getVendorRanking(db, period, funnelType, now = new Date()) {
+const inSegment = (sale, segment) => !segment || sale.segment === segment;
+
+export function getVendorRanking(db, period, funnelType, now = new Date(), segment = null) {
   const pointsByVendor = new Map();
 
   for (const sale of findActiveByPeriod(db, period, now)) {
-    if (sale.funnelType !== funnelType) continue;
+    if (sale.funnelType !== funnelType || !inSegment(sale, segment)) continue;
     pointsByVendor.set(sale.vendorId, (pointsByVendor.get(sale.vendorId) || 0) + POINTS[sale.funnelType]);
   }
 
@@ -144,10 +146,11 @@ export function getVendorRanking(db, period, funnelType, now = new Date()) {
   return { vendor: ranked.slice(0, 3) };
 }
 
-export function getSdrRanking(db, period, now = new Date()) {
+export function getSdrRanking(db, period, now = new Date(), segment = null) {
   const pointsBySdr = new Map();
 
   for (const sale of findActiveByPeriod(db, period, now)) {
+    if (!inSegment(sale, segment)) continue;
     for (const sdrId of sale.sdrIds) {
       pointsBySdr.set(sdrId, (pointsBySdr.get(sdrId) || 0) + POINTS.passage);
     }
@@ -176,3 +179,55 @@ export function getForecast(db, segment, now = new Date()) {
 
   return { segment: validSegment, goalIsTotal: !(segmentGoal > 0), ...buildForecast({ sales, goal, now }) };
 }
+
+const mockDayKey = (date) => new Date(new Date(date).getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+const mockNextDay = (day) => new Date(new Date(`${day}T00:00:00Z`).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+
+export function getPointsHistory(db, segment, now = new Date()) {
+  const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
+  const today = mockDayKey(now);
+  const sales = db.sales.filter((sale) => isActive(sale) && inSegment(sale, validSegment));
+  const firstDay = sales
+    .map((sale) => mockDayKey(sale.realizedAt))
+    .filter((day) => day <= today)
+    .sort()[0];
+
+  const days = [];
+  for (let day = firstDay; firstDay && day <= today; day = mockNextDay(day)) {
+    days.push(day);
+  }
+  const zeros = () => days.map(() => 0);
+  const teams = new Map(
+    db.teams.map((team) => [
+      team._id,
+      { teamId: team._id, teamName: team.name, teamShirt: team.imageUrl, sales: zeros(), farm: zeros(), passage: zeros() },
+    ]),
+  );
+  const vendorTeam = new Map(db.vendors.map((vendor) => [vendor._id, vendor.teamId]));
+  const sdrTeam = new Map(db.sdrs.map((sdr) => [sdr._id, sdr.teamId]));
+
+  for (const sale of sales) {
+    const index = days.indexOf(mockDayKey(sale.realizedAt));
+    if (index < 0) continue;
+    const sellerTeam = teams.get(vendorTeam.get(sale.vendorId));
+    if (sellerTeam) sellerTeam[sale.funnelType][index] += POINTS[sale.funnelType];
+    for (const sdrId of sale.sdrIds) {
+      const team = teams.get(sdrTeam.get(sdrId));
+      if (team) team.passage[index] += POINTS.passage;
+    }
+  }
+
+  const history = [...teams.values()].map((team) => ({
+    ...team,
+    total: days.map((_, index) => team.sales[index] + team.farm[index] + team.passage[index]),
+  }));
+
+  return {
+    segment: validSegment,
+    days,
+    teams: history,
+    total: days.map((_, index) => history.reduce((sum, team) => sum + team.total[index], 0)),
+  };
+}
+

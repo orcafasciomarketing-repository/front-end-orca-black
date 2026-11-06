@@ -1,0 +1,16 @@
+.periods {
+  composes: tabs from "../RankWidget/RankWidget.module.css";
+  margin: 12px 20px 0;
+}
+
+.period {
+  composes: tab from "../RankWidget/RankWidget.module.css";
+  flex: 1;
+  padding: 4px 6px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.periodActive {
+  composes: tabActive from "../RankWidget/RankWidget.module.css";
+}

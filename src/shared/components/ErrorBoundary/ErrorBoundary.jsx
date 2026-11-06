@@ -22,6 +22,10 @@ class ErrorCatcher extends Component {
   };
 
   render() {
+    if (this.state.error && this.props.fallback !== undefined) {
+      return this.props.fallback;
+    }
+
     if (this.state.error) {
       return (
         <ErrorScreen
@@ -38,11 +42,11 @@ class ErrorCatcher extends Component {
   }
 }
 
-export default function ErrorBoundary({ location, className, children }) {
+export default function ErrorBoundary({ location, className, fallback, children }) {
   const { reset } = useQueryErrorResetBoundary();
 
   return (
-    <ErrorCatcher location={location} className={className} onReset={reset}>
+    <ErrorCatcher location={location} className={className} fallback={fallback} onReset={reset}>
       {children}
     </ErrorCatcher>
   );

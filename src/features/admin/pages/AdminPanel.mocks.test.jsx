@@ -262,19 +262,19 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
         .getAllByRole("listitem")
         .map((item) => item.textContent);
     await waitFor(() =>
-      expect(vendorRank()).toEqual(["1ºGustavo RochaB2G Sales9 pontos", "2ºFernanda MeloB2G Sales3 pontos"]),
+      expect(vendorRank()).toEqual(["1ºGustavo RochaB2G Sales6 pontos", "2ºFernanda MeloB2G Sales2 pontos"]),
     );
     const passageRank = within(sectionOf("Rank das passagens"))
       .getAllByRole("listitem")
       .map((item) => item.textContent);
     expect(passageRank).toEqual([
-      "1ºJulia TomazSuporte2 pontos",
-      "2ºCaio MartinsCS1 ponto",
-      "3ºLucas DanielSDR0 pontos",
+      "1ºCaio MartinsCS1 ponto",
+      "2ºJulia TomazSuporte1 ponto",
+      "3ºLucas DanielSDR1 ponto",
     ]);
 
     fireEvent.click(within(sectionOf("Rank dos vendedores")).getByRole("tab", { name: "Renovação" }));
-    await waitFor(() => expect(vendorRank()).toEqual(["1ºJoice PereiraB2G Farmer2 pontos"]));
+    await waitFor(() => expect(vendorRank()).toEqual(["1ºJoice PereiraB2G Farmer1 ponto"]));
 
     const { fileName, rows } = await exportReport();
     expect(fileName).toBe("vendas-todos-b2g-2026-10-21.csv");
@@ -309,4 +309,15 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
     const goal = sectionOf("Meta da Black Friday");
     await waitFor(() => expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("de R$ 1.000.000,00 (meta B2G)"));
   });
+
+  it("clicar num vendedor do ranking abre o perfil dele", async () => {
+    renderPanel();
+
+    const rankButton = await within(sectionOf("Rank dos vendedores")).findByRole("button", { name: "Gustavo Rocha" });
+    fireEvent.click(rankButton);
+
+    const profile = await screen.findByRole("dialog", { name: "Perfil de Gustavo Rocha" });
+    await waitFor(() => expect(profile.textContent.replace(/\u00a0/g, " ")).toContain("Total vendidoR$ 90.000,00"));
+  });
 });
+

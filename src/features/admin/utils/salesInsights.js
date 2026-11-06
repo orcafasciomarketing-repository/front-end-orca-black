@@ -1,7 +1,7 @@
 import { funnelOf, isActiveSale, segmentOf, totalsByVendor } from "./chartData";
 import { filterSalesByPeriod, previousPeriod } from "./periods";
 import { monthDays, monthOf, monthsBetween } from "./dateRange";
-import { addDays, daysBetween, getDayKey, getWeekKey } from "./weeks";
+import { addDays, getDayKey, getWeekKey } from "./weeks";
 
 const NO_NAME = "Sem nome";
 const TOP_VENDORS = 3;
@@ -219,51 +219,67 @@ export function weeklyTotals(activeSales, now = new Date()) {
   return { weeks, ...totals };
 }
 
-export function forecast({ days, total }, goal, endDay, now = new Date()) {
-  const today = getDayKey(now);
-  const sold = total.at(-1) ?? 0;
-  const ended = today > endDay;
-  const elapsedDays = days.length ? daysBetween(days[0], ended ? endDay : today) + 1 : 0;
-  const dailyAverage = elapsedDays ? sold / elapsedDays : 0;
-  const daysLeft = ended ? 0 : daysBetween(today, endDay);
-  const remaining = Math.max(goal - sold, 0);
-  const projection = sold + dailyAverage * daysLeft;
-
-  return {
-    sold,
-    goal,
-    remaining,
-    ended,
-    reached: sold >= goal,
-    daysLeft,
-    dailyAverage,
-    projection,
-    willHit: projection >= goal,
-    requiredPerDay: remaining > 0 ? remaining / Math.max(daysLeft, 1) : 0,
-  };
-}
-
-export function goalTrack(campaign, goal, endDay, now = new Date()) {
-  const plan = forecast(campaign, goal, endDay, now);
-  const actual = campaign.total;
-  const todayIndex = actual.length - 1;
-
-  if (todayIndex < 0 || plan.daysLeft === 0) {
-    return { days: campaign.days, actual, projection: null, required: null };
+export function forecastTrack(campaign, forecast) {
+  const { today, goal } = forecast;
+  const end = forecast.campaign.end;
+  const days = [...campaign.days];
+  for (let day = days.at(-1) ?? today; day < end; ) {
+    day = addDays(day, 1);
+    days.push(day);
   }
 
-  const futureDays = Array.from({ length: plan.daysLeft }, (_, index) => addDays(campaign.days[todayIndex], index + 1));
-  const ahead = (perDay) => [
-    ...actual.slice(0, -1).map(() => null),
-    plan.sold,
-    ...futureDays.map((_, index) => plan.sold + perDay * (index + 1)),
-  ];
+  const actual = days.map((_, index) => (index < campaign.total.length ? campaign.total[index] : null));
+  const todayIndex = campaign.days.indexOf(today);
+
+  if (todayIndex < 0 || today >= end) {
+    return { days, actual, realistic: null, required: null };
+  }
+
+  const sold = campaign.total[todayIndex];
+  const productiveAhead = forecast.trajectory.days.filter((day) => day > today);
+  const realisticByDay = new Map(forecast.trajectory.days.map((day, index) => [day, forecast.trajectory.realistic[index]]));
+
+  let lastRealistic = sold;
+  const realistic = days.map((day) => {
+    if (day < today) return null;
+    if (day === today) return sold;
+    lastRealistic = realisticByDay.get(day) ?? lastRealistic;
+    return lastRealistic;
+  });
+
+  const required =
+    productiveAhead.length > 0 && sold < goal
+      ? days.map((day) => {
+          if (day < today) return null;
+          const done = productiveAhead.filter((productiveDay) => productiveDay <= day).length;
+          return sold + ((goal - sold) * done) / productiveAhead.length;
+        })
+      : null;
+
+  return { days, actual, realistic, required };
+}
+
+export const TREND_DAYS = 7;
+
+export function lastDaysTrend(activeSales, today, length = TREND_DAYS) {
+  const days = Array.from({ length }, (_, index) => addDays(today, index - length + 1));
+  const byDay = new Map(days.map((day) => [day, { total: 0, count: 0 }]));
+
+  activeSales.forEach((sale) => {
+    const day = byDay.get(getDayKey(sale.realizedAt));
+    if (day) {
+      day.total += sale.value ?? 0;
+      day.count += 1;
+    }
+  });
+
+  const values = days.map((day) => byDay.get(day));
 
   return {
-    days: [...campaign.days, ...futureDays],
-    actual: [...actual, ...futureDays.map(() => null)],
-    projection: ahead(plan.dailyAverage),
-    required: plan.reached ? null : ahead(plan.requiredPerDay),
+    days,
+    total: values.map((value) => value.total),
+    count: values.map((value) => value.count),
+    average: values.map((value) => (value.count ? value.total / value.count : 0)),
   };
 }
 
@@ -276,6 +292,7 @@ export function buildSalesInsights(sales, period, now = new Date()) {
     activeSales,
     campaignTotal: sumValues(campaignSales),
     kpis: buildKpis(campaignSales, period),
+    trend: lastDaysTrend(campaignSales, getDayKey(now)),
     ticket: {
       bySegment: ticketBySegment(activeSales),
       byVendor: ticketByVendor(activeSales),

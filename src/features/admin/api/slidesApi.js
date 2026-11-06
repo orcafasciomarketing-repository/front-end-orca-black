@@ -15,13 +15,28 @@ export const getVendors = async () => {
   return response.data.data;
 };
 
-export const getRankVendors = async (department) => {
-  const response = await http.get("/analytics/ranking", { params: { vendorDepartment: department } });
+const rankingRequest = (path, { period = "all", segment = "" } = {}) => {
+  const url = period === "lastWeek" ? `${path}/last-week` : path;
+  const params = {
+    ...(period === "week" ? { period: "week" } : {}),
+    ...(segment ? { segment: segment.toLowerCase() } : {}),
+  };
+
+  return { url, params };
+};
+
+export const getRankVendors = async (department, options) => {
+  const { url, params } = rankingRequest("/analytics/ranking", options);
+  const response = await http.get(url, { params: { vendorDepartment: department, ...params } });
   return response.data.data.vendor;
 };
 
-export const getRankSdrs = async () => {
-  const response = await http.get("/analytics/sdr-ranking");
+export const getRankSdrs = async (options) => {
+  const { url, params } = rankingRequest("/analytics/sdr-ranking", options);
+  const response =
+    url === "/analytics/sdr-ranking" && Object.keys(params).length === 0
+      ? await http.get(url)
+      : await http.get(url, { params });
   return response.data.data;
 };
 

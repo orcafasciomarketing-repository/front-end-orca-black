@@ -126,16 +126,6 @@ describe("ChartsPage", () => {
     expect(screen.queryByRole("button", { name: "Modo escuro" })).not.toBeInTheDocument();
   });
 
-  it("previsão de fechamento mostra o ritmo necessário até o fim da campanha", async () => {
-    renderPage();
-
-    const card = await screen.findByRole("region", {
-      name: "Previsão de fechamento",
-    });
-    await waitFor(() => expect(card.textContent.replace(/\u00a0/g, " ")).toContain("Dias restantes até 01/1240"));
-    expect(card.textContent.replace(/\u00a0/g, " ")).toContain("Ritmo necessário por diaR$ 74.975,00");
-  });
-
   it("Gerar PDF: escolhe os widgets, imprime só eles com o cabeçalho e volta ao normal depois", async () => {
     const print = vi.spyOn(window, "print").mockImplementation(() => {});
     renderPage();
@@ -148,25 +138,26 @@ describe("ChartsPage", () => {
 
     expect(options.map((option) => option.textContent)).toEqual([
       "Indicadores",
-      "Comparar períodos",
       "Acumulado x meta",
-      "Previsão de fechamento",
       "Forecast",
       "Vendas acumuladas",
       "Vendas acumuladas por setor",
       "Vendas x renovações por dia",
       "Vendas por semana",
+      "Calendário de vendas",
       "Vendas por pessoa",
       "Vendas por equipe",
       "Passagens por pessoa",
+      "Pontos por equipe",
+      "Evolução dos pontos",
       "Ticket médio",
+      "Comparar períodos",
       "Participação por setor",
       "Concentração",
       "Cancelamentos",
-      "Calendário de vendas",
     ]);
     expect(selectAll).toBeChecked();
-    expect(within(dialog).getByText("17 de 17")).toBeInTheDocument();
+    expect(within(dialog).getByText("18 de 18")).toBeInTheDocument();
 
     fireEvent.click(selectAll);
     expect(within(dialog).getByRole("button", { name: "Gerar PDF" })).toBeDisabled();
