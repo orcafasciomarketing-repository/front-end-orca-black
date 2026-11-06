@@ -2,6 +2,7 @@ import styles from "./TeamPointsWidgets.module.css";
 
 import { usePointsHistory } from "../../hooks/usePointsHistory";
 import { CHART_COLORS } from "../../utils/chartColors";
+import { formatCompactNumber } from "../../utils/chartScale";
 import { formatDay } from "../../utils/chartData";
 import { cumulativeTeamPoints, summarizeTeamPoints } from "../../utils/teamPoints";
 import { timeSeriesRows } from "../../utils/tableCsv";
@@ -107,7 +108,13 @@ export function TeamPointsEvolution({ period, segment }) {
       {evolution.days.length === 0 ? (
         <p className={styles.empty}>Nenhum ponto no período</p>
       ) : (
-        <TimeSeriesChart title={title} days={evolution.days} series={series} formatValue={formatPoints} />
+        <TimeSeriesChart
+          title={title}
+          days={evolution.days}
+          series={series}
+          formatValue={formatPoints}
+          formatTick={formatCompactNumber}
+        />
       )}
     </ChartCard>
   );

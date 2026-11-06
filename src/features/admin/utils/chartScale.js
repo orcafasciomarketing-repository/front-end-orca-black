@@ -33,6 +33,13 @@ export function formatCompactCurrency(value) {
   return `R$ ${number}`;
 }
 
+export function formatCompactNumber(value) {
+  const amount = value ?? 0;
+  const unit = COMPACT_UNITS.find(({ size }) => Math.abs(amount) >= size);
+
+  return unit ? decimalFormatter.format(amount / unit.size) + unit.suffix : decimalFormatter.format(amount);
+}
+
 export function formatPassages(value) {
   return `${value} ${value === 1 ? "passagem" : "passagens"}`;
 }

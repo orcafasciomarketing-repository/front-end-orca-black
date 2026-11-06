@@ -343,6 +343,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     expect(teams[0]).toMatch(/^Orçawinx\d+ pontos/);
     expect(teams.every((team) => /venda \d+, renovação \d+, passagem \d+/.test(team))).toBe(true);
     expect(within(widget("Evolução dos pontos")).getByRole("img")).toBeInTheDocument();
+    expect(textOf(within(widget("Evolução dos pontos")).getByRole("img"))).not.toContain("R$");
     expect(lastRowOf("Evolução dos pontos")[0]).toBe("21/10");
   });
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   formatCompactCurrency,
+  formatCompactNumber,
   formatPassages,
   formatPercent,
   formatSalesCount,
@@ -18,6 +19,13 @@ describe("chartScale", () => {
 
   it("niceTicks sem valor devolve uma escala mínima", () => {
     expect(niceTicks(0)).toEqual([0, 1]);
+  });
+
+  it("formatCompactNumber abrevia como o de reais, mas sem o R$ (eixo de pontos)", () => {
+    expect(formatCompactNumber(0)).toBe("0");
+    expect(formatCompactNumber(15)).toBe("15");
+    expect(formatCompactNumber(2.5)).toBe("2,5");
+    expect(formatCompactNumber(1500)).toBe("1,5 mil");
   });
 
   it("formatCompactCurrency abrevia em mil, mi e bi, sem casa decimal quando o número é redondo", () => {

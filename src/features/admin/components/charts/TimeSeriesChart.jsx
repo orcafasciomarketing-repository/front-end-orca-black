@@ -52,6 +52,7 @@ export default function TimeSeriesChart({
   variant = "line",
   reference,
   formatValue,
+  formatTick = formatCompactCurrency,
   formatLabel = formatDay,
   formatTitle = formatLabel,
   columnLabel = "Dia",
@@ -145,7 +146,7 @@ export default function TimeSeriesChart({
                 textAnchor="end"
                 dominantBaseline="middle"
               >
-                {formatCompactCurrency(tick)}
+                {formatTick(tick)}
               </text>
             </g>
           ))}
