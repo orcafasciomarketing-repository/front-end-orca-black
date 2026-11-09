@@ -343,7 +343,7 @@ export function getMyTeam(db, period = "all", now = new Date(), person = MOCK_PE
 
 
 // Prêmios (cópia das regras do backend, features/prizes/service/prizeCalculator.js):
-// a cada PRIZE_POINTS_STEP pontos das semanas fechadas, 1 prêmio; saldo = direitos − retirados
+// a cada PRIZE_POINTS_STEP pontos acumulados (inclusive a semana em andamento), 1 prêmio; saldo = direitos − retirados
 export const PRIZE_POINTS_STEP = 10;
 
 const addDayKeys = (day, amount) => {
@@ -368,9 +368,8 @@ export function getPrizes(db, segment = null, now = new Date()) {
   const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
   const today = mockDayKey(now);
   const start = mockDayKey(getWeekRange(0, now).startOfWeek);
-  const closedUntil = addDayKeys(start, -1);
 
-  const closed = getPeoplePoints(db, { to: closedUntil }, now);
+  const all = getPeoplePoints(db, {}, now);
   const current = getPeoplePoints(db, { from: start }, now);
   const keyOf = (kind, personId) => `${kind}-${personId}`;
   const currentByKey = new Map(current.people.map((person) => [keyOf(person.kind, person.personId), person.total]));
@@ -380,7 +379,7 @@ export function getPrizes(db, segment = null, now = new Date()) {
     withdrawnByKey.set(key, (withdrawnByKey.get(key) ?? 0) + withdrawal.quantity);
   }
 
-  const people = closed.people
+  const people = all.people
     .map((person) => {
       const key = keyOf(person.kind, person.personId);
       const accumulated = person.total;
@@ -402,7 +401,7 @@ export function getPrizes(db, segment = null, now = new Date()) {
         balance: earned - withdrawn,
         debtPoints: Math.max(withdrawn * PRIZE_POINTS_STEP - accumulated, 0),
         nextPrizeAt,
-        pointsToNext: Math.max(nextPrizeAt - accumulated - currentWeek, 0),
+        pointsToNext: nextPrizeAt - accumulated,
       };
     })
     .filter(inPrizeSegment(validSegment))
@@ -412,9 +411,8 @@ export function getPrizes(db, segment = null, now = new Date()) {
     segment: validSegment,
     step: PRIZE_POINTS_STEP,
     today,
-    closedUntil,
     currentWeek: { start, end: addDayKeys(start, 6) },
-    teams: closed.teams,
+    teams: all.teams,
     people,
   };
 }

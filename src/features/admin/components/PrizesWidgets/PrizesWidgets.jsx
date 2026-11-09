@@ -8,7 +8,8 @@ import { usePrizeMutations, usePrizes, usePrizeWithdrawals } from "../../hooks/u
 import Avatar from "../Avatar/Avatar";
 import { ChartCard } from "../SalesChartWidgets/SalesChartWidgets";
 
-// Saldo de prêmios (calculado no backend, GET /prizes): a cada 10 pontos das semanas fechadas, 1 prêmio.
+// Saldo de prêmios (calculado no backend, GET /prizes): a cada 10 pontos acumulados (inclusive os da
+// semana em andamento), 1 prêmio.
 // Só o master registra e exclui retiradas; os outros perfis só veem
 
 const ALL = "";
@@ -63,7 +64,7 @@ export function PrizeBalances({ segment }) {
   const totalBalance = people.reduce((total, person) => total + Math.max(person.balance, 0), 0);
 
   const csvRows = [
-    ["Pessoa", "Equipe", "Cargo", "Pontos acumulados", "Semana em andamento", "Direitos", "Retirados", "Saldo", "Faltam para o próximo"],
+    ["Pessoa", "Equipe", "Cargo", "Pontos acumulados", "Pontos nesta semana", "Direitos", "Retirados", "Saldo", "Faltam para o próximo"],
     ...people.map((person) => [
       person.name,
       person.teamName,
@@ -80,7 +81,7 @@ export function PrizeBalances({ segment }) {
   return (
     <ChartCard
       title={title}
-      description={`A cada ${prizes.step} pontos acumulados, 1 prêmio. Contam as semanas fechadas até ${formatFullDay(prizes.closedUntil)}; a semana em andamento (${formatFullDay(prizes.currentWeek.start)} a ${formatFullDay(prizes.currentWeek.end)}) ainda não dá direito`}
+      description={`A cada ${prizes.step} pontos acumulados, 1 prêmio. O acumulado já inclui a semana atual (${formatFullDay(prizes.currentWeek.start)} a ${formatFullDay(prizes.currentWeek.end)})`}
       csvRows={csvRows}
       segment={segment}
     >
@@ -127,7 +128,7 @@ export function PrizeBalances({ segment }) {
                 <th scope="col">Pessoa</th>
                 <th scope="col">Equipe</th>
                 <th scope="col" className={styles.number}>Acumulado</th>
-                <th scope="col" className={styles.number}>Semana atual</th>
+                <th scope="col" className={styles.number}>Nesta semana</th>
                 <th scope="col" className={styles.number}>Direitos</th>
                 <th scope="col" className={styles.number}>Retirados</th>
                 <th scope="col">Saldo</th>
@@ -183,9 +184,7 @@ function PrizeRow({ person, step, defaultDay, canRegister, isRegistering, onTogg
             {balanceText(person)}
           </span>
         </td>
-        <td className={styles.next}>
-          {person.pointsToNext === 0 ? "Garantido quando a semana fechar" : `Faltam ${formatPoints(person.pointsToNext)}`}
-        </td>
+        <td className={styles.next}>Faltam {formatPoints(person.pointsToNext)}</td>
         {canRegister && (
           <td>
             <button className={styles.secondaryButton} type="button" aria-expanded={isRegistering} onClick={onToggle}>

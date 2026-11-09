@@ -322,11 +322,11 @@ Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src
 
 ### `PrizesPage()` (Prêmios)
 
-[src/features/admin/pages/PrizesPage.jsx](src/features/admin/pages/PrizesPage.jsx). Todos os perfis do admin (b2b/b2g com o setor travado). O cálculo é do backend (`GET /prizes`, regras RN-66 a RN-68 no `projeto.md` do backend); o front só exibe. A cada 10 pontos acumulados das **semanas fechadas** (até o último domingo), 1 prêmio; a sobra passa para a semana seguinte. Vale para vendedores e pessoas de passagem (SDR, CS, Suporte). Widgets em [PrizesWidgets.jsx](src/features/admin/components/PrizesWidgets/PrizesWidgets.jsx):
+[src/features/admin/pages/PrizesPage.jsx](src/features/admin/pages/PrizesPage.jsx). Todos os perfis do admin (b2b/b2g com o setor travado). O cálculo é do backend (`GET /prizes`, regras RN-66 a RN-68 no `projeto.md` do backend); o front só exibe. A cada 10 pontos acumulados, 1 prêmio. O acumulado conta **todos os pontos até agora, inclusive os da semana atual** (os prêmios são entregues na segunda); a sobra passa para a semana seguinte. Vale para vendedores e pessoas de passagem (SDR, CS, Suporte). Widgets em [PrizesWidgets.jsx](src/features/admin/components/PrizesWidgets/PrizesWidgets.jsx):
 
 | Widget | Mostra |
 |---|---|
-| `PrizeBalances` (Saldo de prêmios) | Tabela: pessoa, equipe, pontos acumulados, semana em andamento, direitos, retirados, saldo (verde com prêmio para retirar, vermelho "Devendo X pontos") e quanto falta para o próximo. Filtros de equipe, tipo e "Só quem tem prêmio para retirar" |
+| `PrizeBalances` (Saldo de prêmios) | Tabela: pessoa, equipe, pontos acumulados, pontos nesta semana (só informação, já estão no acumulado), direitos, retirados, saldo (verde com prêmio para retirar, vermelho "Devendo X pontos") e quanto falta para o próximo. Filtros de equipe, tipo e "Só quem tem prêmio para retirar" |
 | `PrizeHistory` (Retiradas registradas) | Histórico das retiradas (dia, pessoa, quantidade e prêmio) |
 
 - **Só o master** vê o botão **Registrar retirada** (abre o formulário na linha: quantidade, prêmio e dia, que já vem com a segunda da semana) e o **Excluir** do histórico. Acima do saldo, o formulário avisa e pede confirmação (`window.confirm`); confirmado, manda `confirmOverBalance: true`. O backend também bloqueia sem a confirmação (409, com a mensagem mostrada na tela).

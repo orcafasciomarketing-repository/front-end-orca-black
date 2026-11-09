@@ -23,7 +23,7 @@ const person = (overrides) => ({
   job: "B2B Venda",
   imageUrl: "",
   teamId: "t1",
-  accumulated: 12,
+  accumulated: 15,
   currentWeek: 3,
   earned: 1,
   withdrawn: 0,
@@ -38,7 +38,6 @@ const PRIZES = {
   segment: null,
   step: 10,
   today: "2026-11-09",
-  closedUntil: "2026-11-08",
   currentWeek: { start: "2026-11-09", end: "2026-11-15" },
   teams: [
     { teamId: "t1", teamName: "Wizards" },
@@ -157,11 +156,11 @@ describe("PrizesPage", () => {
     fireEvent.change(within(form).getByLabelText("Quantidade"), { target: { value: "2" } });
     fireEvent.change(within(form).getByLabelText("Prêmio"), { target: { value: "Caneca" } });
 
-    expect(within(form).getByRole("status")).toHaveTextContent("Ana Lima ficaria devendo 8 pontos");
+    expect(within(form).getByRole("status")).toHaveTextContent("Ana Lima ficaria devendo 5 pontos");
 
     fireEvent.click(within(form).getByRole("button", { name: "Registrar" }));
     expect(confirm).toHaveBeenCalledWith(
-      "Ana Lima tem saldo de 1 prêmio. Registrar 2 prêmios deixa o saldo em -1 (devendo 8 pontos). Registrar mesmo assim?",
+      "Ana Lima tem saldo de 1 prêmio. Registrar 2 prêmios deixa o saldo em -1 (devendo 5 pontos). Registrar mesmo assim?",
     );
     expect(createPrizeWithdrawal).not.toHaveBeenCalled();
 
