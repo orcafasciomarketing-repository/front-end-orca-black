@@ -326,10 +326,10 @@ Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src
 
 | Widget | Mostra |
 |---|---|
-| `PrizeBalances` (Saldo de prêmios) | Tabela: pessoa, equipe, pontos acumulados, pontos nesta semana (só informação, já estão no acumulado), direitos, retirados, saldo (verde com prêmio para retirar, vermelho "Devendo X pontos") e quanto falta para o próximo. Filtros de equipe, tipo e "Só quem tem prêmio para retirar" |
-| `PrizeHistory` (Retiradas registradas) | Histórico das retiradas (dia, pessoa, quantidade e prêmio) |
+| `PrizeBalances` (Saldo de prêmios) | Tabela: pessoa, equipe, acumulado, retirados, saldo (verde com prêmio para retirar, vermelho "Devendo X pontos") e quanto falta para o próximo. Filtros de equipe, tipo e "Só quem tem prêmio para retirar" |
+| `PrizeHistory` (Retiradas registradas) | Histórico das retiradas (dia, pessoa e quantidade) |
 
-- **Só o master** vê o botão **Registrar retirada** (abre o formulário na linha: quantidade, prêmio e dia, que já vem com a segunda da semana) e o **Excluir** do histórico. Acima do saldo, o formulário avisa e pede confirmação (`window.confirm`); confirmado, manda `confirmOverBalance: true`. O backend também bloqueia sem a confirmação (409, com a mensagem mostrada na tela).
+- **Só o master** vê o botão **Registrar retirada** (abre o formulário na linha: quantidade e dia, que já vem com a segunda da semana; qual prêmio não é cadastrado) e o **Excluir** do histórico. Acima do saldo, o formulário avisa e pede confirmação (`window.confirm`); confirmado, manda `confirmOverBalance: true`. O backend também bloqueia sem a confirmação (409, com a mensagem mostrada na tela).
 - Venda cancelada depois da retirada: o saldo fica negativo ("Devendo X pontos") e a venda nova só zera, sem dar outro prêmio (regra do backend).
 - b2b/b2g veem só as pessoas com cargo do próprio setor; CS e Suporte (sem setor no cargo) só aparecem para master e admin.
 - API em [api/prizesApi.js](src/features/admin/api/prizesApi.js) e hooks em [hooks/usePrizes.js](src/features/admin/hooks/usePrizes.js) (chave `["admin-prizes", ...]`; registrar ou excluir recarrega o saldo e o histórico).

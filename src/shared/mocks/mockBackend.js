@@ -360,7 +360,7 @@ const inPrizeSegment = (segment) => (person) => !segment || prizeSegmentOf(perso
 function mockWithdrawals(now) {
   const monday = mockDayKey(getWeekRange(0, now).startOfWeek);
   return [
-    { _id: "withdrawal-1", personId: "vendor-brenda", kind: "vendor", quantity: 1, prize: "Caneca personalizada", withdrawnAt: monday, createdBy: "master@demo.com" },
+    { _id: "withdrawal-1", personId: "vendor-brenda", kind: "vendor", quantity: 1, withdrawnAt: monday, createdBy: "master@demo.com" },
   ];
 }
 

@@ -64,14 +64,12 @@ export function PrizeBalances({ segment }) {
   const totalBalance = people.reduce((total, person) => total + Math.max(person.balance, 0), 0);
 
   const csvRows = [
-    ["Pessoa", "Equipe", "Cargo", "Pontos acumulados", "Pontos nesta semana", "Direitos", "Retirados", "Saldo", "Faltam para o próximo"],
+    ["Pessoa", "Equipe", "Cargo", "Pontos acumulados", "Retirados", "Saldo", "Faltam para o próximo"],
     ...people.map((person) => [
       person.name,
       person.teamName,
       person.job ?? "",
       String(person.accumulated),
-      String(person.currentWeek),
-      String(person.earned),
       String(person.withdrawn),
       String(person.balance),
       String(person.pointsToNext),
@@ -81,7 +79,7 @@ export function PrizeBalances({ segment }) {
   return (
     <ChartCard
       title={title}
-      description={`A cada ${prizes.step} pontos acumulados, 1 prêmio. O acumulado já inclui a semana atual (${formatFullDay(prizes.currentWeek.start)} a ${formatFullDay(prizes.currentWeek.end)})`}
+      description={`A cada ${prizes.step} pontos acumulados (inclusive os desta semana), 1 prêmio`}
       csvRows={csvRows}
       segment={segment}
     >
@@ -128,8 +126,6 @@ export function PrizeBalances({ segment }) {
                 <th scope="col">Pessoa</th>
                 <th scope="col">Equipe</th>
                 <th scope="col" className={styles.number}>Acumulado</th>
-                <th scope="col" className={styles.number}>Nesta semana</th>
-                <th scope="col" className={styles.number}>Direitos</th>
                 <th scope="col" className={styles.number}>Retirados</th>
                 <th scope="col">Saldo</th>
                 <th scope="col">Próximo prêmio</th>
@@ -176,8 +172,6 @@ function PrizeRow({ person, step, defaultDay, canRegister, isRegistering, onTogg
         </th>
         <td>{person.teamName}</td>
         <td className={styles.number}>{person.accumulated}</td>
-        <td className={styles.number}>{person.currentWeek}</td>
-        <td className={styles.number}>{person.earned}</td>
         <td className={styles.number}>{person.withdrawn}</td>
         <td>
           <span className={`${styles.badge} ${balanceClass}`} aria-label={`Saldo de ${person.name}`}>
@@ -195,7 +189,7 @@ function PrizeRow({ person, step, defaultDay, canRegister, isRegistering, onTogg
       </tr>
       {isRegistering && (
         <tr className={styles.formRow}>
-          <td colSpan={9}>
+          <td colSpan={7}>
             <WithdrawalForm person={person} step={step} defaultDay={defaultDay} create={create} onDone={onDone} />
           </td>
         </tr>
@@ -206,7 +200,6 @@ function PrizeRow({ person, step, defaultDay, canRegister, isRegistering, onTogg
 
 function WithdrawalForm({ person, step, defaultDay, create, onDone }) {
   const [quantity, setQuantity] = useState("1");
-  const [prize, setPrize] = useState("");
   const [withdrawnAt, setWithdrawnAt] = useState(defaultDay);
   const [formError, setFormError] = useState("");
 
@@ -219,10 +212,6 @@ function WithdrawalForm({ person, step, defaultDay, create, onDone }) {
 
     if (!Number.isInteger(amount) || amount < 1) {
       setFormError("A quantidade precisa ser pelo menos 1");
-      return;
-    }
-    if (!prize.trim()) {
-      setFormError("Informe qual prêmio");
       return;
     }
     if (!withdrawnAt) {
@@ -245,7 +234,6 @@ function WithdrawalForm({ person, step, defaultDay, create, onDone }) {
         personId: String(person.personId),
         kind: person.kind,
         quantity: amount,
-        prize: prize.trim(),
         withdrawnAt,
         ...(isOverBalance ? { confirmOverBalance: true } : {}),
       },
@@ -264,17 +252,6 @@ function WithdrawalForm({ person, step, defaultDay, create, onDone }) {
       <label className={styles.field}>
         <span className={styles.label}>Quantidade</span>
         <input className={styles.input} type="number" min="1" step="1" value={quantity} onChange={changeAnd(setQuantity)} />
-      </label>
-      <label className={`${styles.field} ${styles.grow}`}>
-        <span className={styles.label}>Prêmio</span>
-        <input
-          className={styles.input}
-          type="text"
-          maxLength={100}
-          placeholder="Ex.: Fone JBL"
-          value={prize}
-          onChange={changeAnd(setPrize)}
-        />
       </label>
       <label className={styles.field}>
         <span className={styles.label}>Dia da retirada</span>
@@ -303,7 +280,7 @@ export function PrizeHistory({ segment }) {
   const handleDelete = (withdrawal) => {
     if (
       window.confirm(
-        `Excluir a retirada de ${formatPrizes(withdrawal.quantity)} (${withdrawal.prize}) de ${withdrawal.name}? O saldo volta a contar esse prêmio.`,
+        `Excluir a retirada de ${formatPrizes(withdrawal.quantity)} de ${withdrawal.name} (${formatFullDay(withdrawal.withdrawnAt)})? O saldo volta a contar.`,
       )
     ) {
       remove.mutate(withdrawal._id);
@@ -315,13 +292,12 @@ export function PrizeHistory({ segment }) {
       title={title}
       description="Da mais recente para a mais antiga"
       csvRows={[
-        ["Dia", "Pessoa", "Cargo", "Quantidade", "Prêmio", "Registrado por"],
+        ["Dia", "Pessoa", "Cargo", "Quantidade", "Registrado por"],
         ...withdrawals.map((withdrawal) => [
           formatFullDay(withdrawal.withdrawnAt),
           withdrawal.name,
           withdrawal.job ?? "",
           String(withdrawal.quantity),
-          withdrawal.prize,
           withdrawal.createdBy ?? "",
         ]),
       ]}
@@ -336,14 +312,14 @@ export function PrizeHistory({ segment }) {
             <li key={withdrawal._id} className={styles.historyItem}>
               <span className={styles.historyDay}>{formatFullDay(withdrawal.withdrawnAt)}</span>
               <span className={styles.historyText}>
-                <strong>{withdrawal.name}</strong> retirou {formatPrizes(withdrawal.quantity)}: {withdrawal.prize}
+                <strong>{withdrawal.name}</strong> retirou {formatPrizes(withdrawal.quantity)}
               </span>
               {isMaster && (
                 <button
                   className={styles.dangerButton}
                   type="button"
                   disabled={remove.isPending}
-                  aria-label={`Excluir retirada de ${withdrawal.name} (${withdrawal.prize})`}
+                  aria-label={`Excluir retirada de ${withdrawal.name} (${formatFullDay(withdrawal.withdrawnAt)})`}
                   onClick={() => handleDelete(withdrawal)}
                 >
                   Excluir

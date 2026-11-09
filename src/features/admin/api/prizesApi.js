@@ -24,7 +24,7 @@ export const getPrizeWithdrawals = async (segment = "") => {
   return response.data.data;
 };
 
-// withdrawal: { personId, kind, quantity, prize, withdrawnAt, confirmOverBalance? }
+// withdrawal: { personId, kind, quantity, withdrawnAt, confirmOverBalance? }
 export const createPrizeWithdrawal = async (withdrawal) => {
   assertMockDisabled();
 

@@ -18,11 +18,6 @@
   composes: input from "../UsersWidget/UsersWidget.module.css";
 }
 
-.grow {
-  flex: 1;
-  min-width: 180px;
-}
-
 .check {
   display: flex;
   align-items: center;

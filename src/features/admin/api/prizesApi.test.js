@@ -29,7 +29,7 @@ describe("prizesApi", () => {
 
   it("registra e exclui retiradas", async () => {
     api.post.mockResolvedValue({ data: { data: { _id: "w1" } } });
-    const withdrawal = { personId: "p1", kind: "vendor", quantity: 1, prize: "Caneca", withdrawnAt: "2026-11-09" };
+    const withdrawal = { personId: "p1", kind: "vendor", quantity: 1, withdrawnAt: "2026-11-09" };
 
     await expect(createPrizeWithdrawal(withdrawal)).resolves.toEqual({ _id: "w1" });
     await deletePrizeWithdrawal("w1");
@@ -51,7 +51,7 @@ describe("prizesApi", () => {
     expect(b2g.people.every((person) => person.job.startsWith("B2G"))).toBe(true);
 
     const withdrawals = await getPrizeWithdrawals("");
-    expect(withdrawals[0]).toMatchObject({ name: "Brenda Lima", prize: "Caneca personalizada" });
+    expect(withdrawals[0]).toMatchObject({ name: "Brenda Lima", quantity: 1 });
 
     await expect(createPrizeWithdrawal({})).rejects.toThrow("não funciona com os dados de demonstração");
   });

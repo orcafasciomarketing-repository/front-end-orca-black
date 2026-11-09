@@ -52,7 +52,7 @@ const PRIZES = {
 };
 
 const WITHDRAWALS = [
-  { _id: "w1", personId: "p2", kind: "vendor", name: "Bruno Dias", job: "B2B Venda", quantity: 1, prize: "Caneca", withdrawnAt: "2026-11-02", createdBy: "master@teste.com" },
+  { _id: "w1", personId: "p2", kind: "vendor", name: "Bruno Dias", job: "B2B Venda", quantity: 1, withdrawnAt: "2026-11-02", createdBy: "master@teste.com" },
 ];
 
 const renderAs = (role) =>
@@ -91,7 +91,7 @@ describe("PrizesPage", () => {
     expect(screen.getByLabelText("Prêmios para retirar")).toHaveTextContent("1 prêmio para retirar");
 
     const history = await screen.findByRole("list", { name: "Histórico de retiradas" });
-    expect(history).toHaveTextContent("Bruno Dias retirou 1 prêmio: Caneca");
+    expect(history).toHaveTextContent("Bruno Dias retirou 1 prêmio");
 
     expect(screen.queryByRole("button", { name: "Registrar retirada" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Excluir retirada/ })).not.toBeInTheDocument();
@@ -118,8 +118,8 @@ describe("PrizesPage", () => {
     fireEvent.click(within(rowOf("Ana Lima")).getByRole("button", { name: "Registrar retirada" }));
     const form = screen.getByRole("form", { name: "Registrar retirada de Ana Lima" });
     expect(within(form).getByLabelText("Dia da retirada")).toHaveValue("2026-11-09");
+    expect(within(form).queryByLabelText("Prêmio")).not.toBeInTheDocument();
 
-    fireEvent.change(within(form).getByLabelText("Prêmio"), { target: { value: " Fone JBL " } });
     fireEvent.click(within(form).getByRole("button", { name: "Registrar" }));
 
     await waitFor(() =>
@@ -127,7 +127,6 @@ describe("PrizesPage", () => {
         personId: "p1",
         kind: "vendor",
         quantity: 1,
-        prize: "Fone JBL",
         withdrawnAt: "2026-11-09",
       }),
     );
@@ -135,15 +134,31 @@ describe("PrizesPage", () => {
     expect(await screen.findByText("Retirada registrada")).toBeInTheDocument();
   });
 
-  it("sem prêmio informado não envia", async () => {
+  it("quantidade 0 não envia", async () => {
     renderAs("master");
     await screen.findByRole("region", { name: "Saldo de prêmios" });
 
     fireEvent.click(within(rowOf("Ana Lima")).getByRole("button", { name: "Registrar retirada" }));
-    fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
+    fireEvent.change(screen.getByLabelText("Quantidade"), { target: { value: "0" } });
+    // O navegador já barra pelo min="1"; o submit direto confere a checagem do código
+    fireEvent.submit(screen.getByRole("form", { name: "Registrar retirada de Ana Lima" }));
 
-    expect(screen.getByText("Informe qual prêmio")).toBeInTheDocument();
+    expect(screen.getByText("A quantidade precisa ser pelo menos 1")).toBeInTheDocument();
     expect(createPrizeWithdrawal).not.toHaveBeenCalled();
+  });
+
+  it("a tabela mostra só pessoa, equipe, acumulado, retirados, saldo e próximo prêmio", async () => {
+    renderAs("admin");
+    await screen.findByRole("region", { name: "Saldo de prêmios" });
+
+    expect(screen.getAllByRole("columnheader").map((cell) => cell.textContent)).toEqual([
+      "Pessoa",
+      "Equipe",
+      "Acumulado",
+      "Retirados",
+      "Saldo",
+      "Próximo prêmio",
+    ]);
   });
 
   it("acima do saldo avisa, pede confirmação e só registra se confirmar", async () => {
@@ -154,7 +169,6 @@ describe("PrizesPage", () => {
     fireEvent.click(within(rowOf("Ana Lima")).getByRole("button", { name: "Registrar retirada" }));
     const form = screen.getByRole("form", { name: "Registrar retirada de Ana Lima" });
     fireEvent.change(within(form).getByLabelText("Quantidade"), { target: { value: "2" } });
-    fireEvent.change(within(form).getByLabelText("Prêmio"), { target: { value: "Caneca" } });
 
     expect(within(form).getByRole("status")).toHaveTextContent("Ana Lima ficaria devendo 5 pontos");
 
@@ -168,7 +182,7 @@ describe("PrizesPage", () => {
     fireEvent.click(within(form).getByRole("button", { name: "Registrar" }));
     await waitFor(() =>
       expect(createPrizeWithdrawal).toHaveBeenCalledWith(
-        expect.objectContaining({ quantity: 2, prize: "Caneca", confirmOverBalance: true }),
+        expect.objectContaining({ quantity: 2, confirmOverBalance: true }),
       ),
     );
   });
@@ -183,7 +197,6 @@ describe("PrizesPage", () => {
     await screen.findByRole("region", { name: "Saldo de prêmios" });
 
     fireEvent.click(within(rowOf("Ana Lima")).getByRole("button", { name: "Registrar retirada" }));
-    fireEvent.change(screen.getByLabelText("Prêmio"), { target: { value: "Caneca" } });
     fireEvent.click(screen.getByRole("button", { name: "Registrar" }));
 
     expect(
@@ -195,7 +208,7 @@ describe("PrizesPage", () => {
     vi.spyOn(window, "confirm").mockReturnValue(true);
     renderAs("master");
 
-    fireEvent.click(await screen.findByRole("button", { name: "Excluir retirada de Bruno Dias (Caneca)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Excluir retirada de Bruno Dias (02/11/2026)" }));
 
     await waitFor(() => expect(deletePrizeWithdrawal).toHaveBeenCalledWith("w1"));
   });
