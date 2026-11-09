@@ -9,6 +9,7 @@ import {
   peopleTiers,
   segmentParts,
   segmentTiers,
+  typeTiers,
   sumTiers,
   tierProgress,
   toCents,
@@ -18,15 +19,15 @@ import {
 const SEGMENTS = ["b2b", "b2g"];
 
 const DEMO_SETTINGS = {
-  b2b: { goal: 120000, superGoal: 150000, blackGoal: 200000, farmPercent: 40 },
-  b2g: { goal: 150000, superGoal: 180000, blackGoal: 240000, farmPercent: 30 },
+  b2b: { farmGoal: 48000, salesGoal: 72000, superPercent: 125, farmBlack: 80000, salesBlack: 120000 },
+  b2g: { farmGoal: 45000, salesGoal: 105000, superPercent: 120, farmBlack: 70000, salesBlack: 170000 },
 };
 
 const blackInfo = (month, now) => ({
   month: currentMonthKey(now),
   active: month === currentMonthKey(now),
-  total: DEMO_SETTINGS.b2b.blackGoal + DEMO_SETTINGS.b2g.blackGoal,
-  suggestedGoals: { b2b: DEMO_SETTINGS.b2b.blackGoal, b2g: DEMO_SETTINGS.b2g.blackGoal },
+  total: 440000,
+  suggestedGoals: { b2b: 200000, b2g: 240000 },
 });
 
 const segmentOfJob = (job) =>
@@ -138,8 +139,9 @@ export function getGoalProgress(db, month, now = new Date()) {
   const segments = [];
   for (const config of configs) {
     const levelNames = new Map(config.levels.map((level) => [level.key, level.name]));
-    const segmentTierValues = segmentTiers(config, black.active ? (config.blackGoal ?? 0) : 0);
-    const tiersByPerson = peopleTiers(config.people, segmentTierValues, config.farmPercent);
+    const byType = typeTiers(config, black.active);
+    const segmentTierValues = segmentTiers(byType);
+    const tiersByPerson = peopleTiers(config.people, byType);
     const segmentPeople = config.people.map((person) => {
       const vendor = db.vendors.find((item) => item._id === person.vendorId);
       const team = db.teams.find((item) => item._id === vendor?.teamId);
@@ -179,14 +181,22 @@ export function getGoalProgress(db, month, now = new Date()) {
 
     segments.push({
       segment: config.segment,
-      goal: config.goal,
-      farmPercent: config.farmPercent,
-      superGoal: config.superGoal,
-      blackGoal: black.active ? (config.blackGoal ?? null) : null,
-      parts: {
-        farm: { goal: parts.farm, realized: realizedOf(segmentPeople.filter((person) => person.type === "farm")) },
-        sales: { goal: parts.sales, realized: realizedOf(segmentPeople.filter((person) => person.type === "sales")) },
-      },
+      goal: segmentTierValues.goal,
+      superPercent: config.superPercent,
+      parts: Object.fromEntries(
+        ["farm", "sales"].map((type) => [
+          type,
+          {
+            goal: parts[type],
+            ...progressOf(
+              realizedOf(segmentPeople.filter((person) => person.type === type)),
+              byType[type],
+              first,
+              last,
+            ),
+          },
+        ]),
+      ),
       month: progressOf(realizedOf(segmentPeople), segmentTierValues, first, last),
       weeks: weeks.map((week, index) => ({
         index,

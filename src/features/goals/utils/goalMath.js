@@ -20,7 +20,9 @@ export const DEFAULT_LEVELS = [
   { key: "senior", name: "Sênior", weight: 2 },
 ];
 
-export const DEFAULT_FARM_PERCENT = 50;
+export const DEFAULT_SUPER_PERCENT = 120;
+
+export const GOAL_TYPES = ["farm", "sales"];
 
 export const dayKeyOf = (date) => new Date(new Date(date).getTime() - SAO_PAULO_OFFSET_MS).toISOString().slice(0, 10);
 
@@ -104,18 +106,27 @@ export function splitEqually(totalCents, parts) {
   return Array.from({ length: parts }, (_, index) => base + (index < rest ? 1 : 0));
 }
 
-export function splitByFarm(value, farmPercent) {
-  const totalCents = toCents(value);
-  const farmCents = Math.round((totalCents * Number(farmPercent || 0)) / 100);
-  return { farm: fromCents(farmCents), sales: fromCents(totalCents - farmCents) };
+export function segmentParts({ farmGoal, salesGoal }) {
+  return { farm: fromCents(toCents(farmGoal)), sales: fromCents(toCents(salesGoal)) };
 }
 
-export function segmentParts({ goal, farmPercent }) {
-  return splitByFarm(goal, farmPercent);
+export function typeTiers(config, withBlack = false) {
+  const parts = segmentParts(config);
+  const black = { farm: withBlack ? config.farmBlack : 0, sales: withBlack ? config.salesBlack : 0 };
+  return Object.fromEntries(
+    GOAL_TYPES.map((type) => [
+      type,
+      {
+        goal: parts[type],
+        super: fromCents(Math.round((toCents(parts[type]) * Number(config.superPercent || 0)) / 100)),
+        black: fromCents(toCents(black[type])),
+      },
+    ]),
+  );
 }
 
-export function segmentTiers({ goal, superGoal }, blackGoal = 0) {
-  return { goal: fromCents(toCents(goal)), super: fromCents(toCents(superGoal)), black: fromCents(toCents(blackGoal)) };
+export function segmentTiers(byType) {
+  return sumTiers(GOAL_TYPES.map((type) => byType[type]));
 }
 
 function shareLike(totalCents, keys, weightsCents) {
@@ -126,16 +137,15 @@ function shareLike(totalCents, keys, weightsCents) {
   );
 }
 
-export function peopleTiers(people, tiers, farmPercent) {
+export function peopleTiers(people, byType) {
   const result = new Map(
     people.map((person) => [person.vendorId, { goal: fromCents(toCents(person.goal)), super: 0, black: 0 }]),
   );
   for (const tier of ["super", "black"]) {
-    const parts = splitByFarm(tiers[tier], farmPercent);
-    for (const type of ["farm", "sales"]) {
+    for (const type of GOAL_TYPES) {
       const members = people.filter((person) => person.type === type);
       const shares = shareLike(
-        toCents(parts[type]),
+        toCents(byType[type][tier]),
         members.map((person) => person.vendorId),
         members.map((person) => toCents(person.goal)),
       );

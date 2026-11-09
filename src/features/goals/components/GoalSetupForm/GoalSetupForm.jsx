@@ -6,7 +6,7 @@ import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import Avatar from "../../../admin/components/Avatar/Avatar";
 import { getGoalErrorMessage } from "../../api/goalsApi";
 import { buildDraft, computeDraft, nextLevelKey, toPayload } from "../../utils/goalDraft";
-import { formatMonth, formatShortDay, splitByFarm, TIER_LABELS, TYPE_LABELS } from "../../utils/goalMath";
+import { formatMonth, formatShortDay, TIER_LABELS, TYPE_LABELS } from "../../utils/goalMath";
 
 const SOURCE_NOTES = {
   previous: (month) =>
@@ -15,9 +15,7 @@ const SOURCE_NOTES = {
 };
 
 export default function GoalSetupForm({ month, segment, weeks, segmentData, black, save, remove }) {
-  const [draft, setDraft] = useState(() =>
-    buildDraft(segmentData, weeks.length, black.active ? black.suggestedGoals?.[segment] : null),
-  );
+  const [draft, setDraft] = useState(() => buildDraft(segmentData, weeks.length));
   const [confirmDelete, setConfirmDelete] = useState(false);
   const computed = computeDraft(draft, weeks.length, black);
   const label = segment.toUpperCase();
@@ -73,36 +71,46 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
         </header>
         <div className={styles.body}>
           <div className={styles.fields}>
-            <MoneyField label="Meta do mês (R$)" value={draft.goal} onChange={(goal) => update({ goal })} />
+            <MoneyField label="Meta Farmer (R$)" value={draft.farmGoal} onChange={(farmGoal) => update({ farmGoal })} />
             <MoneyField
-              label="Super meta do mês (R$)"
-              value={draft.superGoal}
-              onChange={(superGoal) => update({ superGoal })}
+              label="Meta Venda (R$)"
+              value={draft.salesGoal}
+              onChange={(salesGoal) => update({ salesGoal })}
             />
-            {black.active && (
-              <MoneyField
-                label="Meta black do setor (R$)"
-                value={draft.blackGoal}
-                onChange={(blackGoal) => update({ blackGoal })}
-              />
-            )}
             <label className={styles.field}>
-              <span className={styles.label}>Renovação (%)</span>
+              <span className={styles.label}>Super meta (% da Meta)</span>
               <input
                 className={styles.input}
                 type="number"
-                min="0"
-                max="100"
+                min="101"
                 step="0.1"
-                value={draft.farmPercent}
-                onChange={(event) => update({ farmPercent: event.target.value })}
+                value={draft.superPercent}
+                onChange={(event) => update({ superPercent: event.target.value })}
               />
             </label>
           </div>
           {black.active && (
-            <p className={styles.hint}>
-              Mês da campanha: a Meta black já vem com a meta do setor cadastrada no backend (a mesma das TVs).
-            </p>
+            <>
+              <div className={styles.fields}>
+                <MoneyField
+                  label="Meta black Farmer (R$)"
+                  value={draft.farmBlack}
+                  onChange={(farmBlack) => update({ farmBlack })}
+                />
+                <MoneyField
+                  label="Meta black Venda (R$)"
+                  value={draft.salesBlack}
+                  onChange={(salesBlack) => update({ salesBlack })}
+                />
+              </div>
+              {black.suggestedGoals?.[segment] > 0 && (
+                <p className={styles.hint}>
+                  Mês da campanha. Meta black do {label} cadastrada no backend (a mesma das TVs):{" "}
+                  {formatCurrency(black.suggestedGoals[segment])}. Somando Farmer e Venda aqui:{" "}
+                  {formatCurrency(computed.tiers.black)}.
+                </p>
+              )}
+            </>
           )}
           <div className={styles.scroll}>
             <table className={styles.table} aria-label="Divisão das metas do setor">
@@ -110,38 +118,37 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                 <tr>
                   <th scope="col">Faixa</th>
                   <th scope="col" className={styles.number}>
+                    Farmer
+                  </th>
+                  <th scope="col" className={styles.number}>
+                    Venda
+                  </th>
+                  <th scope="col" className={styles.number}>
                     Setor
-                  </th>
-                  <th scope="col" className={styles.number}>
-                    Renovação ({Number(draft.farmPercent || 0).toLocaleString("pt-BR")}%)
-                  </th>
-                  <th scope="col" className={styles.number}>
-                    Vendas ({(100 - Number(draft.farmPercent || 0)).toLocaleString("pt-BR")}%)
                   </th>
                 </tr>
               </thead>
               <tbody>
-                {tierKeys.map((tier) => {
-                  const parts = splitByFarm(computed.tiers[tier], draft.farmPercent);
-                  return (
-                    <tr key={tier}>
-                      <th scope="row">{TIER_LABELS[tier]}</th>
-                      <td className={styles.number}>{formatCurrency(computed.tiers[tier])}</td>
-                      <td className={styles.number}>{formatCurrency(parts.farm)}</td>
-                      <td className={styles.number}>{formatCurrency(parts.sales)}</td>
-                    </tr>
-                  );
-                })}
+                {tierKeys.map((tier) => (
+                  <tr key={tier}>
+                    <th scope="row">{TIER_LABELS[tier]}</th>
+                    <td className={styles.number}>{formatCurrency(computed.byType.farm[tier])}</td>
+                    <td className={styles.number}>{formatCurrency(computed.byType.sales[tier])}</td>
+                    <td className={styles.number}>{formatCurrency(computed.tiers[tier])}</td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
-          {!computed.valuesOk && (
-            <p className={styles.error}>
-              {black.active
-                ? "A Super meta precisa ser maior que a Meta, a Meta black maior que a Super, e a renovação vai de 0 a 100%."
-                : "A Super meta precisa ser maior que a Meta, e a renovação vai de 0 a 100%."}
-            </p>
-          )}
+          {!computed.superOk && <p className={styles.error}>A Super meta precisa passar de 100% da Meta.</p>}
+          {["farm", "sales"]
+            .filter((type) => !computed.blackOk[type])
+            .map((type) => (
+              <p key={type} className={styles.error}>
+                {type === "farm" ? "Farmer" : "Venda"}: a Meta black precisa ser maior que a Super meta (
+                {formatCurrency(computed.byType[type].super)}).
+              </p>
+            ))}
         </div>
       </section>
 
@@ -151,8 +158,7 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
         </header>
         <div className={styles.body}>
           <p className={styles.hint}>
-            A parte de renovação e a de vendas são divididas pelos pesos: um nível com peso 2 recebe o dobro de um com
-            peso 1.
+            A Meta Farmer e a Meta Venda são divididas pelos pesos: um nível com peso 2 recebe o dobro de um com peso 1.
           </p>
           <ul className={styles.levels}>
             {draft.levels.map((level, index) => (

@@ -82,7 +82,7 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
 
       const totals = await screen.findByLabelText("Distribuição");
       expect(textOf(screen.getByRole("table", { name: "Divisão das metas do setor" }))).toMatch(
-        /MetaR\$ 120\.000,00R\$ 48\.000,00R\$ 72\.000,00Super metaR\$ 150\.000,00R\$ 60\.000,00R\$ 90\.000,00Meta blackR\$ 200\.000,00R\$ 80\.000,00R\$ 120\.000,00/,
+        /MetaR\$ 48\.000,00R\$ 72\.000,00R\$ 120\.000,00Super metaR\$ 60\.000,00R\$ 90\.000,00R\$ 150\.000,00Meta blackR\$ 80\.000,00R\$ 120\.000,00R\$ 200\.000,00/,
       );
       expect(textOf(totals)).toMatch(/Renovação: distribuído R\$ 48\.000,00 de R\$ 48\.000,00/);
       expect(textOf(totals)).toMatch(/Vendas: distribuído R\$ 72\.000,00 de R\$ 72\.000,00/);
@@ -104,20 +104,23 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
     });
 
-    it("mudar a meta do setor redistribui as metas das pessoas pelos pesos", async () => {
+    it("mudar a Meta Farmer redistribui as metas dos Farmers pelos pesos e a Super acompanha o %", async () => {
       renderPage(GoalsSetupPage);
       await screen.findByLabelText("Distribuição");
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta do mês (R$)" }), { target: { value: "140000" } });
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta Farmer (R$)" }), { target: { value: "56000" } });
 
       expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(
         /Renovação: distribuído R\$ 56\.000,00 de R\$ 56\.000,00/,
       );
+      expect(textOf(screen.getByRole("table", { name: "Divisão das metas do setor" }))).toMatch(
+        /Super metaR\$ 70\.000,00/,
+      );
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta do mês (R$)" }), { target: { value: "160000" } });
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta Farmer (R$)" }), { target: { value: "70000" } });
 
-      expect(screen.getByText(/A Super meta precisa ser maior que a Meta/)).toBeInTheDocument();
+      expect(screen.getByText(/Farmer: a Meta black precisa ser maior que a Super meta/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
     });
 

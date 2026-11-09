@@ -30,6 +30,8 @@ const SEGMENT_OPTIONS = [
   { value: "b2g", label: "B2G" },
 ];
 
+const PART_LABELS = { farm: "Farmer", sales: "Venda" };
+
 const TIER_CLASS = { goal: "tierGoal", super: "tierSuper", black: "tierBlack" };
 const TIER_COLORS = { goal: "var(--color-primary)", super: CHART_COLORS.aqua, black: "var(--color-text)" };
 
@@ -178,18 +180,17 @@ function SegmentBlock({ item, progress, weekIndex }) {
           <p className={`widget ${styles.empty}`}>Hoje não está em nenhuma semana deste mês</p>
         )}
       </div>
-      <dl className={styles.parts} aria-label={`Divisão do setor ${label}`}>
+      <div className={styles.cards} aria-label={`Farmer e Venda do setor ${label}`}>
         {["farm", "sales"].map((type) => (
-          <div key={type} className={styles.part}>
-            <dt>
-              {TYPE_LABELS[type]} ({type === "farm" ? item.farmPercent : 100 - item.farmPercent}%)
-            </dt>
-            <dd>
-              {formatCurrency(item.parts[type].realized)} de {formatCurrency(item.parts[type].goal)}
-            </dd>
-          </div>
+          <GoalTierCard
+            key={type}
+            title={`${PART_LABELS[type]} · ${label}`}
+            period={`Mês · Meta ${formatCurrency(item.parts[type].tiers.goal)}`}
+            progress={item.parts[type]}
+            showPace={false}
+          />
         ))}
-      </dl>
+      </div>
       <ChartCard
         title={`Evolução do mês · ${label}`}
         description="Realizado acumulado comparado ao ritmo que bate a Meta no fim do mês"
