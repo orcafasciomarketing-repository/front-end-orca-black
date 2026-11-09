@@ -81,6 +81,9 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       renderPage(GoalsSetupPage);
 
       const totals = await screen.findByLabelText("Distribuição");
+      expect(textOf(screen.getByRole("table", { name: "Divisão das metas do setor" }))).toMatch(
+        /MetaR\$ 120\.000,00R\$ 48\.000,00R\$ 72\.000,00Super metaR\$ 150\.000,00R\$ 60\.000,00R\$ 90\.000,00Meta blackR\$ 200\.000,00R\$ 80\.000,00R\$ 120\.000,00/,
+      );
       expect(textOf(totals)).toMatch(/Renovação: distribuído R\$ 48\.000,00 de R\$ 48\.000,00/);
       expect(textOf(totals)).toMatch(/Vendas: distribuído R\$ 72\.000,00 de R\$ 72\.000,00/);
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
@@ -105,12 +108,17 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       renderPage(GoalsSetupPage);
       await screen.findByLabelText("Distribuição");
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta do mês (R$)" }), { target: { value: "200000" } });
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta do mês (R$)" }), { target: { value: "140000" } });
 
       expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(
-        /Renovação: distribuído R\$ 80\.000,00 de R\$ 80\.000,00/,
+        /Renovação: distribuído R\$ 56\.000,00 de R\$ 56\.000,00/,
       );
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
+
+      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta do mês (R$)" }), { target: { value: "160000" } });
+
+      expect(screen.getByText(/A Super meta precisa ser maior que a Meta/)).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
     });
 
     it("com os dados de demonstração, salvar avisa que não grava", async () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { buildDraft, computeDraft, toPayload } from "./goalDraft";
-import { monthWeeks, paceOf, segmentParts, tierProgress, tiersOf } from "./goalMath";
+import { monthWeeks, paceOf, peopleTiers, segmentParts, segmentTiers, tierProgress, weekTiers } from "./goalMath";
 
 const vendors = [
   { vendorId: "v1", name: "Ana", job: "B2B Venda", type: "sales" },
@@ -11,7 +11,7 @@ const vendors = [
 
 const newDraft = (changes = {}) => {
   const draft = buildDraft({ config: null, previous: null, vendors }, 4);
-  return { ...draft, goal: 10000, farmPercent: 30, ...changes };
+  return { ...draft, goal: 10000, superGoal: 12000, blackGoal: 15000, farmPercent: 30, ...changes };
 };
 
 describe("goalMath (mesmas regras do backend)", () => {
@@ -25,13 +25,32 @@ describe("goalMath (mesmas regras do backend)", () => {
     ]);
   });
 
-  it("partes do setor e faixas", () => {
+  it("partes do setor; Super e Black descem para as pessoas na proporção da Meta e para as semanas", () => {
     expect(segmentParts({ goal: 10000, farmPercent: 30 })).toEqual({ farm: 3000, sales: 7000 });
-    expect(tiersOf(1000, 120, 150)).toEqual({ goal: 1000, super: 1200, black: 1500 });
+
+    const people = [
+      { vendorId: "jr", type: "sales", goal: 1000 },
+      { vendorId: "sr", type: "sales", goal: 2000 },
+      { vendorId: "fa", type: "farm", goal: 1000 },
+    ];
+    const byPerson = peopleTiers(people, segmentTiers({ goal: 4000, superGoal: 6000 }, 12000), 25);
+    expect(byPerson.get("sr")).toEqual({ goal: 2000, super: 3000, black: 6000 });
+    expect(weekTiers(byPerson.get("jr"), [400, 600])).toEqual([
+      { goal: 400, super: 600, black: 1200 },
+      { goal: 600, super: 900, black: 1800 },
+    ]);
+  });
+
+  it("sem Meta black (fora do mês da campanha), bateu a Super o resto é excedente", () => {
+    expect(tierProgress(1300, { goal: 1000, super: 1200, black: 0 })).toMatchObject({
+      available: ["goal", "super"],
+      current: "super",
+      excess: 100,
+    });
   });
 
   it("faixa atual sobe de Meta para Super e Black; o que passa da Black é excedente", () => {
-    const tiers = tiersOf(1000, 120, 150);
+    const tiers = { goal: 1000, super: 1200, black: 1500 };
     expect(tierProgress(999, tiers).current).toBe("goal");
     expect(tierProgress(1000, tiers).current).toBe("super");
     expect(tierProgress(1200, tiers).current).toBe("black");
@@ -86,9 +105,22 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
     expect(computed.canSave).toBe(false);
   });
 
-  it("Super precisa passar de 100% e Black precisa ser maior que a Super", () => {
-    expect(computeDraft(newDraft({ superPercent: 100 }), 4).canSave).toBe(false);
-    expect(computeDraft(newDraft({ blackPercent: 110, superPercent: 120 }), 4).canSave).toBe(false);
+  it("Super maior que a Meta; no mês da campanha, Black maior que a Super", () => {
+    expect(computeDraft(newDraft({ superGoal: 10000 }), 4).canSave).toBe(false);
+    expect(computeDraft(newDraft({ blackGoal: 12000 }), 4, { active: true }).canSave).toBe(false);
+    expect(computeDraft(newDraft({ blackGoal: 12000 }), 4).canSave).toBe(true);
+    expect(computeDraft(newDraft(), 4, { active: true }).canSave).toBe(true);
+  });
+
+  it("mostra a Super e a Black de cada pessoa e só manda a Black no mês da campanha", () => {
+    const draft = newDraft();
+    const black = { active: true };
+    const computed = computeDraft(draft, 4, black);
+    const v3 = computed.people.find((person) => person.vendorId === "v3");
+
+    expect(v3.tiers).toEqual({ goal: 3000, super: 3600, black: 4500 });
+    expect(toPayload(draft, computed, black)).toMatchObject({ superGoal: 12000, blackGoal: 15000 });
+    expect(toPayload(draft, computeDraft(draft, 4)).blackGoal).toBeNull();
   });
 
   it("quem fica sem meta não entra na divisão nem no envio", () => {
@@ -107,8 +139,8 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
       month: "2026-11",
       goal: 10000,
       farmPercent: 30,
-      superPercent: 120,
-      blackPercent: 150,
+      superGoal: 12000,
+      blackGoal: null,
       levels: [{ key: "junior", name: "Júnior", weight: 1 }],
       people: [
         { vendorId: "v1", type: "sales", level: "junior", goal: 6000, weeks: [3000, 1000, 1000, 1000] },
@@ -132,8 +164,8 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
       month: "2026-10",
       goal: 8000,
       farmPercent: 50,
-      superPercent: 125,
-      blackPercent: 160,
+      superGoal: 9000,
+      blackGoal: null,
       levels: [
         { key: "a", name: "A", weight: 1 },
         { key: "b", name: "B", weight: 3 },
@@ -143,7 +175,7 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
 
     const draft = buildDraft({ config: null, previous, vendors }, 4);
 
-    expect(draft).toMatchObject({ source: "previous", sourceMonth: "2026-10", superPercent: 125, goal: 8000 });
+    expect(draft).toMatchObject({ source: "previous", sourceMonth: "2026-10", superGoal: 9000, goal: 8000 });
     expect(draft.people.find((person) => person.vendorId === "v2").level).toBe("b");
     expect(draft.people.every((person) => person.manualGoal === null)).toBe(true);
     expect(computeDraft(draft, 4).canSave).toBe(true);

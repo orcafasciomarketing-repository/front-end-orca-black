@@ -104,7 +104,9 @@ function ProgressContent({ month, segment }) {
     { label: "Vendedores com meta", value: people.length },
     { label: "Bateram a Meta", value: count((person) => person.month.reached.includes("goal")) },
     { label: "Bateram a Super meta", value: count((person) => person.month.reached.includes("super")) },
-    { label: "Bateram a Meta black", value: count((person) => person.month.reached.includes("black")) },
+    ...(progress.black?.active
+      ? [{ label: "Bateram a Meta black", value: count((person) => person.month.reached.includes("black")) }]
+      : []),
     { label: "No ritmo", value: count((person) => ["ahead", "done"].includes(person.month.pace.status)) },
     { label: "Atrasados", value: count((person) => person.month.pace.status === "behind") },
   ];
@@ -126,9 +128,9 @@ function ProgressContent({ month, segment }) {
 
       <ChartCard
         title="Quanto cada vendedor já fez da Meta do mês"
-        description="Barra = realizado ÷ Meta. As marcas mostram onde ficam a Meta (100%), a Super meta e a Meta black."
+        description={`Barra = realizado ÷ Meta. As marcas mostram onde ficam a Meta (100%), a Super meta${progress.black?.active ? " e a Meta black" : ""}.`}
       >
-        <TierBars people={people} segments={progress.segments} onSelect={setSelectedId} />
+        <TierBars people={people} onSelect={setSelectedId} />
       </ChartCard>
 
       <TeamsTable teams={segment ? null : progress.teams} />
@@ -136,7 +138,7 @@ function ProgressContent({ month, segment }) {
       <ChartCard
         title="Vendedores"
         description="Clique no nome para ver o detalhe do vendedor"
-        csvRows={vendorRows(people)}
+        csvRows={vendorRows(people, Boolean(progress.black?.active))}
       >
         <VendorsTable people={people} selectedId={selectedId} onSelect={setSelectedId} />
       </ChartCard>
@@ -205,11 +207,15 @@ function SegmentBlock({ item, progress, weekIndex }) {
   );
 }
 
-function TierBars({ people, segments, onSelect }) {
-  const percentsOf = (person) => segments.find((item) => item.segment === person.segment);
+const markersOf = (progress) =>
+  progress.available
+    .map((tier) => (progress.tiers.goal > 0 ? (progress.tiers[tier] / progress.tiers.goal) * 100 : 0))
+    .filter((value) => value > 0);
+
+function TierBars({ people, onSelect }) {
   const scale = Math.max(
     100,
-    ...segments.map((item) => item.blackPercent),
+    ...people.flatMap((person) => markersOf(person.month)),
     ...people.map((person) => shareOfGoal(person.month)),
   );
 
@@ -218,18 +224,19 @@ function TierBars({ people, segments, onSelect }) {
   return (
     <>
       <ul className={styles.legend}>
-        {Object.entries(TIER_LABELS).map(([tier, label]) => (
-          <li key={tier} className={styles.legendItem}>
-            <span className={styles.swatch} style={{ background: TIER_COLORS[tier] }} />
-            Buscando a {label}
-          </li>
-        ))}
+        {Object.entries(TIER_LABELS)
+          .filter(([tier]) => people.some((person) => person.month.available.includes(tier)))
+          .map(([tier, label]) => (
+            <li key={tier} className={styles.legendItem}>
+              <span className={styles.swatch} style={{ background: TIER_COLORS[tier] }} />
+              Buscando a {label}
+            </li>
+          ))}
       </ul>
       <ol className={styles.bars} aria-label="Percentual da Meta por vendedor">
         {people.map((person) => {
           const share = shareOfGoal(person.month);
-          const config = percentsOf(person);
-          const markers = [100, config?.superPercent, config?.blackPercent].filter(Boolean);
+          const markers = markersOf(person.month);
           return (
             <li key={person.vendorId} className={styles.barRow}>
               <span className={styles.person}>
@@ -314,7 +321,7 @@ function TeamsTable({ teams }) {
   );
 }
 
-function vendorRows(people) {
+function vendorRows(people, hasBlack) {
   return [
     ["Vendedor", "Setor", "Conta", "Nível", "Meta", "Super meta", "Meta black", "Realizado", "Faixa atual", "Situação"],
     ...people.map((person) => [
@@ -324,7 +331,7 @@ function vendorRows(people) {
       person.levelName,
       person.month.tiers.goal,
       person.month.tiers.super,
-      person.month.tiers.black,
+      hasBlack ? person.month.tiers.black : "",
       person.month.realized,
       TIER_LABELS[person.month.current],
       STATUS_LABELS[person.month.pace.status],
@@ -388,7 +395,9 @@ function VendorsTable({ people, selectedId, onSelect }) {
                   </span>
                 </td>
                 <td className={styles.number}>
-                  {month.reached.length === 3 ? `+${formatCurrency(month.excess)}` : formatCurrency(month.remaining)}
+                  {month.reached.length === month.available.length && month.available.length > 0
+                    ? `+${formatCurrency(month.excess)}`
+                    : formatCurrency(month.remaining)}
                 </td>
                 <td className={styles.number}>
                   {month.pace.status === "done" || month.pace.remainingDays === 0
@@ -409,6 +418,7 @@ function VendorsTable({ people, selectedId, onSelect }) {
 }
 
 function VendorDetail({ person, progress, weekIndex }) {
+  const hasBlack = Boolean(progress.black?.active);
   const week = weekIndex >= 0 ? person.weeks[weekIndex] : null;
   const series = [
     {
@@ -456,9 +466,11 @@ function VendorDetail({ person, progress, weekIndex }) {
                 <th scope="col" className={styles.number}>
                   Super meta
                 </th>
-                <th scope="col" className={styles.number}>
-                  Meta black
-                </th>
+                {hasBlack && (
+                  <th scope="col" className={styles.number}>
+                    Meta black
+                  </th>
+                )}
                 <th scope="col" className={styles.number}>
                   Realizado
                 </th>
@@ -472,7 +484,7 @@ function VendorDetail({ person, progress, weekIndex }) {
                   <th scope="row">{weekLabel(item)}</th>
                   <td className={styles.number}>{formatCurrency(item.tiers.goal)}</td>
                   <td className={styles.number}>{formatCurrency(item.tiers.super)}</td>
-                  <td className={styles.number}>{formatCurrency(item.tiers.black)}</td>
+                  {hasBlack && <td className={styles.number}>{formatCurrency(item.tiers.black)}</td>}
                   <td className={styles.number}>{formatCurrency(item.realized)}</td>
                   <td>
                     <span className={`${styles.tier} ${styles[TIER_CLASS[item.current]]}`}>

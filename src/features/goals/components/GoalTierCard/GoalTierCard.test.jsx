@@ -2,10 +2,10 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import GoalTierCard from "./GoalTierCard";
-import { paceOf, tierProgress, tiersOf } from "../../utils/goalMath";
+import { paceOf, tierProgress } from "../../utils/goalMath";
 
-const progressOf = (realized) => ({
-  ...tierProgress(realized, tiersOf(1000, 120, 150)),
+const progressOf = (realized, tiers = { goal: 1000, super: 1200, black: 1500 }) => ({
+  ...tierProgress(realized, tiers),
   pace: paceOf({ realized, goal: 1000, start: "2026-11-02", end: "2026-11-08", today: "2026-11-05" }),
 });
 
@@ -39,5 +39,12 @@ describe("GoalTierCard", () => {
       "100",
     );
     expect(textOf(screen.getByRole("region", { name: "Mês" }))).toMatch(/Meta black batida, com R\$ 300,00 além dela/);
+  });
+
+  it("fora do mês da campanha a última faixa é a Super, com o excedente nela", () => {
+    render(<GoalTierCard title="Mês" progress={progressOf(1300, { goal: 1000, super: 1200, black: 0 })} />);
+
+    expect(screen.getByRole("progressbar", { name: "Progresso da Super meta" })).toBeInTheDocument();
+    expect(textOf(screen.getByRole("region", { name: "Mês" }))).toMatch(/Super meta batida, com R\$ 100,00 além dela/);
   });
 });

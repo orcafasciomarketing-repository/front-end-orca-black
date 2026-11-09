@@ -1,13 +1,13 @@
 import styles from "./GoalTierCard.module.css";
 
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
-import { STATUS_LABELS, TIER_LABELS, TIERS } from "../../utils/goalMath";
+import { STATUS_LABELS, TIER_LABELS } from "../../utils/goalMath";
 
 const TIER_CLASS = { goal: "tierGoal", super: "tierSuper", black: "tierBlack" };
 
 export default function GoalTierCard({ title, period, progress, showPace = true }) {
-  const { current, realized, target, percent, remaining, excess, reached, pace } = progress;
-  const allReached = reached.length === TIERS.length;
+  const { current, realized, target, percent, remaining, excess, reached, available, pace } = progress;
+  const allReached = available.length > 0 && reached.length === available.length;
   const label = TIER_LABELS[current];
 
   return (
@@ -40,8 +40,8 @@ export default function GoalTierCard({ title, period, progress, showPace = true 
       <p className={styles.note}>
         {allReached
           ? excess > 0
-            ? `Meta black batida, com ${formatCurrency(excess)} além dela`
-            : "Meta black batida!"
+            ? `${label} batida, com ${formatCurrency(excess)} além dela`
+            : `${label} batida!`
           : `Faltam ${formatCurrency(remaining)} para a ${label}`}
       </p>
       {reached.length > 0 && (

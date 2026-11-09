@@ -9,6 +9,8 @@ import GoalSetupForm from "../components/GoalSetupForm/GoalSetupForm";
 import { useGoalMonth, useGoalMutations } from "../hooks/useGoals";
 import { currentMonthKey } from "../utils/goalMath";
 
+const NO_BLACK = { active: false };
+
 const SEGMENTS = [
   { value: "b2b", label: "B2B" },
   { value: "b2g", label: "B2G" },
@@ -88,6 +90,7 @@ function SetupContent({ month, segment, save, remove }) {
       segment={segment}
       weeks={goalMonth.weeks}
       segmentData={segmentData}
+      black={goalMonth.black ?? NO_BLACK}
       save={save}
       remove={remove}
     />

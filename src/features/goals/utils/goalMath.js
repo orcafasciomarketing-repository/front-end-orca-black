@@ -20,7 +20,7 @@ export const DEFAULT_LEVELS = [
   { key: "senior", name: "Sênior", weight: 2 },
 ];
 
-export const DEFAULT_PERCENTS = { farmPercent: 50, superPercent: 120, blackPercent: 150 };
+export const DEFAULT_FARM_PERCENT = 50;
 
 export const dayKeyOf = (date) => new Date(new Date(date).getTime() - SAO_PAULO_OFFSET_MS).toISOString().slice(0, 10);
 
@@ -104,19 +104,59 @@ export function splitEqually(totalCents, parts) {
   return Array.from({ length: parts }, (_, index) => base + (index < rest ? 1 : 0));
 }
 
-export function segmentParts({ goal, farmPercent }) {
-  const totalCents = toCents(goal);
+export function splitByFarm(value, farmPercent) {
+  const totalCents = toCents(value);
   const farmCents = Math.round((totalCents * Number(farmPercent || 0)) / 100);
   return { farm: fromCents(farmCents), sales: fromCents(totalCents - farmCents) };
 }
 
-export function tiersOf(goal, superPercent, blackPercent) {
-  const cents = toCents(goal);
-  return {
-    goal: fromCents(cents),
-    super: fromCents(Math.round((cents * superPercent) / 100)),
-    black: fromCents(Math.round((cents * blackPercent) / 100)),
-  };
+export function segmentParts({ goal, farmPercent }) {
+  return splitByFarm(goal, farmPercent);
+}
+
+export function segmentTiers({ goal, superGoal }, blackGoal = 0) {
+  return { goal: fromCents(toCents(goal)), super: fromCents(toCents(superGoal)), black: fromCents(toCents(blackGoal)) };
+}
+
+function shareLike(totalCents, keys, weightsCents) {
+  const hasWeight = weightsCents.some((value) => value > 0);
+  return distributeByWeight(
+    totalCents,
+    keys.map((key, index) => ({ key, weight: hasWeight ? weightsCents[index] : 1 })),
+  );
+}
+
+export function peopleTiers(people, tiers, farmPercent) {
+  const result = new Map(
+    people.map((person) => [person.vendorId, { goal: fromCents(toCents(person.goal)), super: 0, black: 0 }]),
+  );
+  for (const tier of ["super", "black"]) {
+    const parts = splitByFarm(tiers[tier], farmPercent);
+    for (const type of ["farm", "sales"]) {
+      const members = people.filter((person) => person.type === type);
+      const shares = shareLike(
+        toCents(parts[type]),
+        members.map((person) => person.vendorId),
+        members.map((person) => toCents(person.goal)),
+      );
+      shares.forEach((cents, key) => {
+        result.get(key)[tier] = fromCents(cents);
+      });
+    }
+  }
+  return result;
+}
+
+export function weekTiers(personTiers, weekGoals) {
+  const keys = weekGoals.map((_, index) => index);
+  const weights = weekGoals.map(toCents);
+  const superShares = shareLike(toCents(personTiers.super), keys, weights);
+  const blackShares = shareLike(toCents(personTiers.black), keys, weights);
+  return weekGoals.map((value, index) => ({
+    goal: fromCents(toCents(value)),
+    super: fromCents(superShares.get(index)),
+    black: fromCents(blackShares.get(index)),
+  }));
 }
 
 export function sumTiers(list) {
@@ -133,8 +173,10 @@ export function sumTiers(list) {
 const round1 = (value) => Math.round(value * 10) / 10;
 
 export function tierProgress(realized, tiers) {
-  const reached = TIERS.filter((tier) => tiers[tier] > 0 && realized >= tiers[tier]);
-  const current = TIERS.find((tier) => !reached.includes(tier)) ?? "black";
+  const available = TIERS.filter((tier) => tiers[tier] > 0);
+  const last = available[available.length - 1] ?? "goal";
+  const reached = available.filter((tier) => realized >= tiers[tier]);
+  const current = available.find((tier) => !reached.includes(tier)) ?? last;
   const target = tiers[current];
 
   return {
@@ -145,7 +187,8 @@ export function tierProgress(realized, tiers) {
     target,
     percent: target > 0 ? round1((realized / target) * 100) : 0,
     remaining: fromCents(Math.max(toCents(target) - toCents(realized), 0)),
-    excess: fromCents(Math.max(toCents(realized) - toCents(tiers.black), 0)),
+    available,
+    excess: tiers[last] > 0 ? fromCents(Math.max(toCents(realized) - toCents(tiers[last]), 0)) : 0,
   };
 }
 

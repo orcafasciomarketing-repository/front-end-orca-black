@@ -340,16 +340,16 @@ Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src
 Pasta [src/features/goals/](src/features/goals/). Duas telas separadas, fora do Dashboard e das abas que já existiam, porque o gestor vai testar antes de liberar para todo mundo. **Por enquanto só master e admin** veem (`canSeeGoals`); o backend também responde 403 para os outros perfis. A meta das TVs não muda. Regras completas no `projeto.md` do backend (RN-69 a RN-73).
 
 **Regras, em resumo:**
-- Tudo em R$. Todo mês, por setor (B2B e B2G): meta do setor, % de renovação (o resto é venda nova), % da Super meta e % da Meta black sobre a meta.
-- Níveis de senioridade com peso (ex.: Júnior 1, Pleno 1,5, Sênior 2). A parte de renovação é dividida pelos pesos entre os Farmers do setor; a de vendas, entre os outros cargos. Passagem não tem meta.
+- Tudo em R$. Todo mês, por setor (B2B e B2G): Meta e Super meta do setor e o % de renovação (o resto é venda nova). No mês da campanha também a **Meta black** do setor, que já vem com o valor cadastrado no backend (a mesma das TVs, ex.: B2B 2 mi e B2G 1 mi).
+- Níveis de senioridade com peso (ex.: Júnior 1, Pleno 1,5, Sênior 2). A Meta de renovação é dividida pelos pesos entre os Farmers do setor; a de vendas, entre os outros cargos. A Super e a Black descem do mesmo jeito: setor → renovação/vendas pelo mesmo % → pessoas na proporção da Meta de cada uma → semanas na proporção da Meta semanal. Somando todo mundo, dá a meta do setor. Passagem não tem meta.
 - A semana vai de segunda a domingo e é do mês em que começa. A meta mensal de cada vendedor é dividida igualmente nas semanas, e a soma das semanas tem que dar a mensal.
-- Cada vendedor conta só as vendas ativas do tipo do cargo. Três faixas: Meta → Super meta → Meta black. A faixa atual é a primeira ainda não batida; depois da Black, o que passar é excedente.
+- Cada vendedor conta só as vendas ativas do tipo do cargo. Faixas: Meta → Super meta → Meta black (só no mês da campanha). A faixa atual é a primeira ainda não batida; depois da última, o que passar é excedente.
 
 **Cadastro de metas** (`/admin/metas`, [GoalsSetupPage.jsx](src/features/goals/pages/GoalsSetupPage.jsx) e [GoalSetupForm.jsx](src/features/goals/components/GoalSetupForm/GoalSetupForm.jsx)):
-- Escolhe o mês e o setor no topo. Três blocos: **Meta do setor** (meta, % renovação, % Super, % Black, com os valores calculados embaixo), **Níveis de senioridade** (nome e peso; adicionar e remover) e **Metas por vendedor** (tabela: tem meta, nível, meta do mês e uma coluna por semana).
+- Escolhe o mês e o setor no topo. Três blocos: **Meta do setor** (Meta, Super meta e, no mês da campanha, Meta black em R$, mais o % de renovação; embaixo, a tabela com cada faixa no setor, em renovação e em vendas), **Níveis de senioridade** (nome e peso; adicionar e remover) e **Metas por vendedor** (tabela: tem meta, nível, meta do mês, Super e Black calculadas e uma coluna por semana).
 - As metas das pessoas são calculadas sozinhas pelos pesos ([utils/goalDraft.js](src/features/goals/utils/goalDraft.js)). Digitar a meta de alguém fixa aquele valor ("Voltar ao peso" desfaz) e o resto da parte vai para os outros pelos pesos. Digitar uma semana fixa as semanas daquela pessoa. **Redistribuir pelos pesos** desfaz todos os ajustes.
 - "Renovação/Vendas: distribuído X de Y" fica verde quando fecha e vermelho quando não. Semana que não fecha fica com o campo vermelho. **Salvar metas** só libera quando tudo fecha (o backend confere de novo).
-- Mês sem metas: vem preenchido com o último mês salvo (percentuais, níveis e o nível de cada pessoa) e um aviso; sem nenhum mês anterior, começa com 50% / 120% / 150% e Júnior, Pleno e Sênior.
+- Mês sem metas: vem preenchido com o último mês salvo (metas do setor, percentual, níveis e o nível de cada pessoa) e um aviso; sem nenhum mês anterior, começa em branco com 50% de renovação e Júnior, Pleno e Sênior.
 - **Excluir metas do mês** (com confirmação) apaga só aquele mês e setor.
 - Os valores são comparados em centavos ([utils/goalMath.js](src/features/goals/utils/goalMath.js), cópia das regras de `goalCalculator.js` do backend), então a soma sempre fecha. **Se mudar a regra no backend, mude a cópia também.**
 

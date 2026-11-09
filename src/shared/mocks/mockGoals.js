@@ -6,19 +6,28 @@ import {
   monthDays,
   monthWeeks,
   paceOf,
+  peopleTiers,
   segmentParts,
+  segmentTiers,
   sumTiers,
   tierProgress,
-  tiersOf,
   toCents,
+  weekTiers,
 } from "../../features/goals/utils/goalMath";
 
 const SEGMENTS = ["b2b", "b2g"];
 
 const DEMO_SETTINGS = {
-  b2b: { goal: 120000, farmPercent: 40, superPercent: 120, blackPercent: 150 },
-  b2g: { goal: 150000, farmPercent: 30, superPercent: 115, blackPercent: 140 },
+  b2b: { goal: 120000, superGoal: 150000, blackGoal: 200000, farmPercent: 40 },
+  b2g: { goal: 150000, superGoal: 180000, blackGoal: 240000, farmPercent: 30 },
 };
+
+const blackInfo = (month, now) => ({
+  month: currentMonthKey(now),
+  active: month === currentMonthKey(now),
+  total: DEMO_SETTINGS.b2b.blackGoal + DEMO_SETTINGS.b2g.blackGoal,
+  suggestedGoals: { b2b: DEMO_SETTINGS.b2b.blackGoal, b2g: DEMO_SETTINGS.b2g.blackGoal },
+});
 
 const segmentOfJob = (job) =>
   String(job ?? "")
@@ -53,7 +62,8 @@ function demoConfig(db, month, segment) {
     ...DEMO_SETTINGS[segment],
     people: draft.people.map((person, index) => ({ ...person, level: levelKeys[index % levelKeys.length] })),
   };
-  const payload = toPayload(withSettings, computeDraft(withSettings, weeks.length));
+  const black = { active: true };
+  const payload = toPayload(withSettings, computeDraft(withSettings, weeks.length, black), black);
 
   return {
     month,
@@ -81,7 +91,7 @@ export function getGoalMonth(db, month, now = new Date()) {
     }),
   );
 
-  return { month, weeks: monthWeeks(month), segments };
+  return { month, weeks: monthWeeks(month), black: blackInfo(month, now), segments };
 }
 
 const cumulative = (values) => {
@@ -97,7 +107,8 @@ export function getGoalProgress(db, month, now = new Date()) {
   const weeks = monthWeeks(month);
   const days = monthDays(weeks);
   const configs = demoConfigs(db, month, now);
-  const empty = { month, today, weeks, days, segments: [], people: [], teams: [] };
+  const black = blackInfo(month, now);
+  const empty = { month, today, weeks, days, black, segments: [], people: [], teams: [] };
 
   if (!configs.length) {
     return { ...empty, summary: { people: 0, reachedGoal: 0, reachedSuper: 0, reachedBlack: 0, onPace: 0, behind: 0 } };
@@ -127,12 +138,18 @@ export function getGoalProgress(db, month, now = new Date()) {
   const segments = [];
   for (const config of configs) {
     const levelNames = new Map(config.levels.map((level) => [level.key, level.name]));
+    const segmentTierValues = segmentTiers(config, black.active ? (config.blackGoal ?? 0) : 0);
+    const tiersByPerson = peopleTiers(config.people, segmentTierValues, config.farmPercent);
     const segmentPeople = config.people.map((person) => {
       const vendor = db.vendors.find((item) => item._id === person.vendorId);
       const team = db.teams.find((item) => item._id === vendor?.teamId);
       const daily = dailyByKey.get(`${person.vendorId}-${person.type}`) ?? new Array(days.length).fill(0);
       const realized = fromCents(daily.reduce((sum, value) => sum + value, 0));
-      const tiers = tiersOf(person.goal, config.superPercent, config.blackPercent);
+      const tiers = tiersByPerson.get(person.vendorId);
+      const personWeekTiers = weekTiers(
+        tiers,
+        weeks.map((_, index) => person.weeks[index] ?? 0),
+      );
 
       return {
         vendorId: person.vendorId,
@@ -150,12 +167,7 @@ export function getGoalProgress(db, month, now = new Date()) {
           index,
           start: week.start,
           end: week.end,
-          ...progressOf(
-            fromCents(sumRange(daily, week.start, week.end)),
-            tiersOf(person.weeks[index] ?? 0, config.superPercent, config.blackPercent),
-            week.start,
-            week.end,
-          ),
+          ...progressOf(fromCents(sumRange(daily, week.start, week.end)), personWeekTiers[index], week.start, week.end),
         })),
         daily,
       };
@@ -169,18 +181,13 @@ export function getGoalProgress(db, month, now = new Date()) {
       segment: config.segment,
       goal: config.goal,
       farmPercent: config.farmPercent,
-      superPercent: config.superPercent,
-      blackPercent: config.blackPercent,
+      superGoal: config.superGoal,
+      blackGoal: black.active ? (config.blackGoal ?? null) : null,
       parts: {
         farm: { goal: parts.farm, realized: realizedOf(segmentPeople.filter((person) => person.type === "farm")) },
         sales: { goal: parts.sales, realized: realizedOf(segmentPeople.filter((person) => person.type === "sales")) },
       },
-      month: progressOf(
-        realizedOf(segmentPeople),
-        tiersOf(config.goal, config.superPercent, config.blackPercent),
-        first,
-        last,
-      ),
+      month: progressOf(realizedOf(segmentPeople), segmentTierValues, first, last),
       weeks: weeks.map((week, index) => ({
         index,
         start: week.start,
