@@ -15,3 +15,8 @@ export const getMyTeam = async (period = "all") => {
   const response = await http.get("/me/team", { params });
   return response.data.data;
 };
+
+export const getMyPrizes = async () => {
+  const response = await http.get("/me/prizes");
+  return response.data.data;
+};

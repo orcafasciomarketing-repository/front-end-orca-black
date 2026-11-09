@@ -97,6 +97,15 @@ describe("mockApi", () => {
     expect(get("/me/team", { period: "lastWeek" }).data.data.period).toBe("lastWeek");
   });
 
+  it("/me/prizes devolve os pontos e os prêmios retirados da Brenda, iguais aos de /prizes", () => {
+    const mine = get("/me/prizes").data.data;
+    const brenda = get("/prizes").data.data.people.find((person) => person.personId === "vendor-brenda");
+
+    expect(mine.accumulated).toBe(brenda.accumulated);
+    expect(mine.withdrawn).toBe(1);
+    expect(mine.balance).toBe(brenda.balance);
+  });
+
   it("rota que não existe devolve 404", () => {
     expect(get("/nao-existe").status).toBe(404);
   });

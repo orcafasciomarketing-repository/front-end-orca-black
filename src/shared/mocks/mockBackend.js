@@ -417,6 +417,21 @@ export function getPrizes(db, segment = null, now = new Date()) {
   };
 }
 
+export function getMyPrizes(db, now = new Date(), person = MOCK_PERSON) {
+  const summary = getPrizes(db, null, now);
+  const mine = summary.people.find((item) => item.kind === person.kind && item.personId === person.id);
+
+  return {
+    step: summary.step,
+    accumulated: mine?.accumulated ?? 0,
+    currentWeek: mine?.currentWeek ?? 0,
+    earned: mine?.earned ?? 0,
+    withdrawn: mine?.withdrawn ?? 0,
+    balance: mine?.balance ?? 0,
+    pointsToNext: mine?.pointsToNext ?? summary.step,
+  };
+}
+
 export function getPrizeWithdrawals(db, segment = null, now = new Date()) {
   const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
   const people = new Map([

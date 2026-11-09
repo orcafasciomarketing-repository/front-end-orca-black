@@ -738,12 +738,13 @@ Tela `/minha-area` ([PersonPage](src/features/person/pages/PersonPage.jsx)), par
 
 - **Cabeçalho:** "Olá, nome" e "cargo · time" (`GET /me`).
 - **Resumo:** total vendido (só concluídas), vendas concluídas, ticket médio e canceladas, contados em cima das vendas da pessoa ([utils/mySales.js](src/features/person/utils/mySales.js)).
+- **Meus pontos e prêmios:** dois cards logo abaixo do resumo: **Meus pontos** (todos os pontos acumulados até agora, inclusive a semana em andamento, de todos os setores) e **Prêmios retirados** (soma das retiradas registradas pelo master). Vêm de `GET /me/prizes`, com o mesmo cálculo da tela de Prêmios, então batem com a coluna "Acumulado" e "Retirados" de lá.
 - **Ranking dos times:** os três times com posição, camiseta e pontos, com o time da pessoa destacado ("(seu time)") e a frase "Seu time está em 2º lugar, com 14 pontos". Abas Campanha / Esta semana / Semana passada (`GET /me/team?period=`).
 - **Pontos do meu time:** os colegas do time em classificação, com a barra de venda/renovação/passagem e o total (o mesmo `PeopleList` do widget "Pontos por pessoa"). A própria pessoa fica destacada, com "Você" embaixo do nome. Segue as mesmas abas do ranking. **Só pontos**: o backend não manda nenhum valor de venda dos colegas.
 - **Minhas vendas** (vendedor) ou **Vendas com a minha passagem** (passagem): a mesma lista do Dashboard (`SaleList`, separada do `SaleWidget` sem mudar nada nele), da mais nova para a mais antiga (`GET /me/sales`).
 - As consultas ([hooks/useMe.js](src/features/person/hooks/useMe.js), [api/meApi.js](src/features/person/api/meApi.js)) têm chave começando em `admin-`, então atualizam sozinhas com as vendas ao vivo.
 - **A segurança é do backend:** a pessoa vem do token, nunca da URL, e todas as rotas do admin respondem 403 para esses perfis.
-- Os mocks respondem `/me`, `/me/sales` e `/me/team` como se a Brenda Lima estivesse logada.
+- Os mocks respondem `/me`, `/me/sales`, `/me/team` e `/me/prizes` como se a Brenda Lima estivesse logada.
 
 **Tela Usuários:** o cadastro ganhou os perfis **Vendedor** e **Passagem**. Com eles aparece o campo **Pessoa** (lista de `/vendor/list` ou `/sdr/list`), obrigatório; o front manda `vendorId` ou `sdrId`. Na lista, a conta de colaborador mostra "Vendedor · Brenda Lima" e não troca de perfil pela tela (só senha e excluir), porque trocar o perfil exigiria escolher outra pessoa.
 

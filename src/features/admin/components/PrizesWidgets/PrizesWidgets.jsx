@@ -163,11 +163,13 @@ function PrizeRow({ person, step, defaultDay, canRegister, isRegistering, onTogg
   return (
     <>
       <tr>
-        <th scope="row" className={styles.person}>
-          <Avatar name={person.name} imageUrl={person.imageUrl} size="small" />
-          <span>
-            <span className={styles.name}>{person.name}</span>
-            {person.job && <span className={styles.job}>{person.job}</span>}
+        <th scope="row">
+          <span className={styles.person}>
+            <Avatar name={person.name} imageUrl={person.imageUrl} size="small" />
+            <span>
+              <span className={styles.name}>{person.name}</span>
+              {person.job && <span className={styles.job}>{person.job}</span>}
+            </span>
           </span>
         </th>
         <td>{person.teamName}</td>

@@ -62,6 +62,13 @@ describe("Minha área com os dados falsos (Brenda Lima, quarta 21/10/2026)", () 
     expect(textOf(region("Pontos do meu time"))).not.toContain("R$");
   });
 
+  it("mostra os pontos dela e quantos prêmios já retirou", async () => {
+    renderPage();
+
+    const prizes = await screen.findByLabelText("Meus pontos e prêmios");
+    expect(textOf(prizes)).toMatch(/^Meus pontos\d+Prêmios retirados1$/);
+  });
+
   it("as abas trocam o período do ranking e dos pontos", async () => {
     renderPage();
     await waitFor(() => expect(within(region("Ranking dos times")).getAllByRole("listitem")).toHaveLength(3));

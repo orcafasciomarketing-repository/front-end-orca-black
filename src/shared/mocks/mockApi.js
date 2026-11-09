@@ -6,6 +6,7 @@ import {
   getGoalProgress,
   getScoreboard,
   getMe,
+  getMyPrizes,
   getMySales,
   getMyTeam,
   getPeoplePoints,
@@ -71,6 +72,7 @@ const ROUTES = [
   },
   { pattern: /^\/me$/, handle: ({ db }) => getMe(db) },
   { pattern: /^\/me\/sales$/, handle: ({ db }) => getMySales(db) },
+  { pattern: /^\/me\/prizes$/, handle: ({ db, now }) => getMyPrizes(db, now) },
   {
     pattern: /^\/me\/team$/,
     handle: ({ db, now, params }) =>

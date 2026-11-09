@@ -10,7 +10,7 @@ import { PeopleList } from "../../admin/components/PeoplePoints/PeoplePoints";
 import RankPeriodTabs from "../../admin/components/RankPeriodTabs/RankPeriodTabs";
 import { SaleList } from "../../admin/components/SaleWidget/SaleWidget";
 import WidgetFallback from "../../admin/components/WidgetFallback/WidgetFallback";
-import { useMe, useMySales, useMyTeam } from "../hooks/useMe";
+import { useMe, useMyPrizes, useMySales, useMyTeam } from "../hooks/useMe";
 import { summarizeMySales } from "../utils/mySales";
 
 const formatPoints = (value) => `${value} ${value === 1 ? "ponto" : "pontos"}`;
@@ -41,6 +41,11 @@ function PersonArea() {
       <ErrorBoundary location="Minha área › resumo">
         <Suspense fallback={<WidgetFallback title="Resumo" />}>
           <MySummary title={salesTitle} />
+        </Suspense>
+      </ErrorBoundary>
+      <ErrorBoundary location="Minha área › prêmios">
+        <Suspense fallback={<WidgetFallback title="Meus pontos e prêmios" />}>
+          <MyPrizes />
         </Suspense>
       </ErrorBoundary>
       <div className={styles.grid}>
@@ -87,6 +92,25 @@ function MySummary({ title }) {
 
   return (
     <dl className={styles.tiles} aria-label={`Resumo: ${title}`}>
+      {tiles.map((tile) => (
+        <div key={tile.label} className={`widget ${styles.tile}`}>
+          <dt className={styles.tileLabel}>{tile.label}</dt>
+          <dd className={styles.tileValue}>{tile.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function MyPrizes() {
+  const { prizes } = useMyPrizes();
+  const tiles = [
+    { label: "Meus pontos", value: String(prizes.accumulated) },
+    { label: "Prêmios retirados", value: String(prizes.withdrawn) },
+  ];
+
+  return (
+    <dl className={styles.prizeTiles} aria-label="Meus pontos e prêmios">
       {tiles.map((tile) => (
         <div key={tile.label} className={`widget ${styles.tile}`}>
           <dt className={styles.tileLabel}>{tile.label}</dt>
