@@ -1,0 +1,277 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+}
+
+.field {
+  composes: field from "../../admin/components/SalesFilters/SalesFilters.module.css";
+}
+
+.label {
+  composes: label from "../../admin/components/SalesFilters/SalesFilters.module.css";
+}
+
+.select {
+  composes: select from "../../admin/components/SalesFilters/SalesFilters.module.css";
+  min-width: 140px;
+}
+
+.input {
+  composes: input from "../../admin/components/UsersWidget/UsersWidget.module.css";
+}
+
+.empty {
+  padding: 24px 20px;
+  color: var(--color-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.tile {
+  gap: 4px;
+  padding: 16px 20px;
+}
+
+.tileLabel {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.tileValue {
+  color: var(--color-text);
+  font-size: 26px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.sectionTitle {
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+.parts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.part {
+  composes: fact from "../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.segmentBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.scroll {
+  composes: scroll from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.table {
+  composes: table from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.table .number {
+  text-align: right;
+}
+
+.person {
+  composes: person from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.name {
+  composes: name from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.job {
+  composes: job from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.selected {
+  background: var(--color-primary-field);
+}
+
+.rowButton {
+  composes: nameButton from "../../admin/components/charts/BarChart.module.css";
+  color: var(--color-text);
+}
+
+.tier {
+  padding: 4px 10px;
+  border-radius: 999px;
+  color: var(--color-on-primary);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tierGoal {
+  background: var(--color-primary);
+}
+
+.tierSuper {
+  background: var(--chart-aqua, #1baf7a);
+}
+
+.tierBlack {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.status {
+  font-weight: 600;
+}
+
+.table .done,
+.table .ahead {
+  color: var(--color-success);
+}
+
+.table .behind {
+  color: var(--color-error);
+}
+
+.table .upcoming {
+  color: var(--color-muted);
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 0 4px;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: minmax(120px, 28%) minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 12px;
+}
+
+.barTrack {
+  position: relative;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--color-background);
+}
+
+.barFill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+}
+
+.marker {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--color-muted);
+}
+
+.barValue {
+  color: var(--color-text);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 12px;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.detailBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0 20px 20px;
+}
+
+.detailHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 1400px) {
+  .tiles {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 1100px) {
+  .cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 16px;
+  }
+
+  .tiles {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .barRow {
+    grid-template-columns: minmax(0, 1fr) 56px;
+  }
+
+  .barRow > :first-child {
+    grid-column: 1 / -1;
+  }
+}

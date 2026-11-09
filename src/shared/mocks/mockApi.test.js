@@ -106,6 +106,19 @@ describe("mockApi", () => {
     expect(mine.balance).toBe(brenda.balance);
   });
 
+  it("/goals/:mes e /goals/:mes/progress respondem como o backend; só o mês atual tem metas", () => {
+    const month = get("/goals/2026-10").data.data;
+    const progress = get("/goals/2026-10/progress").data.data;
+
+    expect(month.weeks).toHaveLength(4);
+    expect(month.segments.b2b.config.people.every((person) => person.weeks.length === 4)).toBe(true);
+    expect(month.segments.b2g.vendors.every((vendor) => vendor.job.startsWith("B2G"))).toBe(true);
+    expect(progress.segments.map((item) => item.segment)).toEqual(["b2b", "b2g"]);
+    expect(progress.summary.people).toBe(progress.people.length);
+    expect(get("/goals/2026-09").data.data.segments.b2b.config).toBeNull();
+    expect(get("/goals/2026-09/progress").data.data.people).toEqual([]);
+  });
+
   it("rota que não existe devolve 404", () => {
     expect(get("/nao-existe").status).toBe(404);
   });

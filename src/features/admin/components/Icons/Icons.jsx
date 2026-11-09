@@ -92,6 +92,16 @@ export function GiftIcon() {
   );
 }
 
+export function TargetIcon() {
+  return (
+    <svg {...iconProps}>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" />
+    </svg>
+  );
+}
+
 export function MoonIcon() {
   return (
     <svg {...iconProps}>

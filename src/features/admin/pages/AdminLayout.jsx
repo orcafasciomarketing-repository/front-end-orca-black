@@ -17,6 +17,7 @@ import {
   LogoutIcon,
   MoonIcon,
   SunIcon,
+  TargetIcon,
   UploadIcon,
   UsersIcon,
 } from "../components/Icons/Icons";
@@ -29,6 +30,8 @@ const NAV_ITEMS = [
   { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon, allow: "canSeeAdmin" },
   { to: "/admin/previsao", label: "Previsão", end: false, Icon: ForecastIcon, allow: "canSeeAdmin" },
   { to: "/admin/premios", label: "Prêmios", end: false, Icon: GiftIcon, allow: "canSeeAdmin" },
+  { to: "/admin/metas", label: "Cadastro de metas", end: true, Icon: TargetIcon, allow: "canSeeGoals" },
+  { to: "/admin/metas/vendedores", label: "Metas por vendedor", end: false, Icon: TargetIcon, allow: "canSeeGoals" },
   { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
   { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
   { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },

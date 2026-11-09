@@ -42,5 +42,6 @@ export function getPermissions(role) {
     segment: SEGMENT_BY_ROLE[knownRole] ?? "",
     isPerson,
     canSeeAdmin: !isPerson,
+    canSeeGoals: isMaster || knownRole === "admin",
   };
 }

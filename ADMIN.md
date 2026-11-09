@@ -65,17 +65,17 @@ Seis perfis, que vêm do backend em `user.role` (login e refresh):
 
 | Perfil | Menu | Filtro de setor | Vendas que chegam do backend | Tela Usuários |
 |---|---|---|---|---|
-| `master` | Dashboard, Gráficos, Previsão, Prêmios, Importação, Erros, Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
-| `admin` | Dashboard, Gráficos, Previsão, Prêmios, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
+| `master` | Dashboard, Gráficos, Previsão, Prêmios, Cadastro de metas, Metas por vendedor, Importação, Erros, Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
+| `admin` | Dashboard, Gráficos, Previsão, Prêmios, Cadastro de metas, Metas por vendedor, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
 | `b2b` | Dashboard, Gráficos, Previsão e Prêmios | travado em B2B | só B2B | — |
 | `b2g` | Dashboard, Gráficos, Previsão e Prêmios | travado em B2G | só B2G | — |
 | `vendor` | só **Minha área** | — | só as dele (`/me/sales`) | — |
 | `sdr` | só **Minha área** | — | só as da passagem dele (`/me/sales`) | — |
 
 - O `master` é definido no backend pela variável `MASTER_EMAIL`. Sem ela, o backend manda todo admin como `master` (como era antes).
-- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isMaster, canSeeUsers, segment, isPerson, canSeeAdmin }`. `isPerson` é `true` só para `vendor` e `sdr`; `canSeeAdmin` é o contrário. Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
+- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isMaster, canSeeUsers, segment, isPerson, canSeeAdmin, canSeeGoals }`. `isPerson` é `true` só para `vendor` e `sdr`; `canSeeAdmin` é o contrário. `canSeeGoals` (telas de metas) é `true` só para `master` e `admin`, durante o teste com o gestor. Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
 - `usePermissions()` ([auth/hooks/usePermissions.js](src/features/auth/hooks/usePermissions.js)) lê o usuário do `AuthContext` e soma o `userId`. Fora do provider (teste de componente solto) vale como admin.
-- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários. Sem a permissão, abrir pelo endereço volta para `/admin` (ou para o `redirectTo` passado). O `/admin` inteiro fica dentro de `RestrictedRoute allow="canSeeAdmin" redirectTo="/minha-area"`, e `/minha-area` dentro de `allow="isPerson"`: colaborador que abre o admin vai para a própria área, e os outros perfis que abrem `/minha-area` voltam para o Dashboard.
+- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários, `allow="canSeeGoals"` em Cadastro de metas e Metas por vendedor. Sem a permissão, abrir pelo endereço volta para `/admin` (ou para o `redirectTo` passado). O `/admin` inteiro fica dentro de `RestrictedRoute allow="canSeeAdmin" redirectTo="/minha-area"`, e `/minha-area` dentro de `allow="isPerson"`: colaborador que abre o admin vai para a própria área, e os outros perfis que abrem `/minha-area` voltam para o Dashboard.
 - **A segurança de verdade é do backend**: ele filtra as vendas pelo setor e responde 403 nas rotas do admin. O front só esconde o que a pessoa não pode usar.
 - As TVs (`/`) não usam login e continuam públicas.
 
@@ -334,6 +334,33 @@ Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src
 - b2b/b2g veem só as pessoas com cargo do próprio setor; CS e Suporte (sem setor no cargo) só aparecem para master e admin.
 - API em [api/prizesApi.js](src/features/admin/api/prizesApi.js) e hooks em [hooks/usePrizes.js](src/features/admin/hooks/usePrizes.js) (chave `["admin-prizes", ...]`; registrar ou excluir recarrega o saldo e o histórico).
 - Com `VITE_USE_MOCKS=true`, `/prizes` usa uma cópia das regras em [mocks/mockBackend.js](src/shared/mocks/mockBackend.js) (`getPrizes`, com uma retirada de exemplo) e gravar mostra "O registro de prêmios não funciona com os dados de demonstração". **Se mudar a regra no backend, mude a cópia também.**
+
+### Metas mensais: `GoalsSetupPage()` (Cadastro de metas) e `GoalsProgressPage()` (Metas por vendedor)
+
+Pasta [src/features/goals/](src/features/goals/). Duas telas separadas, fora do Dashboard e das abas que já existiam, porque o gestor vai testar antes de liberar para todo mundo. **Por enquanto só master e admin** veem (`canSeeGoals`); o backend também responde 403 para os outros perfis. A meta das TVs não muda. Regras completas no `projeto.md` do backend (RN-69 a RN-73).
+
+**Regras, em resumo:**
+- Tudo em R$. Todo mês, por setor (B2B e B2G): meta do setor, % de renovação (o resto é venda nova), % da Super meta e % da Meta black sobre a meta.
+- Níveis de senioridade com peso (ex.: Júnior 1, Pleno 1,5, Sênior 2). A parte de renovação é dividida pelos pesos entre os Farmers do setor; a de vendas, entre os outros cargos. Passagem não tem meta.
+- A semana vai de segunda a domingo e é do mês em que começa. A meta mensal de cada vendedor é dividida igualmente nas semanas, e a soma das semanas tem que dar a mensal.
+- Cada vendedor conta só as vendas ativas do tipo do cargo. Três faixas: Meta → Super meta → Meta black. A faixa atual é a primeira ainda não batida; depois da Black, o que passar é excedente.
+
+**Cadastro de metas** (`/admin/metas`, [GoalsSetupPage.jsx](src/features/goals/pages/GoalsSetupPage.jsx) e [GoalSetupForm.jsx](src/features/goals/components/GoalSetupForm/GoalSetupForm.jsx)):
+- Escolhe o mês e o setor no topo. Três blocos: **Meta do setor** (meta, % renovação, % Super, % Black, com os valores calculados embaixo), **Níveis de senioridade** (nome e peso; adicionar e remover) e **Metas por vendedor** (tabela: tem meta, nível, meta do mês e uma coluna por semana).
+- As metas das pessoas são calculadas sozinhas pelos pesos ([utils/goalDraft.js](src/features/goals/utils/goalDraft.js)). Digitar a meta de alguém fixa aquele valor ("Voltar ao peso" desfaz) e o resto da parte vai para os outros pelos pesos. Digitar uma semana fixa as semanas daquela pessoa. **Redistribuir pelos pesos** desfaz todos os ajustes.
+- "Renovação/Vendas: distribuído X de Y" fica verde quando fecha e vermelho quando não. Semana que não fecha fica com o campo vermelho. **Salvar metas** só libera quando tudo fecha (o backend confere de novo).
+- Mês sem metas: vem preenchido com o último mês salvo (percentuais, níveis e o nível de cada pessoa) e um aviso; sem nenhum mês anterior, começa com 50% / 120% / 150% e Júnior, Pleno e Sênior.
+- **Excluir metas do mês** (com confirmação) apaga só aquele mês e setor.
+- Os valores são comparados em centavos ([utils/goalMath.js](src/features/goals/utils/goalMath.js), cópia das regras de `goalCalculator.js` do backend), então a soma sempre fecha. **Se mudar a regra no backend, mude a cópia também.**
+
+**Metas por vendedor** (`/admin/metas/vendedores`, [GoalsProgressPage.jsx](src/features/goals/pages/GoalsProgressPage.jsx)), com mês e filtro de setor (Todos, B2B, B2G):
+- Cards do resumo: vendedores com meta, quantos bateram a Meta, a Super e a Black, no ritmo e atrasados.
+- Por setor: card do **mês** e da **semana atual** ([GoalTierCard](src/features/goals/components/GoalTierCard/GoalTierCard.jsx)), que mostra **só a faixa atual** (bateu a Meta, o card passa a mostrar a Super; bateu a Super, a Black; depois disso, o excedente), com quanto falta, situação, ritmo por dia e projeção. Embaixo, o realizado de renovação e de vendas contra a parte de cada um, e o gráfico de evolução do mês (realizado acumulado x ritmo que bate a Meta).
+- **Quanto cada vendedor já fez da Meta do mês**: barra do realizado ÷ Meta, na cor da faixa que a pessoa está buscando, com marcas na Meta (100%), na Super e na Black.
+- **Metas por time** (só com "Todos"): soma das metas e do realizado das pessoas de cada time.
+- **Vendedores**: tabela com meta, realizado, faixa atual, falta (ou "+excedente"), ritmo por dia, projeção e situação, com CSV. Clicar no nome abre o **detalhe**: os cards do mês e da semana atual (o mesmo widget que o vendedor vai ver quando a área dele for liberada), a tabela das semanas com as três faixas e o gráfico de evolução dele.
+- Hooks em [hooks/useGoals.js](src/features/goals/hooks/useGoals.js) (chave `["admin-goals", ...]`, então atualizam sozinhos com as vendas ao vivo; salvar ou excluir recarrega). API em [api/goalsApi.js](src/features/goals/api/goalsApi.js).
+- Com `VITE_USE_MOCKS=true`, o mês atual tem metas de exemplo nos dois setores ([mocks/mockGoals.js](src/shared/mocks/mockGoals.js)); os outros meses vêm vazios, e salvar/excluir mostra "O cadastro de metas não funciona com os dados de demonstração".
 
 ### `UsersPage()` (Usuários)
 
@@ -779,6 +806,10 @@ No pé do menu lateral ficam, nessa ordem: **Trocar senha**, **Modo escuro** e *
 | `utils/teamPoints.test.js` | Pontos por equipe somados por tipo e por período; evolução acumulada |
 | `pages/AdminLayoutAccount.test.jsx` | Logado: Trocar senha, Modo escuro e Sair no pé do menu; Sair chama o logout; Trocar senha abre e fecha o diálogo; sem login, só o Modo escuro |
 | `auth/components/ChangePasswordDialog/ChangePasswordDialog.test.jsx` | Troca a senha e devolve usuário e token novos; senha curta ou diferente não chama o backend; mostra o erro do backend; Cancelar, Esc e clicar fora fecham |
+| `app/GoalsRoutes.test.jsx` | Master, admin e usuário antigo abrem as duas telas de metas e veem os itens no menu; as telas têm endereços separados; b2b/b2g não veem os itens e voltam para o Dashboard; vendedor e passagem vão para a própria área |
+| `goals/utils/goalDraft.test.js` | Semanas do mês; partes do setor e faixas; faixa atual subindo de Meta para Super e Black com o excedente; ritmo; divisão pelos pesos e pelas semanas fechando no centavo; ajuste à mão redistribuindo o resto; salvar travado quando semana ou parte não fecha e com Super/Black inválidas; quem fica sem meta; mês salvo voltando igual; mês novo copiando o anterior |
+| `goals/components/GoalTierCard/GoalTierCard.test.jsx` | Mostra só a faixa atual: Meta, depois Super com a Meta marcada como batida, e a Black com o excedente |
+| `goals/pages/GoalsPages.mocks.test.jsx` | Com os dados falsos: resumo, setores, barras por vendedor, filtro de setor, detalhe do vendedor e mês sem metas; cadastro abrindo o mês salvo com tudo fechando, semana errada travando o salvar e "Redistribuir" resolvendo, meta do setor redistribuindo, aviso de demonstração ao salvar e mês novo em branco |
 | `app/PersonRoutes.test.jsx` | Vendedor e passagem abrindo o admin vão para a própria área, com só "Minha área" no menu; master, admin, b2b, b2g e usuário antigo continuam no admin e não entram na área do colaborador |
 | `person/pages/PersonPage.mocks.test.jsx` | Com os dados falsos: nome, cargo e time; só as vendas da pessoa com o resumo; ranking dos times com o time destacado e os pontos dos colegas, sem valores em reais; as abas trocam o período |
 | `utils/peoplePoints.test.js` | Ordem do backend com posições; filtro por equipe recontando as posições; equipe vazia; linhas do CSV com a divisão dos pontos |

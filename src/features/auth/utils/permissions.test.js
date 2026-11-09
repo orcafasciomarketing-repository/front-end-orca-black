@@ -11,6 +11,7 @@ describe("getPermissions", () => {
       segment: "",
       isPerson: false,
       canSeeAdmin: true,
+      canSeeGoals: true,
     });
   });
 
@@ -22,6 +23,7 @@ describe("getPermissions", () => {
       segment: "",
       isPerson: false,
       canSeeAdmin: true,
+      canSeeGoals: true,
     });
   });
 
@@ -33,6 +35,7 @@ describe("getPermissions", () => {
       segment: "B2B",
       isPerson: false,
       canSeeAdmin: true,
+      canSeeGoals: false,
     });
     expect(getPermissions("b2g")).toEqual({
       role: "b2g",
@@ -41,6 +44,7 @@ describe("getPermissions", () => {
       segment: "B2G",
       isPerson: false,
       canSeeAdmin: true,
+      canSeeGoals: false,
     });
   });
 
@@ -53,6 +57,7 @@ describe("getPermissions", () => {
         segment: "",
         isPerson: true,
         canSeeAdmin: false,
+        canSeeGoals: false,
       });
     }
   });

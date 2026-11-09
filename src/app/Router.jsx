@@ -14,6 +14,8 @@ import ImportPage from "../features/admin/pages/ImportPage";
 import PrizesPage from "../features/admin/pages/PrizesPage";
 import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import GoalsProgressPage from "../features/goals/pages/GoalsProgressPage";
+import GoalsSetupPage from "../features/goals/pages/GoalsSetupPage";
 import PersonPage from "../features/person/pages/PersonPage";
 
 const router = createBrowserRouter([
@@ -47,6 +49,13 @@ const router = createBrowserRouter([
               {
                 element: <RestrictedRoute allow="canSeeUsers" />,
                 children: [{ path: "usuarios", element: <UsersPage /> }],
+              },
+              {
+                element: <RestrictedRoute allow="canSeeGoals" />,
+                children: [
+                  { path: "metas", element: <GoalsSetupPage /> },
+                  { path: "metas/vendedores", element: <GoalsProgressPage /> },
+                ],
               },
             ],
           },

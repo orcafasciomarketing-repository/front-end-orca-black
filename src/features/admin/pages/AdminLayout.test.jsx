@@ -84,19 +84,47 @@ describe("AdminLayout", () => {
     it("master vê todas as telas, inclusive Importação, Erros e Usuários", () => {
       renderAs("master");
 
-      expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Previsão", "Prêmios", "Importação", "Erros", "Usuários"]);
+      expect(menuLinks()).toEqual([
+        "Dashboard",
+        "Gráficos",
+        "Previsão",
+        "Prêmios",
+        "Cadastro de metas",
+        "Metas por vendedor",
+        "Importação",
+        "Erros",
+        "Usuários",
+      ]);
     });
 
     it("admin vê Usuários, mas não Importação nem Erros", () => {
       renderAs("admin");
 
-      expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Previsão", "Prêmios", "Usuários"]);
+      expect(menuLinks()).toEqual([
+        "Dashboard",
+        "Gráficos",
+        "Previsão",
+        "Prêmios",
+        "Cadastro de metas",
+        "Metas por vendedor",
+        "Usuários",
+      ]);
     });
 
     it("sem perfil (backend antigo) continua vendo tudo", () => {
       renderAs(undefined);
 
-      expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Previsão", "Prêmios", "Importação", "Erros", "Usuários"]);
+      expect(menuLinks()).toEqual([
+        "Dashboard",
+        "Gráficos",
+        "Previsão",
+        "Prêmios",
+        "Cadastro de metas",
+        "Metas por vendedor",
+        "Importação",
+        "Erros",
+        "Usuários",
+      ]);
     });
 
     for (const role of ["b2b", "b2g"]) {

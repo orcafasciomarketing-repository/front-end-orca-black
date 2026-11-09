@@ -17,6 +17,7 @@ import {
   getVendorRanking,
 } from "./mockBackend";
 import { buildMockDatabase } from "./mockDatabase";
+import { getGoalMonth, getGoalProgress as getMonthlyGoalProgress } from "./mockGoals";
 
 const MOCK_DELAY = 300;
 
@@ -70,6 +71,11 @@ const ROUTES = [
     pattern: /^\/prizes\/withdrawals$/,
     handle: ({ db, now, params }) => getPrizeWithdrawals(db, toSegment(params.segment), now),
   },
+  {
+    pattern: /^\/goals\/(\d{4}-\d{2})\/progress$/,
+    handle: ({ db, now, match }) => getMonthlyGoalProgress(db, match[1], now),
+  },
+  { pattern: /^\/goals\/(\d{4}-\d{2})$/, handle: ({ db, now, match }) => getGoalMonth(db, match[1], now) },
   { pattern: /^\/me$/, handle: ({ db }) => getMe(db) },
   { pattern: /^\/me\/sales$/, handle: ({ db }) => getMySales(db) },
   { pattern: /^\/me\/prizes$/, handle: ({ db, now }) => getMyPrizes(db, now) },
