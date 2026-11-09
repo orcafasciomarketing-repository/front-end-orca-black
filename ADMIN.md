@@ -732,7 +732,7 @@ Tela `/minha-area` ([PersonPage](src/features/person/pages/PersonPage.jsx)), par
 
 **Tela Usuários:** o cadastro ganhou os perfis **Vendedor** e **Passagem**. Com eles aparece o campo **Pessoa** (lista de `/vendor/list` ou `/sdr/list`), obrigatório; o front manda `vendorId` ou `sdrId`. Na lista, a conta de colaborador mostra "Vendedor · Brenda Lima" e não troca de perfil pela tela (só senha e excluir), porque trocar o perfil exigiria escolher outra pessoa.
 
-**Contas criadas pelo seed do backend:** uma para cada vendedor e pessoa de passagem do `seed.js`, com e-mail `nome.sobrenome@orcafascio.com` e senha `Nome123` (primeiro nome com inicial maiúscula, sem acento; ex.: `vinicius.pereira@orcafascio.com` / `Vinicius123`). O seed só cria o que falta: nunca troca senha nem perfil de quem já tem conta.
+**Contas criadas pelo seed do backend** (`node seed.js --contas`, rodado à mão uma vez; não roda no deploy): uma para cada vendedor e pessoa de passagem do `seed.js`, com e-mail `nome.sobrenome@orcafascio.com` e senha `Nome123` (primeiro nome com inicial maiúscula, sem acento; ex.: `vinicius.pereira@orcafascio.com` / `Vinicius123`). O seed só cria o que falta: nunca troca senha nem perfil de quem já tem conta.
 
 ## Sair e trocar a própria senha
 
