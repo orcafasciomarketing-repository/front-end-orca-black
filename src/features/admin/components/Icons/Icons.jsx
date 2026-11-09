@@ -81,6 +81,17 @@ export function ForecastIcon() {
   );
 }
 
+export function GiftIcon() {
+  return (
+    <svg {...iconProps}>
+      <rect x="3" y="8" width="18" height="4" rx="1" />
+      <path d="M5 12v8a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-8" />
+      <line x1="12" y1="8" x2="12" y2="21" />
+      <path d="M12 8c-1.5-3-5-4-5.5-1.5S9 8 12 8c3 0 6-.5 5.5-1.5S13.5 5 12 8z" />
+    </svg>
+  );
+}
+
 export function MoonIcon() {
   return (
     <svg {...iconProps}>

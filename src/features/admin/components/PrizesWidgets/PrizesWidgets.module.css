@@ -1,0 +1,217 @@
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.field {
+  composes: field from "../UsersWidget/UsersWidget.module.css";
+}
+
+.label {
+  composes: label from "../UsersWidget/UsersWidget.module.css";
+}
+
+.input {
+  composes: input from "../UsersWidget/UsersWidget.module.css";
+}
+
+.grow {
+  flex: 1;
+  min-width: 180px;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  color: var(--color-text);
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.summary {
+  margin-left: auto;
+  align-self: center;
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.summary strong {
+  color: var(--color-primary);
+}
+
+.scroll {
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-align: left;
+  white-space: nowrap;
+}
+
+.table thead th {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.table .number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 400;
+}
+
+.name {
+  display: block;
+  font-weight: 600;
+}
+
+.job {
+  display: block;
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.badge {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.available {
+  background: var(--color-success-field);
+  color: var(--color-success);
+}
+
+.zero {
+  background: var(--color-fill-light);
+  color: var(--color-muted);
+}
+
+.debt {
+  background: var(--color-error-field);
+  color: var(--color-error);
+}
+
+.next {
+  color: var(--color-muted);
+}
+
+.formRow td {
+  background: var(--color-fill-light);
+  white-space: normal;
+}
+
+.form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.primaryButton {
+  composes: primaryButton from "../UsersWidget/UsersWidget.module.css";
+}
+
+.secondaryButton {
+  composes: secondaryButton from "../UsersWidget/UsersWidget.module.css";
+}
+
+.dangerButton {
+  composes: dangerButton from "../UsersWidget/UsersWidget.module.css";
+}
+
+.history {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+}
+
+.historyItem {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 14px;
+}
+
+.historyItem:last-child {
+  border-bottom: none;
+}
+
+.historyDay {
+  color: var(--color-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.historyText {
+  flex: 1;
+  min-width: 200px;
+  color: var(--color-text);
+}
+
+.warning {
+  width: 100%;
+  color: var(--color-error);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.empty {
+  padding: 24px 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+.error {
+  composes: error from "../UsersWidget/UsersWidget.module.css";
+}
+
+.success {
+  composes: success from "../UsersWidget/UsersWidget.module.css";
+  margin-bottom: 12px;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .summary {
+    margin-left: 0;
+  }
+}

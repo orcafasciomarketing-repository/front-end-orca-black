@@ -10,6 +10,8 @@ import {
   getMyTeam,
   getPeoplePoints,
   getPointsHistory,
+  getPrizes,
+  getPrizeWithdrawals,
   getSdrRanking,
   getVendorRanking,
 } from "./mockBackend";
@@ -61,6 +63,11 @@ const ROUTES = [
         },
         now,
       ),
+  },
+  { pattern: /^\/prizes$/, handle: ({ db, now, params }) => getPrizes(db, toSegment(params.segment), now) },
+  {
+    pattern: /^\/prizes\/withdrawals$/,
+    handle: ({ db, now, params }) => getPrizeWithdrawals(db, toSegment(params.segment), now),
   },
   { pattern: /^\/me$/, handle: ({ db }) => getMe(db) },
   { pattern: /^\/me\/sales$/, handle: ({ db }) => getMySales(db) },

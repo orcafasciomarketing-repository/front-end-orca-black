@@ -1,0 +1,18 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+}
+
+.field {
+  composes: field from "../components/SalesFilters/SalesFilters.module.css";
+}
+
+.label {
+  composes: label from "../components/SalesFilters/SalesFilters.module.css";
+}
+
+.select {
+  composes: select from "../components/SalesFilters/SalesFilters.module.css";
+}

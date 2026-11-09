@@ -65,10 +65,10 @@ Seis perfis, que vêm do backend em `user.role` (login e refresh):
 
 | Perfil | Menu | Filtro de setor | Vendas que chegam do backend | Tela Usuários |
 |---|---|---|---|---|
-| `master` | Dashboard, Gráficos, Importação, Erros, Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
-| `admin` | Dashboard, Gráficos, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
-| `b2b` | Dashboard e Gráficos | travado em B2B | só B2B | — |
-| `b2g` | Dashboard e Gráficos | travado em B2G | só B2G | — |
+| `master` | Dashboard, Gráficos, Previsão, Prêmios, Importação, Erros, Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
+| `admin` | Dashboard, Gráficos, Previsão, Prêmios, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
+| `b2b` | Dashboard, Gráficos, Previsão e Prêmios | travado em B2B | só B2B | — |
+| `b2g` | Dashboard, Gráficos, Previsão e Prêmios | travado em B2G | só B2G | — |
 | `vendor` | só **Minha área** | — | só as dele (`/me/sales`) | — |
 | `sdr` | só **Minha área** | — | só as da passagem dele (`/me/sales`) | — |
 
@@ -319,6 +319,21 @@ Com `VITE_USE_MOCKS=true` a importação não chama o backend e mostra o erro "A
 Na tela Gráficos, o widget **Forecast** (`ForecastSummary`) é a única previsão: o antigo card "Previsão de fechamento" (média simples, dias corridos) saiu, porque dava um número diferente para a mesma pergunta. O "Acumulado x meta" também desenha o cenário realista e o ritmo necessário a partir deste forecast. O card **Forecast da semana** mostra a meta semanal automática (`weekGoal`) quando o backend manda.
 
 Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src/shared/mocks/mockForecast.js), uma cópia do cálculo do backend (o `mockForecast.test.js` confere os números do PDF). **Se mudar a regra no backend, mude a cópia também.**
+
+### `PrizesPage()` (Prêmios)
+
+[src/features/admin/pages/PrizesPage.jsx](src/features/admin/pages/PrizesPage.jsx). Todos os perfis do admin (b2b/b2g com o setor travado). O cálculo é do backend (`GET /prizes`, regras RN-66 a RN-68 no `projeto.md` do backend); o front só exibe. A cada 10 pontos acumulados das **semanas fechadas** (até o último domingo), 1 prêmio; a sobra passa para a semana seguinte. Vale para vendedores e pessoas de passagem (SDR, CS, Suporte). Widgets em [PrizesWidgets.jsx](src/features/admin/components/PrizesWidgets/PrizesWidgets.jsx):
+
+| Widget | Mostra |
+|---|---|
+| `PrizeBalances` (Saldo de prêmios) | Tabela: pessoa, equipe, pontos acumulados, semana em andamento, direitos, retirados, saldo (verde com prêmio para retirar, vermelho "Devendo X pontos") e quanto falta para o próximo. Filtros de equipe, tipo e "Só quem tem prêmio para retirar" |
+| `PrizeHistory` (Retiradas registradas) | Histórico das retiradas (dia, pessoa, quantidade e prêmio) |
+
+- **Só o master** vê o botão **Registrar retirada** (abre o formulário na linha: quantidade, prêmio e dia, que já vem com a segunda da semana) e o **Excluir** do histórico. Acima do saldo, o formulário avisa e pede confirmação (`window.confirm`); confirmado, manda `confirmOverBalance: true`. O backend também bloqueia sem a confirmação (409, com a mensagem mostrada na tela).
+- Venda cancelada depois da retirada: o saldo fica negativo ("Devendo X pontos") e a venda nova só zera, sem dar outro prêmio (regra do backend).
+- b2b/b2g veem só as pessoas com cargo do próprio setor; CS e Suporte (sem setor no cargo) só aparecem para master e admin.
+- API em [api/prizesApi.js](src/features/admin/api/prizesApi.js) e hooks em [hooks/usePrizes.js](src/features/admin/hooks/usePrizes.js) (chave `["admin-prizes", ...]`; registrar ou excluir recarrega o saldo e o histórico).
+- Com `VITE_USE_MOCKS=true`, `/prizes` usa uma cópia das regras em [mocks/mockBackend.js](src/shared/mocks/mockBackend.js) (`getPrizes`, com uma retirada de exemplo) e gravar mostra "O registro de prêmios não funciona com os dados de demonstração". **Se mudar a regra no backend, mude a cópia também.**
 
 ### `UsersPage()` (Usuários)
 

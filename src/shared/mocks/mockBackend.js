@@ -341,3 +341,95 @@ export function getMyTeam(db, period = "all", now = new Date(), person = MOCK_PE
   };
 }
 
+
+// Prêmios (cópia das regras do backend, features/prizes/service/prizeCalculator.js):
+// a cada PRIZE_POINTS_STEP pontos das semanas fechadas, 1 prêmio; saldo = direitos − retirados
+export const PRIZE_POINTS_STEP = 10;
+
+const addDayKeys = (day, amount) => {
+  const date = new Date(`${day}T00:00:00Z`);
+  date.setUTCDate(date.getUTCDate() + amount);
+  return date.toISOString().slice(0, 10);
+};
+
+// Setor pelo cargo ("B2B Sales", "B2G Farmer"); CS, Suporte e SDR sem setor no cargo ficam só para o admin
+const prizeSegmentOf = (job) => String(job ?? "").trim().toLowerCase().match(/^(b2b|b2g)\b/)?.[1] ?? null;
+const inPrizeSegment = (segment) => (person) => !segment || prizeSegmentOf(person.job) === segment;
+
+// Retiradas de demonstração, na segunda da semana atual
+function mockWithdrawals(now) {
+  const monday = mockDayKey(getWeekRange(0, now).startOfWeek);
+  return [
+    { _id: "withdrawal-1", personId: "vendor-brenda", kind: "vendor", quantity: 1, prize: "Caneca personalizada", withdrawnAt: monday, createdBy: "master@demo.com" },
+  ];
+}
+
+export function getPrizes(db, segment = null, now = new Date()) {
+  const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
+  const today = mockDayKey(now);
+  const start = mockDayKey(getWeekRange(0, now).startOfWeek);
+  const closedUntil = addDayKeys(start, -1);
+
+  const closed = getPeoplePoints(db, { to: closedUntil }, now);
+  const current = getPeoplePoints(db, { from: start }, now);
+  const keyOf = (kind, personId) => `${kind}-${personId}`;
+  const currentByKey = new Map(current.people.map((person) => [keyOf(person.kind, person.personId), person.total]));
+  const withdrawnByKey = new Map();
+  for (const withdrawal of mockWithdrawals(now)) {
+    const key = keyOf(withdrawal.kind, withdrawal.personId);
+    withdrawnByKey.set(key, (withdrawnByKey.get(key) ?? 0) + withdrawal.quantity);
+  }
+
+  const people = closed.people
+    .map((person) => {
+      const key = keyOf(person.kind, person.personId);
+      const accumulated = person.total;
+      const currentWeek = currentByKey.get(key) ?? 0;
+      const withdrawn = withdrawnByKey.get(key) ?? 0;
+      const earned = Math.floor(accumulated / PRIZE_POINTS_STEP);
+      const nextPrizeAt = PRIZE_POINTS_STEP * (Math.max(earned, withdrawn) + 1);
+      return {
+        personId: person.personId,
+        kind: person.kind,
+        name: person.name,
+        job: person.job,
+        imageUrl: person.imageUrl,
+        teamId: person.teamId,
+        accumulated,
+        currentWeek,
+        earned,
+        withdrawn,
+        balance: earned - withdrawn,
+        debtPoints: Math.max(withdrawn * PRIZE_POINTS_STEP - accumulated, 0),
+        nextPrizeAt,
+        pointsToNext: Math.max(nextPrizeAt - accumulated - currentWeek, 0),
+      };
+    })
+    .filter(inPrizeSegment(validSegment))
+    .sort((a, b) => b.balance - a.balance || b.accumulated - a.accumulated || a.name.localeCompare(b.name, "pt-BR"));
+
+  return {
+    segment: validSegment,
+    step: PRIZE_POINTS_STEP,
+    today,
+    closedUntil,
+    currentWeek: { start, end: addDayKeys(start, 6) },
+    teams: closed.teams,
+    people,
+  };
+}
+
+export function getPrizeWithdrawals(db, segment = null, now = new Date()) {
+  const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
+  const people = new Map([
+    ...db.vendors.map((vendor) => [`vendor-${vendor._id}`, { name: vendor.vendorName, job: vendor.job }]),
+    ...db.sdrs.map((sdr) => [`sdr-${sdr._id}`, { name: sdr.name, job: sdr.job }]),
+  ]);
+
+  return mockWithdrawals(now)
+    .map((withdrawal) => {
+      const person = people.get(`${withdrawal.kind}-${withdrawal.personId}`);
+      return { ...withdrawal, name: person?.name ?? "Pessoa removida", job: person?.job ?? null, createdAt: now.toISOString() };
+    })
+    .filter(inPrizeSegment(validSegment));
+}

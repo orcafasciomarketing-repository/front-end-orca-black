@@ -11,6 +11,7 @@ import ChartsPage from "../features/admin/pages/ChartsPage";
 import ErrorsPage from "../features/admin/pages/ErrorsPage";
 import ForecastPage from "../features/admin/pages/ForecastPage";
 import ImportPage from "../features/admin/pages/ImportPage";
+import PrizesPage from "../features/admin/pages/PrizesPage";
 import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import PersonPage from "../features/person/pages/PersonPage";
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
               { index: true, element: <AdminPanel /> },
               { path: "graficos", element: <ChartsPage /> },
               { path: "previsao", element: <ForecastPage /> },
+              { path: "premios", element: <PrizesPage /> },
               {
                 element: <RestrictedRoute allow="isMaster" />,
                 children: [
