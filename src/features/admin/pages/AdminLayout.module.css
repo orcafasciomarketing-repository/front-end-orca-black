@@ -114,7 +114,15 @@
   color: var(--color-on-primary);
 }
 
-.themeToggle {
+.sidebarFooter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.themeToggle,
+.footerButton {
   width: 100%;
   display: flex;
   align-items: center;
@@ -135,12 +143,14 @@
     color 0.2s ease;
 }
 
-.themeToggle:hover {
+.themeToggle:hover,
+.footerButton:hover {
   background: var(--color-sidebar-hover);
   color: var(--color-sidebar-text-strong);
 }
 
-.themeToggle:focus-visible {
+.themeToggle:focus-visible,
+.footerButton:focus-visible {
   outline-color: var(--color-primary);
   outline-offset: 2px;
 }

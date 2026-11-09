@@ -13,3 +13,11 @@ export const logoutUser = async () => {
     setAccessToken(null);
   }
 };
+
+export const changePassword = async ({ currentPassword, password, passwordConfirmation }) => {
+  const response = await api.post("/auth/change-password", { currentPassword, password, passwordConfirmation });
+  setAccessToken(response.data.token);
+  return response.data;
+};
+
+export const getAuthErrorMessage = (error) => error.response?.data?.error ?? error.message;

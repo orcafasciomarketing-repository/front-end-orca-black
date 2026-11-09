@@ -29,10 +29,14 @@ function SaleName({ name }) {
 export default function SaleWidget({ vendorId, period, segment }) {
   const { sales, total } = useAdminSales(vendorId, period, segment);
 
+  return <SaleList sales={sales} total={total} />;
+}
+
+export function SaleList({ sales, total, title = "Vendas cadastradas" }) {
   return (
     <section className="widget">
       <header className="header">
-        <h2 className="title">Vendas cadastradas</h2>
+        <h2 className="title">{title}</h2>
         <span className={styles.count}>{total}</span>
       </header>
       {sales.length === 0 ? (

@@ -5,6 +5,9 @@ import {
   getForecast,
   getGoalProgress,
   getScoreboard,
+  getMe,
+  getMySales,
+  getMyTeam,
   getPeoplePoints,
   getPointsHistory,
   getSdrRanking,
@@ -58,6 +61,13 @@ const ROUTES = [
         },
         now,
       ),
+  },
+  { pattern: /^\/me$/, handle: ({ db }) => getMe(db) },
+  { pattern: /^\/me\/sales$/, handle: ({ db }) => getMySales(db) },
+  {
+    pattern: /^\/me\/team$/,
+    handle: ({ db, now, params }) =>
+      getMyTeam(db, ["week", "lastWeek"].includes(params.period) ? params.period : "all", now),
   },
   { pattern: /^\/sales\/admin$/, handle: ({ db }) => findAllSales(db) },
   { pattern: /^\/sales\/get$/, handle: ({ db, now }) => findActiveSalesOfCurrentWeek(db, now) },

@@ -61,7 +61,7 @@ Importação e Erros são **só do master**; Usuários, do master e do admin (ve
 
 ### Perfis
 
-Quatro perfis, que vêm do backend em `user.role` (login e refresh):
+Seis perfis, que vêm do backend em `user.role` (login e refresh):
 
 | Perfil | Menu | Filtro de setor | Vendas que chegam do backend | Tela Usuários |
 |---|---|---|---|---|
@@ -69,11 +69,13 @@ Quatro perfis, que vêm do backend em `user.role` (login e refresh):
 | `admin` | Dashboard, Gráficos, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
 | `b2b` | Dashboard e Gráficos | travado em B2B | só B2B | — |
 | `b2g` | Dashboard e Gráficos | travado em B2G | só B2G | — |
+| `vendor` | só **Minha área** | — | só as dele (`/me/sales`) | — |
+| `sdr` | só **Minha área** | — | só as da passagem dele (`/me/sales`) | — |
 
 - O `master` é definido no backend pela variável `MASTER_EMAIL`. Sem ela, o backend manda todo admin como `master` (como era antes).
-- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isMaster, canSeeUsers, segment }`. Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
+- `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isMaster, canSeeUsers, segment, isPerson, canSeeAdmin }`. `isPerson` é `true` só para `vendor` e `sdr`; `canSeeAdmin` é o contrário. Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
 - `usePermissions()` ([auth/hooks/usePermissions.js](src/features/auth/hooks/usePermissions.js)) lê o usuário do `AuthContext` e soma o `userId`. Fora do provider (teste de componente solto) vale como admin.
-- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários. Sem a permissão, abrir pelo endereço volta para `/admin`.
+- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários. Sem a permissão, abrir pelo endereço volta para `/admin` (ou para o `redirectTo` passado). O `/admin` inteiro fica dentro de `RestrictedRoute allow="canSeeAdmin" redirectTo="/minha-area"`, e `/minha-area` dentro de `allow="isPerson"`: colaborador que abre o admin vai para a própria área, e os outros perfis que abrem `/minha-area` voltam para o Dashboard.
 - **A segurança de verdade é do backend**: ele filtra as vendas pelo setor e responde 403 nas rotas do admin. O front só esconde o que a pessoa não pode usar.
 - As TVs (`/`) não usam login e continuam públicas.
 
@@ -715,6 +717,31 @@ Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-
   - o `renderWithQuery` dos testes também devolve o `queryClient`;
   - o backend falso (`src/shared/mocks`) aceita `segment` nos rankings, tem `points-history`, `people-points` e a meta semanal no forecast. Ele continua com a pontuação simplificada.
 
+## Minha área (vendedores e pessoas de passagem)
+
+Tela `/minha-area` ([PersonPage](src/features/person/pages/PersonPage.jsx)), para os perfis `vendor` e `sdr`. Usa o mesmo `AdminLayout` (menu lateral e modo escuro), mas o menu mostra só **Minha área**. Depois do login, o colaborador cai no `/admin` e é mandado para `/minha-area`.
+
+- **Cabeçalho:** "Olá, nome" e "cargo · time" (`GET /me`).
+- **Resumo:** total vendido (só concluídas), vendas concluídas, ticket médio e canceladas, contados em cima das vendas da pessoa ([utils/mySales.js](src/features/person/utils/mySales.js)).
+- **Ranking dos times:** os três times com posição, camiseta e pontos, com o time da pessoa destacado ("(seu time)") e a frase "Seu time está em 2º lugar, com 14 pontos". Abas Campanha / Esta semana / Semana passada (`GET /me/team?period=`).
+- **Pontos do meu time:** os colegas do time em classificação, com a barra de venda/renovação/passagem e o total (o mesmo `PeopleList` do widget "Pontos por pessoa"). A própria pessoa fica destacada, com "Você" embaixo do nome. Segue as mesmas abas do ranking. **Só pontos**: o backend não manda nenhum valor de venda dos colegas.
+- **Minhas vendas** (vendedor) ou **Vendas com a minha passagem** (passagem): a mesma lista do Dashboard (`SaleList`, separada do `SaleWidget` sem mudar nada nele), da mais nova para a mais antiga (`GET /me/sales`).
+- As consultas ([hooks/useMe.js](src/features/person/hooks/useMe.js), [api/meApi.js](src/features/person/api/meApi.js)) têm chave começando em `admin-`, então atualizam sozinhas com as vendas ao vivo.
+- **A segurança é do backend:** a pessoa vem do token, nunca da URL, e todas as rotas do admin respondem 403 para esses perfis.
+- Os mocks respondem `/me`, `/me/sales` e `/me/team` como se a Brenda Lima estivesse logada.
+
+**Tela Usuários:** o cadastro ganhou os perfis **Vendedor** e **Passagem**. Com eles aparece o campo **Pessoa** (lista de `/vendor/list` ou `/sdr/list`), obrigatório; o front manda `vendorId` ou `sdrId`. Na lista, a conta de colaborador mostra "Vendedor · Brenda Lima" e não troca de perfil pela tela (só senha e excluir), porque trocar o perfil exigiria escolher outra pessoa.
+
+**Contas criadas pelo seed do backend:** uma para cada vendedor e pessoa de passagem do `seed.js`, com e-mail `nome.sobrenome@orcafascio.com` e senha `Nome123` (primeiro nome com inicial maiúscula, sem acento; ex.: `vinicius.pereira@orcafascio.com` / `Vinicius123`). O seed só cria o que falta: nunca troca senha nem perfil de quem já tem conta.
+
+## Sair e trocar a própria senha
+
+No pé do menu lateral ficam, nessa ordem: **Trocar senha**, **Modo escuro** e **Sair**. Valem para todos os perfis, inclusive na Minha área. Sem usuário logado (ex.: teste de componente solto, fora do `AuthContext`), só o Modo escuro aparece, como antes.
+
+- **Sair** chama o `logout()` do `AuthContext`: `POST /auth/logout` invalida o refresh token e apaga o cookie no backend, o front limpa a sessão e o cache, e o `PrivateRoute` manda para o login. Antes essa rota não existia no backend, então recarregar a página entrava de novo pelo cookie.
+- **Trocar senha** abre o [ChangePasswordDialog](src/features/auth/components/ChangePasswordDialog/ChangePasswordDialog.jsx): senha atual, senha nova e confirmação. Ele confere no front (mínimo 6 caracteres, confirmação igual) e chama `POST /auth/change-password` (`changePassword` em [authApi.js](src/features/auth/api/authApi.js)). Senha atual errada mostra "Senha atual incorreta". Deu certo: mostra "Senha alterada", e o front guarda o usuário e o token novos (`SET_USER`), então a pessoa continua logada aqui. Nos outros aparelhos, as sessões caem. Fecha em Cancelar, Esc ou clicando fora.
+- Só troca a senha de quem está logado: o backend pega o usuário pelo token. Trocar a senha de outra pessoa continua sendo na tela Usuários (só o master).
+
 ## 8. Testes
 
 | Arquivo | Garante |
@@ -734,6 +761,10 @@ Feitas junto com mudanças no backend (ver `ROTAS.md` e `projeto.md` de lá: RN-
 | `utils/companyLink.test.js` | Link com https, http e sem protocolo; nome comum continua texto; recusa `javascript:`, `mailto:`, `data:` e endereço sem domínio |
 | `utils/vendorProfile.test.js` | Sequência de dias vendendo; perfil com totais, posição, semanas, evolução e últimas vendas; vendedor sem vendas |
 | `utils/teamPoints.test.js` | Pontos por equipe somados por tipo e por período; evolução acumulada |
+| `pages/AdminLayoutAccount.test.jsx` | Logado: Trocar senha, Modo escuro e Sair no pé do menu; Sair chama o logout; Trocar senha abre e fecha o diálogo; sem login, só o Modo escuro |
+| `auth/components/ChangePasswordDialog/ChangePasswordDialog.test.jsx` | Troca a senha e devolve usuário e token novos; senha curta ou diferente não chama o backend; mostra o erro do backend; Cancelar, Esc e clicar fora fecham |
+| `app/PersonRoutes.test.jsx` | Vendedor e passagem abrindo o admin vão para a própria área, com só "Minha área" no menu; master, admin, b2b, b2g e usuário antigo continuam no admin e não entram na área do colaborador |
+| `person/pages/PersonPage.mocks.test.jsx` | Com os dados falsos: nome, cargo e time; só as vendas da pessoa com o resumo; ranking dos times com o time destacado e os pontos dos colegas, sem valores em reais; as abas trocam o período |
 | `utils/peoplePoints.test.js` | Ordem do backend com posições; filtro por equipe recontando as posições; equipe vazia; linhas do CSV com a divisão dos pontos |
 | `components/PeoplePoints/PeoplePoints.test.jsx` | Dashboard: lista com equipe, cargo, divisão e total; seletor de equipe; abas de período mantendo a equipe e mandando o setor; Gráficos: período da página como `from`/`to` e CSV só da equipe escolhida; aviso de equipe sem ninguém |
 | `components/SaleToasts/SaleToasts.test.jsx` | Aviso de venda nova e de renovação, atualiza só os dados do admin, venda alterada sem aviso, fecha no X e sozinho, no máximo 3, para de escutar ao sair |

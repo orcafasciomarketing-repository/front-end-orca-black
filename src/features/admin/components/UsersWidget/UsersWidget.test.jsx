@@ -15,6 +15,13 @@ vi.mock("../../api/usersApi", async (importOriginal) => ({
   deleteUser: vi.fn(),
 }));
 vi.mock("../../../../shared/errorLogger", () => ({ reportError: vi.fn() }));
+vi.mock("../../api/slidesApi", () => ({
+  getVendors: vi.fn(async () => [
+    { _id: "v-brenda", vendorName: "Brenda Lima" },
+    { _id: "v-gustavo", vendorName: "Gustavo Rocha" },
+  ]),
+  getSdrs: vi.fn(async () => [{ _id: "s-caio", name: "Caio Martins" }]),
+}));
 
 const USERS = [
   { _id: "u-master", email: "master@empresa.com", role: "master" },
@@ -96,7 +103,7 @@ describe("UsersWidget", () => {
     await screen.findByText("b2b@empresa.com");
 
     const options = within(within(createForm()).getByLabelText("Perfil")).getAllByRole("option");
-    expect(options.map((option) => option.textContent)).toEqual(["Admin", "B2B", "B2G"]);
+    expect(options.map((option) => option.textContent)).toEqual(["Admin", "B2B", "B2G", "Vendedor", "Passagem"]);
   });
 
   it("cadastra com email, perfil e senha e limpa o formulário", async () => {
@@ -199,5 +206,69 @@ describe("UsersWidget", () => {
 
     fireEvent.click(within(itemOf("b2b@empresa.com")).getByRole("button", { name: "Excluir" }));
     await waitFor(() => expect(deleteUser).toHaveBeenCalledWith("u-b2b"));
+  });
+
+  describe("contas de colaborador (Vendedor e Passagem)", () => {
+    it("perfil Vendedor pede a pessoa; sem escolher, avisa e não chama o backend", async () => {
+      renderWidget();
+      await screen.findByText("b2b@empresa.com");
+
+      fillCreateForm({ email: "brenda@empresa.com", role: "vendor", password: "123456" });
+      await waitFor(() =>
+        expect(
+          within(within(createForm()).getByLabelText("Pessoa"))
+            .getAllByRole("option")
+            .map((option) => option.textContent),
+        ).toEqual(["Escolha a pessoa", "Brenda Lima", "Gustavo Rocha"]),
+      );
+
+      fireEvent.click(within(createForm()).getByRole("button", { name: "Cadastrar" }));
+
+      expect(screen.getByText("Escolha a pessoa ligada a essa conta")).toBeInTheDocument();
+      expect(createUser).not.toHaveBeenCalled();
+    });
+
+    it("cadastra o vendedor com o vendorId e a passagem com o sdrId", async () => {
+      createUser.mockResolvedValue({ _id: "novo", email: "x@empresa.com", role: "vendor" });
+      renderWidget();
+      await screen.findByText("b2b@empresa.com");
+
+      fillCreateForm({ email: "brenda@empresa.com", role: "vendor", password: "123456" });
+      await waitFor(() => expect(within(createForm()).getAllByRole("option", { name: "Brenda Lima" })).toHaveLength(1));
+      fireEvent.change(within(createForm()).getByLabelText("Pessoa"), { target: { value: "v-brenda" } });
+      fireEvent.click(within(createForm()).getByRole("button", { name: "Cadastrar" }));
+
+      await waitFor(() =>
+        expect(createUser).toHaveBeenCalledWith({
+          email: "brenda@empresa.com",
+          role: "vendor",
+          password: "123456",
+          passwordConfirmation: "123456",
+          vendorId: "v-brenda",
+        }),
+      );
+
+      await screen.findByText("Usuário cadastrado");
+      fillCreateForm({ email: "caio@empresa.com", role: "sdr", password: "123456" });
+      await waitFor(() => expect(within(createForm()).getAllByRole("option", { name: "Caio Martins" })).toHaveLength(1));
+      fireEvent.change(within(createForm()).getByLabelText("Pessoa"), { target: { value: "s-caio" } });
+      fireEvent.click(within(createForm()).getByRole("button", { name: "Cadastrar" }));
+
+      await waitFor(() => expect(createUser).toHaveBeenLastCalledWith(expect.objectContaining({ role: "sdr", sdrId: "s-caio" })));
+    });
+
+    it("na lista, a conta de colaborador mostra a pessoa e não troca de perfil (só senha e excluir)", async () => {
+      getUsers.mockResolvedValue([...USERS, { _id: "u-brenda", email: "brenda@empresa.com", role: "vendor", vendorId: "v-brenda" }]);
+      renderWidget();
+
+      await waitFor(() =>
+        expect(within(itemOf("brenda@empresa.com")).getByLabelText("Perfil de brenda@empresa.com")).toHaveTextContent(
+          "Vendedor · Brenda Lima",
+        ),
+      );
+      expect(within(itemOf("brenda@empresa.com")).queryByRole("combobox")).not.toBeInTheDocument();
+      expect(within(itemOf("brenda@empresa.com")).getByRole("button", { name: "Trocar senha" })).toBeInTheDocument();
+      expect(within(itemOf("brenda@empresa.com")).getByRole("button", { name: "Excluir" })).toBeInTheDocument();
+    });
   });
 });

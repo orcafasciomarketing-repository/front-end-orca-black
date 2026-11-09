@@ -3,16 +3,36 @@ import styles from "./UsersWidget.module.css";
 import { useState } from "react";
 
 import usePermissions from "../../../auth/hooks/usePermissions";
-import { ROLE_LABELS, ROLE_OPTIONS } from "../../../auth/utils/permissions";
+import { PERSON_FIELDS, PERSON_ROLE_OPTIONS, ROLE_LABELS, ROLE_OPTIONS } from "../../../auth/utils/permissions";
 import { getUserErrorMessage } from "../../api/usersApi";
+import { useSdrs } from "../../hooks/useSdrs";
 import { useUserMutations, useUsers } from "../../hooks/useUsers";
+import { getVendorLabel, useVendors } from "../../hooks/useVendors";
 
-const EMPTY_FORM = { email: "", password: "", passwordConfirmation: "", role: "b2b" };
+const EMPTY_FORM = { email: "", password: "", passwordConfirmation: "", role: "b2b", personId: "" };
+
+const CREATE_ROLE_OPTIONS = [...ROLE_OPTIONS, ...PERSON_ROLE_OPTIONS];
+
+function usePeopleOptions() {
+  const { vendors } = useVendors();
+  const { sdrs } = useSdrs();
+
+  return {
+    vendorId: vendors.map((vendor) => ({ id: String(vendor._id), name: getVendorLabel(vendor) })),
+    sdrId: sdrs.map((sdr) => ({ id: String(sdr._id), name: sdr.name })),
+  };
+}
+
+const toCreatePayload = ({ personId, ...form }) => {
+  const field = PERSON_FIELDS[form.role];
+  return field ? { ...form, [field]: personId } : form;
+};
 
 export default function UsersWidget() {
   const { users } = useUsers();
   const { create, update, remove } = useUserMutations();
   const { userId, isMaster } = usePermissions();
+  const peopleOptions = usePeopleOptions();
 
   return (
     <section className="widget">
@@ -23,10 +43,11 @@ export default function UsersWidget() {
       <div className={styles.body}>
         <p className={styles.help}>
           Master admin faz tudo. Admin vê todos os setores e cadastra usuários, mas não troca perfil, senha nem exclui.
-          B2B e B2G veem só as vendas do próprio setor, no Dashboard e nos Gráficos. As telas das TVs continuam públicas.
+          B2B e B2G veem só as vendas do próprio setor, no Dashboard e nos Gráficos. Vendedor e Passagem entram só na
+          própria área, com as vendas deles e os pontos do time. As telas das TVs continuam públicas.
         </p>
 
-        <CreateUserForm create={create} />
+        <CreateUserForm create={create} peopleOptions={peopleOptions} />
 
         {update.isError && <p className={styles.error}>Não foi possível alterar: {getUserErrorMessage(update.error)}</p>}
         {remove.isError && <p className={styles.error}>Não foi possível excluir: {getUserErrorMessage(remove.error)}</p>}
@@ -41,6 +62,7 @@ export default function UsersWidget() {
                 user={user}
                 isMe={user._id === userId}
                 canEdit={isMaster}
+                personName={personNameOf(user, peopleOptions)}
                 update={update}
                 remove={remove}
               />
@@ -52,7 +74,13 @@ export default function UsersWidget() {
   );
 }
 
-function CreateUserForm({ create }) {
+const personNameOf = (user, peopleOptions) => {
+  const field = PERSON_FIELDS[user.role];
+  if (!field || !user[field]) return "";
+  return peopleOptions[field].find((person) => person.id === String(user[field]))?.name ?? "";
+};
+
+function CreateUserForm({ create, peopleOptions }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
@@ -74,8 +102,15 @@ function CreateUserForm({ create }) {
       return;
     }
 
-    create.mutate(form, { onSuccess: () => setForm(EMPTY_FORM) });
+    if (PERSON_FIELDS[form.role] && !form.personId) {
+      setFormError("Escolha a pessoa ligada a essa conta");
+      return;
+    }
+
+    create.mutate(toCreatePayload(form), { onSuccess: () => setForm(EMPTY_FORM) });
   };
+
+  const personField = PERSON_FIELDS[form.role];
 
   return (
     <form className={styles.form} onSubmit={handleSubmit} aria-label="Cadastrar usuário">
@@ -88,13 +123,26 @@ function CreateUserForm({ create }) {
         <label className={styles.field}>
           <span className={styles.label}>Perfil</span>
           <select className={styles.input} value={form.role} onChange={changeField("role")}>
-            {ROLE_OPTIONS.map((option) => (
+            {CREATE_ROLE_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
             ))}
           </select>
         </label>
+        {personField && (
+          <label className={styles.field}>
+            <span className={styles.label}>Pessoa</span>
+            <select className={styles.input} value={form.personId} onChange={changeField("personId")}>
+              <option value="">Escolha a pessoa</option>
+              {peopleOptions[personField].map((person) => (
+                <option key={person.id} value={person.id}>
+                  {person.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <label className={styles.field}>
           <span className={styles.label}>Senha</span>
           <input
@@ -129,11 +177,13 @@ function CreateUserForm({ create }) {
 }
 
 // canEdit: só o master troca perfil e senha e exclui. O perfil do master nunca muda pela tela
-function UserItem({ user, isMe, canEdit, update, remove }) {
+function UserItem({ user, isMe, canEdit, personName, update, remove }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const isBusy = update.isPending || remove.isPending;
   const role = user.role ?? "admin";
-  const canChangeRole = canEdit && !isMe && role !== "master";
+  const isPerson = Boolean(PERSON_FIELDS[role]);
+  const canChangeRole = canEdit && !isMe && role !== "master" && !isPerson;
+  const canDelete = canEdit && !isMe && role !== "master";
 
   const handleRoleChange = (event) => {
     update.mutate({ id: user._id, changes: { role: event.target.value } });
@@ -170,6 +220,7 @@ function UserItem({ user, isMe, canEdit, update, remove }) {
           ) : (
             <span className={styles.role} aria-label={`Perfil de ${user.email}`}>
               {ROLE_LABELS[role] ?? role}
+              {personName && ` · ${personName}`}
             </span>
           )}
           {canEdit && (
@@ -182,7 +233,7 @@ function UserItem({ user, isMe, canEdit, update, remove }) {
               Trocar senha
             </button>
           )}
-          {canChangeRole && (
+          {canDelete && (
             <button className={styles.dangerButton} type="button" disabled={isBusy} onClick={handleDelete}>
               Excluir
             </button>

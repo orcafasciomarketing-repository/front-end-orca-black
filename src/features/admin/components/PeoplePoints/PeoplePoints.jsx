@@ -41,7 +41,7 @@ function TeamSelect({ teams, value, onChange }) {
   );
 }
 
-function PeopleList({ people }) {
+export function PeopleList({ people, label = TITLE }) {
   if (people.length === 0) {
     return <p className={styles.empty}>Nenhuma pessoa nesta equipe</p>;
   }
@@ -58,9 +58,9 @@ function PeopleList({ people }) {
           </li>
         ))}
       </ul>
-      <ol className={styles.rows} aria-label={TITLE}>
+      <ol className={styles.rows} aria-label={label}>
         {people.map((person) => (
-          <li key={person.key} className={styles.row}>
+          <li key={person.key} className={`${styles.row} ${person.isMe ? styles.me : ""}`}>
             <span className={`${styles.position} ${styles[`position${person.position}`] ?? ""}`}>
               {person.position}º
             </span>
@@ -69,8 +69,8 @@ function PeopleList({ people }) {
               <span className={styles.identity}>
                 <span className={styles.name}>{person.name}</span>
                 <span className={styles.detail}>
-                  {person.teamName}
-                  {person.job && ` · ${person.job}`}
+                  {person.isMe && <span className={styles.meTag}>Você · </span>}
+                  {[person.teamName, person.job].filter(Boolean).join(" · ")}
                 </span>
               </span>
             </span>

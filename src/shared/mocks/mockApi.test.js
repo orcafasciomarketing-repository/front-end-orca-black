@@ -81,6 +81,22 @@ describe("mockApi", () => {
     expect(total({ from: "2026-12-01" }, "Brenda Lima")).toBe(0);
   });
 
+  it("/me, /me/sales e /me/team respondem como a área do colaborador do backend (Brenda Lima)", () => {
+    const me = get("/me").data.data;
+    const sales = get("/me/sales").data.data;
+    const team = get("/me/team").data.data;
+
+    expect(me).toEqual(expect.objectContaining({ kind: "vendor", name: "Brenda Lima" }));
+    expect(me.team.teamName).toBe("Wizards of sales");
+    expect(sales.total).toBe(sales.data.length);
+    expect(sales.data.every((sale) => sale.vendorId._id === "vendor-brenda")).toBe(true);
+    expect(team.teams.map((item) => item.position)).toEqual([1, 2, 3]);
+    expect(team.people.every((person) => !("value" in person))).toBe(true);
+    expect(team.people.filter((person) => person.isMe).map((person) => person.name)).toEqual(["Brenda Lima"]);
+    expect(team.people.reduce((sum, person) => sum + person.total, 0)).toBe(team.team.total);
+    expect(get("/me/team", { period: "lastWeek" }).data.data.period).toBe("lastWeek");
+  });
+
   it("rota que não existe devolve 404", () => {
     expect(get("/nao-existe").status).toBe(404);
   });

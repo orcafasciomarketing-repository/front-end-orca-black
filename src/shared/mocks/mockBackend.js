@@ -276,3 +276,68 @@ export function getPeoplePoints(db, { period = "all", segment = null, from = nul
     ].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "pt-BR")),
   };
 }
+
+export const MOCK_PERSON = { kind: "vendor", id: "vendor-brenda" };
+
+function findMockPerson(db, person = MOCK_PERSON) {
+  const record =
+    person.kind === "vendor"
+      ? db.vendors.find((vendor) => vendor._id === person.id)
+      : db.sdrs.find((sdr) => sdr._id === person.id);
+  const team = db.teams.find((item) => item._id === record.teamId);
+
+  return {
+    kind: person.kind,
+    id: record._id,
+    name: person.kind === "vendor" ? record.vendorName : record.name,
+    job: record.job,
+    imageUrl: record.imageUrl,
+    team: team ? { teamId: team._id, teamName: team.name, teamShirt: team.imageUrl } : null,
+  };
+}
+
+export function getMe(db, person = MOCK_PERSON) {
+  return findMockPerson(db, person);
+}
+
+export function getMySales(db, person = MOCK_PERSON) {
+  const sales = db.sales
+    .filter((sale) => (person.kind === "vendor" ? sale.vendorId === person.id : sale.sdrIds.includes(person.id)))
+    .map((sale) => populateSale(db, sale));
+
+  return { data: sales, total: sales.length };
+}
+
+export function getMyTeam(db, period = "all", now = new Date(), person = MOCK_PERSON) {
+  const me = findMockPerson(db, person);
+  const teamId = me.team?.teamId ?? null;
+  const teams = getScoreboard(db, period, now).map((team, index) => ({
+    position: index + 1,
+    teamId: team.teamId,
+    teamName: team.teamName,
+    teamShirt: team.teamShirt,
+    total: team.total,
+  }));
+
+  return {
+    period,
+    team: teams.find((team) => team.teamId === teamId) ?? null,
+    teams,
+    people: getPeoplePoints(db, { period }, now)
+      .people.filter((member) => teamId && member.teamId === teamId)
+      .map((member, index) => ({
+        position: index + 1,
+        personId: member.personId,
+        kind: member.kind,
+        name: member.name,
+        job: member.job,
+        imageUrl: member.imageUrl,
+        sales: member.sales,
+        farm: member.farm,
+        passage: member.passage,
+        total: member.total,
+        isMe: member.kind === me.kind && member.personId === me.id,
+      })),
+  };
+}
+

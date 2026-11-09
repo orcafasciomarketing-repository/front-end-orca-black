@@ -13,6 +13,7 @@ import ForecastPage from "../features/admin/pages/ForecastPage";
 import ImportPage from "../features/admin/pages/ImportPage";
 import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import PersonPage from "../features/person/pages/PersonPage";
 
 const router = createBrowserRouter([
   {
@@ -26,21 +27,42 @@ const router = createBrowserRouter([
     errorElement: <RouteErrorScreen />,
     children: [
       {
-        element: <AdminLayout />,
+        element: <RestrictedRoute allow="canSeeAdmin" redirectTo="/minha-area" />,
         children: [
-          { index: true, element: <AdminPanel /> },
-          { path: "graficos", element: <ChartsPage /> },
-          { path: "previsao", element: <ForecastPage /> },
           {
-            element: <RestrictedRoute allow="isMaster" />,
+            element: <AdminLayout />,
             children: [
-              { path: "importacao", element: <ImportPage /> },
-              { path: "erros", element: <ErrorsPage /> },
+              { index: true, element: <AdminPanel /> },
+              { path: "graficos", element: <ChartsPage /> },
+              { path: "previsao", element: <ForecastPage /> },
+              {
+                element: <RestrictedRoute allow="isMaster" />,
+                children: [
+                  { path: "importacao", element: <ImportPage /> },
+                  { path: "erros", element: <ErrorsPage /> },
+                ],
+              },
+              {
+                element: <RestrictedRoute allow="canSeeUsers" />,
+                children: [{ path: "usuarios", element: <UsersPage /> }],
+              },
             ],
           },
+        ],
+      },
+    ],
+  },
+  {
+    path: "/minha-area",
+    element: <PrivateRoute />,
+    errorElement: <RouteErrorScreen />,
+    children: [
+      {
+        element: <RestrictedRoute allow="isPerson" />,
+        children: [
           {
-            element: <RestrictedRoute allow="canSeeUsers" />,
-            children: [{ path: "usuarios", element: <UsersPage /> }],
+            element: <AdminLayout />,
+            children: [{ index: true, element: <PersonPage /> }],
           },
         ],
       },
