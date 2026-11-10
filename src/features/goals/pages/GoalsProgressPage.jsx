@@ -9,8 +9,10 @@ import PageHeader from "../../admin/components/PageHeader/PageHeader";
 import { ChartCard } from "../../admin/components/SalesChartWidgets/SalesChartWidgets";
 import WidgetFallback from "../../admin/components/WidgetFallback/WidgetFallback";
 import { CHART_COLORS } from "../../admin/utils/chartColors";
+import GoalAlerts from "../components/GoalAlerts/GoalAlerts";
 import GoalEvolution from "../components/GoalEvolution/GoalEvolution";
 import GoalForecastCard from "../components/GoalForecastCard/GoalForecastCard";
+import MonthComparison from "../components/MonthComparison/MonthComparison";
 import TierProgressCard from "../components/TierProgressCard/TierProgressCard";
 import { useGoalProgress } from "../hooks/useGoals";
 import {
@@ -195,7 +197,7 @@ function SummaryTiles({ people, hasBlack }) {
   );
 }
 
-function ScopeOverview({ label, scope, weekIndex }) {
+function ScopeOverview({ label, scope, weekIndex, month, pickHistory }) {
   const week = weekIndex >= 0 ? scope.weeks[weekIndex] : null;
 
   return (
@@ -208,6 +210,9 @@ function ScopeOverview({ label, scope, weekIndex }) {
           ))}
         </div>
         {scope.forecast && <GoalForecastCard forecast={scope.forecast} title={`Previsão do mês · ${label}`} />}
+        <Suspense fallback={<WidgetFallback title="Comparação com o mês anterior" />}>
+          <MonthComparison label={label} month={month} scope={scope} pickHistory={pickHistory} />
+        </Suspense>
       </section>
       {week && (
         <section className={styles.segmentBlock} aria-label={`Semana atual · ${label}`}>
@@ -240,21 +245,25 @@ function TotalView({ progress, segment, segments, people, weekIndex, onSelect })
     ...["farm", "sales"].map((type) => ({ key: type, label: PART_LABELS[type], progress: scope.parts[type] })),
   ];
 
+  const pickHistory = (item) => (segment ? item.segments[segment] : item.total);
+
   return (
     <>
       <SummaryTiles people={people} hasBlack={hasBlack} />
-      <ScopeOverview label={label} scope={scope} weekIndex={weekIndex} />
+      <GoalAlerts people={people} progress={progress} onSelect={onSelect} />
+      <ScopeOverview
+        label={label}
+        scope={scope}
+        weekIndex={weekIndex}
+        month={progress.month}
+        pickHistory={pickHistory}
+      />
       <TierTable
         title={segment ? `Farmer e Venda · ${label}` : "Setores, Farmer e Venda"}
         rows={rows}
         hasBlack={hasBlack}
       />
-      <GoalEvolution
-        label={label}
-        scope={scope}
-        progress={progress}
-        pickHistory={(item) => (segment ? item.segments[segment] : item.total)}
-      />
+      <GoalEvolution label={label} scope={scope} progress={progress} pickHistory={pickHistory} />
 
       <ChartCard
         title="Quanto cada vendedor já fez da Meta do mês"
@@ -279,6 +288,8 @@ function TotalView({ progress, segment, segments, people, weekIndex, onSelect })
 function VendorView({ person, progress, weekIndex }) {
   const hasBlack = Boolean(progress.black?.active);
   const label = person.name;
+  const pickHistory = (item) =>
+    item.people.find((entry) => entry.vendorId === person.vendorId) ?? { realized: 0, tiers: null };
 
   return (
     <>
@@ -296,16 +307,15 @@ function VendorView({ person, progress, weekIndex }) {
         </span>
       </section>
 
-      <ScopeOverview label={label} scope={person} weekIndex={weekIndex} />
-
-      <GoalEvolution
+      <ScopeOverview
         label={label}
         scope={person}
-        progress={progress}
-        pickHistory={(item) =>
-          item.people.find((entry) => entry.vendorId === person.vendorId) ?? { realized: 0, tiers: null }
-        }
+        weekIndex={weekIndex}
+        month={progress.month}
+        pickHistory={pickHistory}
       />
+
+      <GoalEvolution label={label} scope={person} progress={progress} pickHistory={pickHistory} />
 
       <ChartCard title={`Semanas de ${person.name}`} description="Meta, Super meta e Meta black de cada semana do mês">
         <div className={styles.scroll}>

@@ -22,10 +22,16 @@ const PRODUCTIVE_DAYS_NOTE = "seg. a sáb., sem feriados";
 // A API devolve percentuais de 0 a 100; o formatPercent espera a fração
 const formatApiPercent = (percent) => formatPercent(percent / 100);
 const perDay = (value) => `${formatCurrency(value)}/dia`;
-const goalLabelOf = (forecast, segment) => (forecast.goalIsTotal ? "Meta total" : `Meta ${segment}`);
+const isMonthOf = (forecast) => forecast.period?.type === "month";
+const hasGoal = (forecast) => forecast.goal > 0;
+const goalLabelOf = (forecast, segment) => {
+  if (isMonthOf(forecast)) return hasGoal(forecast) ? "Meta do mês" : "Sem meta cadastrada no mês";
+  return forecast.goalIsTotal ? "Meta total" : `Meta ${segment}`;
+};
 
-const requiredPaceText = (campaign) => {
-  if (campaign.requiredPace === null) return "Campanha encerrada";
+const requiredPaceText = (campaign, forecast) => {
+  if (!hasGoal(forecast)) return "—";
+  if (campaign.requiredPace === null) return isMonthOf(forecast) ? "Mês encerrado" : "Campanha encerrada";
   if (campaign.requiredPace === 0) return "Meta batida";
   return perDay(campaign.requiredPace);
 };
@@ -41,10 +47,10 @@ const scenarioRows = (scenarios) => [
 ];
 
 // Cartões: os 3 cenários e a meta
-export function ForecastScenarios({ segment }) {
-  const { forecast } = useForecast(segment);
+export function ForecastScenarios({ segment, month }) {
+  const { forecast } = useForecast(segment, month);
   const { campaign, goal } = forecast;
-  const title = "Cenários da campanha";
+  const title = isMonthOf(forecast) ? "Cenários do mês" : "Cenários da campanha";
 
   return (
     <ChartCard
@@ -75,23 +81,28 @@ export function ForecastScenarios({ segment }) {
 }
 
 // Ritmo atual x necessário, cobertura, gap e chance de bater a meta
-export function ForecastIndicators({ segment }) {
-  const { forecast } = useForecast(segment);
+export function ForecastIndicators({ segment, month }) {
+  const { forecast } = useForecast(segment, month);
   const { campaign } = forecast;
   const title = "Indicadores do forecast";
+  const withGoal = hasGoal(forecast);
 
   const facts = [
-    { label: "Ritmo atual", value: perDay(campaign.pace.current), note: "Ritmo ponderado (7 dias, 30 dias e campanha)" },
-    { label: "Ritmo necessário", value: requiredPaceText(campaign), note: "Quanto falta para a meta ÷ dias produtivos restantes" },
+    {
+      label: "Ritmo atual",
+      value: perDay(campaign.pace.current),
+      note: `Ritmo ponderado (7 dias, 30 dias e ${isMonthOf(forecast) ? "mês" : "campanha"})`,
+    },
+    { label: "Ritmo necessário", value: requiredPaceText(campaign, forecast), note: "Quanto falta para a meta ÷ dias produtivos restantes" },
     {
       label: "Cobertura do ritmo",
-      value: campaign.paceCoverage === null ? "—" : formatApiPercent(campaign.paceCoverage),
+      value: !withGoal || campaign.paceCoverage === null ? "—" : formatApiPercent(campaign.paceCoverage),
       note: "Quanto do ritmo necessário está sendo entregue. Não é a chance de bater a meta",
     },
-    { label: "Gap previsto (realista)", value: gapText(campaign.gap), note: "Meta − cenário realista" },
+    { label: "Gap previsto (realista)", value: withGoal ? gapText(campaign.gap) : "—", note: "Meta − cenário realista" },
     {
       label: "Chance de bater a meta",
-      value: probabilityText(campaign.probability),
+      value: withGoal ? probabilityText(campaign.probability) : "—",
       note: "Estimativa estatística pela variação das vendas diárias",
     },
   ];
@@ -117,8 +128,8 @@ export function ForecastIndicators({ segment }) {
 }
 
 // Realizado até hoje e, daí em diante, as 3 trajetórias, com a meta como referência
-export function ForecastTrajectoryChart({ segment }) {
-  const { forecast } = useForecast(segment);
+export function ForecastTrajectoryChart({ segment, month }) {
+  const { forecast } = useForecast(segment, month);
   const { trajectory, goal } = forecast;
   const title = "Trajetórias do forecast";
   const series = [
@@ -147,14 +158,14 @@ export function ForecastTrajectoryChart({ segment }) {
 }
 
 // Como o ritmo é calculado: as 3 médias e os pesos
-export function ForecastPace({ segment }) {
-  const { forecast } = useForecast(segment);
+export function ForecastPace({ segment, month }) {
+  const { forecast } = useForecast(segment, month);
   const { pace, productiveDays } = forecast.campaign;
   const title = "Como o ritmo é calculado";
   const parts = [
     { label: "Últimos 7 dias produtivos", average: pace.last7, weight: pace.weights?.last7 ?? null },
     { label: "Últimos 30 dias produtivos", average: pace.last30, weight: pace.weights?.last30 ?? null },
-    { label: "Campanha inteira", average: pace.campaign, weight: pace.weights?.campaign ?? null },
+    { label: isMonthOf(forecast) ? "Mês inteiro" : "Campanha inteira", average: pace.campaign, weight: pace.weights?.campaign ?? null },
   ];
 
   return (
@@ -197,8 +208,8 @@ export function ForecastPace({ segment }) {
 }
 
 // Semana atual (segunda a sábado): cenários e, quando o backend manda, a meta semanal automática
-export function WeekForecast({ segment }) {
-  const { forecast } = useForecast(segment);
+export function WeekForecast({ segment, month }) {
+  const { forecast } = useForecast(segment, month);
   const { week, weekGoal } = forecast;
   const title = "Forecast da semana";
   const goalNote = weekGoal
@@ -241,7 +252,7 @@ export function ForecastSummary({ segment }) {
 
   const facts = [
     ["Ritmo atual", perDay(campaign.pace.current)],
-    ["Ritmo necessário", requiredPaceText(campaign)],
+    ["Ritmo necessário", requiredPaceText(campaign, forecast)],
     ["Cobertura do ritmo", campaign.paceCoverage === null ? "—" : formatApiPercent(campaign.paceCoverage)],
     ["Chance de bater a meta", probabilityText(campaign.probability)],
   ];

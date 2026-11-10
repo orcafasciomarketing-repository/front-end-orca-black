@@ -84,13 +84,16 @@ describe("AdminLayout", () => {
     it("master vê todas as telas, inclusive Importação, Erros e Usuários", () => {
       renderAs("master");
 
+      const groups = [...document.querySelectorAll("nav p")].map((label) => label.textContent);
+      expect(groups).toEqual(["Campanha Black", "Metas do mês", "Administração"]);
+
       expect(menuLinks()).toEqual([
         "Dashboard",
         "Gráficos",
         "Previsão",
         "Prêmios",
-        "Cadastro de metas",
         "Metas por vendedor",
+        "Cadastro de metas",
         "Importação",
         "Erros",
         "Usuários",
@@ -105,8 +108,8 @@ describe("AdminLayout", () => {
         "Gráficos",
         "Previsão",
         "Prêmios",
-        "Cadastro de metas",
         "Metas por vendedor",
+        "Cadastro de metas",
         "Usuários",
       ]);
     });
@@ -119,8 +122,8 @@ describe("AdminLayout", () => {
         "Gráficos",
         "Previsão",
         "Prêmios",
-        "Cadastro de metas",
         "Metas por vendedor",
+        "Cadastro de metas",
         "Importação",
         "Erros",
         "Usuários",

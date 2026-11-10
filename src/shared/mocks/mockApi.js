@@ -27,7 +27,10 @@ const toSegment = (value) => (["b2b", "b2g"].includes(String(value ?? "").toLowe
 
 const ROUTES = [
   { pattern: /^\/analytics\/goal$/, handle: ({ db }) => getGoalProgress(db) },
-  { pattern: /^\/analytics\/forecast$/, handle: ({ db, now, params }) => getForecast(db, params.segment, now) },
+  {
+    pattern: /^\/analytics\/forecast$/,
+    handle: ({ db, now, params }) => getForecast(db, params.segment, now, /^\d{4}-\d{2}$/.test(params.month ?? "") ? params.month : null),
+  },
   { pattern: /^\/analytics\/scoreboard\/last-week$/, handle: ({ db, now }) => getScoreboard(db, "lastWeek", now) },
   { pattern: /^\/analytics\/scoreboard$/, handle: ({ db, now, params }) => getScoreboard(db, toPeriod(params.period), now) },
   {

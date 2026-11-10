@@ -80,11 +80,11 @@ const goalProbability = ({ sold, goal, realistic, stdDev, daysLeft }) => {
 };
 
 // sales: vendas ativas ({ value, realizedAt }); goal: meta do período da campanha
-const buildWeekGoal = ({ sales, goal, weekStart, weekEnd, weekSold, weekDaysLeft }) => {
-  const from = weekStart > CAMPAIGN_START_DAY ? weekStart : CAMPAIGN_START_DAY;
+const buildWeekGoal = ({ sales, goal, weekStart, weekEnd, weekSold, weekDaysLeft, start, end }) => {
+  const from = weekStart > start ? weekStart : start;
   if (goal <= 0 || from > weekEnd) return null;
 
-  const daysFromWeek = productiveDaysBetween(from, CAMPAIGN_END_DAY).length;
+  const daysFromWeek = productiveDaysBetween(from, end).length;
   const weekDays = productiveDaysBetween(from, weekEnd).length;
   if (!daysFromWeek || !weekDays) return null;
 
@@ -102,14 +102,20 @@ const buildWeekGoal = ({ sales, goal, weekStart, weekEnd, weekSold, weekDaysLeft
   };
 };
 
-export const buildForecast = ({ sales, goal, now = new Date() }) => {
+export const buildForecast = ({
+  sales,
+  goal,
+  now = new Date(),
+  start = CAMPAIGN_START_DAY,
+  end = CAMPAIGN_END_DAY,
+}) => {
   const today = dayKeyOf(now);
-  const hasStarted = today >= CAMPAIGN_START_DAY;
-  const lastElapsedDay = today < CAMPAIGN_END_DAY ? today : CAMPAIGN_END_DAY;
+  const hasStarted = today >= start;
+  const lastElapsedDay = today < end ? today : end;
 
   // Hoje conta como dia já passado (as vendas de hoje já estão no vendido)
-  const elapsedDays = hasStarted ? productiveDaysBetween(CAMPAIGN_START_DAY, lastElapsedDay) : [];
-  const remainingDays = productiveDaysBetween(hasStarted ? addDays(today, 1) : CAMPAIGN_START_DAY, CAMPAIGN_END_DAY);
+  const elapsedDays = hasStarted ? productiveDaysBetween(start, lastElapsedDay) : [];
+  const remainingDays = productiveDaysBetween(hasStarted ? addDays(today, 1) : start, end);
 
   const sold = sum(sales.map((sale) => sale.value ?? 0));
 
@@ -117,7 +123,7 @@ export const buildForecast = ({ sales, goal, now = new Date() }) => {
   const soldByDay = new Map(elapsedDays.map((day) => [day, 0]));
   for (const sale of sales) {
     const day = dayKeyOf(sale.realizedAt);
-    if (!elapsedDays.length || day < CAMPAIGN_START_DAY || day > lastElapsedDay) continue;
+    if (!elapsedDays.length || day < start || day > lastElapsedDay) continue;
     const productiveDay = productiveDayFor(day, elapsedDays);
     soldByDay.set(productiveDay, soldByDay.get(productiveDay) + (sale.value ?? 0));
   }
@@ -149,7 +155,7 @@ export const buildForecast = ({ sales, goal, now = new Date() }) => {
   // Semana atual (segunda a sábado), sem meta: só os cenários
   const weekStart = addDays(today, -((weekDayOf(today) || 7) - 1));
   const weekSunday = addDays(weekStart, 6);
-  const weekEnd = addDays(weekStart, 5) < CAMPAIGN_END_DAY ? addDays(weekStart, 5) : CAMPAIGN_END_DAY;
+  const weekEnd = addDays(weekStart, 5) < end ? addDays(weekStart, 5) : end;
   const weekSold = sum(
     sales
       .filter((sale) => {
@@ -164,8 +170,8 @@ export const buildForecast = ({ sales, goal, now = new Date() }) => {
     today,
     goal,
     campaign: {
-      start: CAMPAIGN_START_DAY,
-      end: CAMPAIGN_END_DAY,
+      start,
+      end,
       sold: roundMoney(sold),
       productiveDays: { elapsed: elapsedDays.length, remaining: daysLeft },
       pace: {
@@ -189,7 +195,7 @@ export const buildForecast = ({ sales, goal, now = new Date() }) => {
       remainingDays: weekDaysLeft,
       scenarios: buildScenarios(weekSold, pace, weekDaysLeft),
     },
-    weekGoal: buildWeekGoal({ sales, goal, weekStart, weekEnd, weekSold, weekDaysLeft }),
+    weekGoal: buildWeekGoal({ sales, goal, weekStart, weekEnd, weekSold, weekDaysLeft, start, end }),
     trajectory: {
       days: [...elapsedDays, ...remainingDays],
       actual: [...actual, ...remainingDays.map(() => null)],

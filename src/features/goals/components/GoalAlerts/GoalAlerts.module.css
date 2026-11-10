@@ -1,0 +1,91 @@
+.card {
+  gap: 16px;
+  padding: 16px 20px 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.description {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.empty {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--color-border);
+  border-radius: 8px;
+  background: var(--color-background);
+}
+
+.danger {
+  border-left-color: var(--color-error);
+}
+
+.warning {
+  border-left-color: var(--chart-orange, #eb6834);
+}
+
+.good {
+  border-left-color: var(--color-success);
+}
+
+.groupTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.count {
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+}
+
+.name {
+  composes: nameButton from "../../../admin/components/charts/BarChart.module.css";
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.detail {
+  color: var(--color-muted);
+  text-align: right;
+  white-space: nowrap;
+}

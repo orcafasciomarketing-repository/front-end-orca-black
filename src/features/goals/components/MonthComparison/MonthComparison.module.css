@@ -1,0 +1,36 @@
+.card {
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.title {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.empty {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fact {
+  composes: fact from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.note {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 600px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

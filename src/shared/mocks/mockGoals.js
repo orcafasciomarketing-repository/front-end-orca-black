@@ -391,6 +391,19 @@ export function getGoalProgress(db, month, now = new Date()) {
   };
 }
 
+export function getMonthTiers(db, month, segment, now = new Date()) {
+  const configs = demoConfigs(db, month, now).filter((config) => !segment || config.segment === segment);
+  if (!configs.length) return null;
+  const black = blackInfo(month, now);
+  return sumTiers(
+    configs.map((config) =>
+      segmentTiers(
+        typeTiers(black.active ? withSectorBlack(config, SECTOR_BLACK[config.segment]) : config, black.active),
+      ),
+    ),
+  );
+}
+
 const shiftMonth = (month, amount) => {
   const [year, number] = month.split("-").map(Number);
   return new Date(Date.UTC(year, number - 1 + amount, 1)).toISOString().slice(0, 7);

@@ -58,6 +58,10 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       expect(within(screen.getByLabelText("Percentual da Meta por vendedor")).getAllByRole("listitem")).toHaveLength(
         11,
       );
+      expect(screen.getByRole("region", { name: "Alertas do mês" })).toBeInTheDocument();
+      const comparison = await screen.findByRole("region", { name: "Comparação com o mês anterior · Total" });
+      expect(textOf(comparison)).toMatch(/setembro de 2026R\$ [\d.,]+Sem meta cadastrada/);
+      expect(textOf(comparison)).toMatch(/Este mês até agora/);
     });
 
     it("o filtro de setor mostra só o setor escolhido, com Farmer e Venda dele", async () => {

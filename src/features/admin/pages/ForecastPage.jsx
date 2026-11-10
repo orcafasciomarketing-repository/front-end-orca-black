@@ -14,6 +14,7 @@ import {
 import PageHeader from "../components/PageHeader/PageHeader";
 import WidgetFallback from "../components/WidgetFallback/WidgetFallback";
 import { getSegmentOptions } from "../utils/segments";
+import { currentMonthKey } from "../../goals/utils/goalMath";
 
 const WIDGETS = [
   { title: "Cenários da campanha", Widget: ForecastScenarios, className: "full" },
@@ -27,10 +28,44 @@ export default function ForecastPage() {
   // b2b e b2g abrem (e ficam) no próprio setor
   const { segment: userSegment } = usePermissions();
   const [selectedSegment, setSelectedSegment] = useState(userSegment);
+  const [period, setPeriod] = useState("campaign");
+  const [month, setMonth] = useState(() => currentMonthKey());
+  const selectedMonth = period === "month" ? month : null;
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Previsão" description="Forecast da Black Friday: cenários pessimista, realista e otimista">
+      <PageHeader
+        title="Previsão"
+        description={
+          selectedMonth
+            ? "Forecast do mês: cenários pessimista, realista e otimista contra a Meta do cadastro de metas"
+            : "Forecast da Black Friday: cenários pessimista, realista e otimista"
+        }
+      >
+        <label className={styles.field}>
+          <span className={styles.label}>Período</span>
+          <select
+            className={styles.select}
+            aria-label="Período da previsão"
+            value={period}
+            onChange={(event) => setPeriod(event.target.value)}
+          >
+            <option value="campaign">Campanha Black</option>
+            <option value="month">Mês</option>
+          </select>
+        </label>
+        {selectedMonth && (
+          <label className={styles.field}>
+            <span className={styles.label}>Mês</span>
+            <input
+              className={styles.input}
+              type="month"
+              aria-label="Mês da previsão"
+              value={month}
+              onChange={(event) => /^\d{4}-\d{2}$/.test(event.target.value) && setMonth(event.target.value)}
+            />
+          </label>
+        )}
         <label className={styles.field}>
           <span className={styles.label}>Setor</span>
           <select
@@ -51,9 +86,9 @@ export default function ForecastPage() {
       <div className={styles.grid}>
         {WIDGETS.map(({ title, Widget, className }) => (
           <div key={title} className={className ? styles[className] : ""}>
-            <ErrorBoundary location={`Admin › previsão › ${title.toLowerCase()}`}>
+            <ErrorBoundary key={selectedMonth ?? "campaign"} location={`Admin › previsão › ${title.toLowerCase()}`}>
               <Suspense fallback={<WidgetFallback title={title} />}>
-                <Widget segment={selectedSegment} />
+                <Widget segment={selectedSegment} month={selectedMonth} />
               </Suspense>
             </ErrorBoundary>
           </div>

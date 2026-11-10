@@ -1,4 +1,6 @@
+import { dayKeyOf as goalDayKeyOf, monthWeeks } from "../../features/goals/utils/goalMath";
 import { buildForecast } from "./mockForecast";
+import { getMonthTiers } from "./mockGoals";
 
 export const POINTS = { sales: 2, farm: 1, passage: 1 };
 export const BLACK_FRIDAY_GOAL = 3000000;
@@ -171,13 +173,39 @@ export function getSdrRanking(db, period, now = new Date(), segment = null) {
 }
 
 // Igual ao GET /analytics/forecast: segment "b2b"/"b2g" usa as vendas e a meta do setor
-export function getForecast(db, segment, now = new Date()) {
+export function getForecast(db, segment, now = new Date(), month = null) {
   const validSegment = ["b2b", "b2g"].includes(segment) ? segment : null;
   const sales = db.sales.filter((sale) => isActive(sale) && (!validSegment || sale.segment === validSegment));
+  if (month) return getMonthForecast(db, validSegment, sales, now, month);
   const segmentGoal = validSegment ? SEGMENT_GOALS[validSegment] : 0;
   const goal = segmentGoal > 0 ? segmentGoal : BLACK_FRIDAY_GOAL;
 
-  return { segment: validSegment, goalIsTotal: !(segmentGoal > 0), ...buildForecast({ sales, goal, now }) };
+  return {
+    segment: validSegment,
+    goalIsTotal: !(segmentGoal > 0),
+    period: { type: "campaign" },
+    ...buildForecast({ sales, goal, now }),
+  };
+}
+
+function getMonthForecast(db, segment, sales, now, month) {
+  const weeks = monthWeeks(month);
+  const start = weeks[0].start;
+  const end = weeks[weeks.length - 1].end;
+  const monthSales = sales.filter((sale) => {
+    const day = goalDayKeyOf(sale.realizedAt);
+    return day >= start && day <= end;
+  });
+  const tiers = getMonthTiers(db, month, segment, now);
+  const goal = tiers?.goal ?? 0;
+
+  return {
+    segment,
+    goalIsTotal: false,
+    period: { type: "month", month, start, end },
+    monthTiers: tiers,
+    ...buildForecast({ sales: monthSales, goal, now, start, end }),
+  };
 }
 
 const mockDayKey = (date) => new Date(new Date(date).getTime() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);

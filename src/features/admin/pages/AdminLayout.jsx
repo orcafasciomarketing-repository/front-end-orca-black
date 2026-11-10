@@ -24,24 +24,51 @@ import {
 import SaleToasts from "../components/SaleToasts/SaleToasts";
 
 // allow: permissão de getPermissions que mostra o item (sem ela, a rota também manda de volta para o dashboard)
-const NAV_ITEMS = [
-  { to: "/minha-area", label: "Minha área", end: true, Icon: DashboardIcon, allow: "isPerson" },
-  { to: "/admin", label: "Dashboard", end: true, Icon: DashboardIcon, allow: "canSeeAdmin" },
-  { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon, allow: "canSeeAdmin" },
-  { to: "/admin/previsao", label: "Previsão", end: false, Icon: ForecastIcon, allow: "canSeeAdmin" },
-  { to: "/admin/premios", label: "Prêmios", end: false, Icon: GiftIcon, allow: "canSeeAdmin" },
-  { to: "/admin/metas", label: "Cadastro de metas", end: true, Icon: TargetIcon, allow: "canSeeGoals" },
-  { to: "/admin/metas/vendedores", label: "Metas por vendedor", end: false, Icon: TargetIcon, allow: "canSeeGoals" },
-  { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
-  { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
-  { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },
+const NAV_GROUPS = [
+  {
+    label: null,
+    items: [{ to: "/minha-area", label: "Minha área", end: true, Icon: DashboardIcon, allow: "isPerson" }],
+  },
+  {
+    label: "Campanha Black",
+    items: [
+      { to: "/admin", label: "Dashboard", end: true, Icon: DashboardIcon, allow: "canSeeAdmin" },
+      { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon, allow: "canSeeAdmin" },
+      { to: "/admin/previsao", label: "Previsão", end: false, Icon: ForecastIcon, allow: "canSeeAdmin" },
+      { to: "/admin/premios", label: "Prêmios", end: false, Icon: GiftIcon, allow: "canSeeAdmin" },
+    ],
+  },
+  {
+    label: "Metas do mês",
+    items: [
+      {
+        to: "/admin/metas/vendedores",
+        label: "Metas por vendedor",
+        end: false,
+        Icon: TargetIcon,
+        allow: "canSeeGoals",
+      },
+      { to: "/admin/metas", label: "Cadastro de metas", end: true, Icon: TargetIcon, allow: "canSeeGoals" },
+    ],
+  },
+  {
+    label: "Administração",
+    items: [
+      { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
+      { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
+      { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },
+    ],
+  },
 ];
 
 const navLinkClass = ({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`;
 
 export default function AdminLayout() {
   const permissions = usePermissions();
-  const navItems = NAV_ITEMS.filter((item) => !item.allow || permissions[item.allow]);
+  const navGroups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: group.items.filter((item) => !item.allow || permissions[item.allow]),
+  })).filter((group) => group.items.length > 0);
   const { theme, isDark, toggleTheme } = useTheme();
   const auth = useContext(AuthContext);
   const isLoggedIn = Boolean(auth?.state.user);
@@ -55,17 +82,22 @@ export default function AdminLayout() {
     <div className={`container ${styles.layout}`} data-theme={theme}>
       <aside className={styles.sidebar}>
         <img className={styles.logo} src="/orca-black-logo.png" alt="Orça Black" />
-        <nav aria-label="Menu principal">
-          <ul className={styles.nav}>
-            {navItems.map(({ to, label, end, Icon }) => (
-              <li key={to}>
-                <NavLink to={to} end={end} className={navLinkClass}>
-                  <Icon />
-                  <span>{label}</span>
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+        <nav className={styles.navGroups} aria-label="Menu principal">
+          {navGroups.map((group) => (
+            <div key={group.label ?? "pessoal"} className={styles.navGroup}>
+              {group.label && <p className={styles.navGroupLabel}>{group.label}</p>}
+              <ul className={styles.nav}>
+                {group.items.map(({ to, label, end, Icon }) => (
+                  <li key={to}>
+                    <NavLink to={to} end={end} className={navLinkClass}>
+                      <Icon />
+                      <span>{label}</span>
+                    </NavLink>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </nav>
         <div className={styles.sidebarFooter}>
           {isLoggedIn && (
