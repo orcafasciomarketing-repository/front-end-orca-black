@@ -20,6 +20,11 @@ export const getGoalProgress = async (month) => {
   return response.data.data;
 };
 
+export const getGoalHistory = async (month) => {
+  const response = await http.get(`/goals/${month}/history`);
+  return response.data.data;
+};
+
 export const saveGoalMonth = async (month, segment, payload) => {
   assertMockDisabled();
 

@@ -30,40 +30,86 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
   });
 
   describe("Metas por vendedor", () => {
-    it("resumo, os dois setores com a faixa atual e o gráfico por vendedor", async () => {
+    it("Total: resumo, as três faixas separadas com o forecast, setores e partes, e o gráfico por vendedor", async () => {
       renderPage(GoalsProgressPage);
 
       const summary = await screen.findByLabelText("Resumo das metas");
       expect(textOf(summary)).toMatch(/Vendedores com meta11/);
-      expect(screen.getByRole("region", { name: "Setor B2B" })).toBeInTheDocument();
-      expect(screen.getByRole("region", { name: "Setor B2G" })).toBeInTheDocument();
-      expect(within(screen.getByRole("region", { name: "Mês · B2B" })).getByRole("progressbar")).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Total" })).toHaveAttribute("aria-pressed", "true");
+
+      const month = within(screen.getByRole("region", { name: "Mês · Total" }));
+      expect(month.getAllByRole("progressbar").map((bar) => bar.getAttribute("aria-label"))).toEqual([
+        "Progresso da Meta",
+        "Progresso da Super meta",
+        "Progresso da Meta black",
+      ]);
+      expect(month.getAllByText("Chance de bater")).toHaveLength(3);
+      expect(textOf(month.getByRole("region", { name: "Previsão do mês · Total" }))).toMatch(
+        /PessimistaR\$ .*RealistaR\$ .*OtimistaR\$/,
+      );
+
+      const parts = within(screen.getByRole("table", { name: "Setores, Farmer e Venda" }));
+      expect(parts.getAllByRole("rowheader").map((cell) => cell.textContent)).toEqual([
+        "Setor B2B",
+        "Setor B2G",
+        "Farmer",
+        "Venda",
+      ]);
       expect(within(screen.getByLabelText("Percentual da Meta por vendedor")).getAllByRole("listitem")).toHaveLength(
         11,
       );
     });
 
-    it("o filtro de setor deixa só o setor escolhido", async () => {
+    it("o filtro de setor mostra só o setor escolhido, com Farmer e Venda dele", async () => {
       renderPage(GoalsProgressPage);
       await screen.findByLabelText("Resumo das metas");
 
       fireEvent.change(screen.getByLabelText("Filtrar metas por setor"), { target: { value: "b2g" } });
 
-      expect(screen.queryByRole("region", { name: "Setor B2B" })).not.toBeInTheDocument();
-      expect(screen.getByRole("region", { name: "Setor B2G" })).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "Mês · Setor B2G" })).toBeInTheDocument();
+      expect(
+        within(screen.getByRole("table", { name: "Farmer e Venda · Setor B2G" }))
+          .getAllByRole("rowheader")
+          .map((cell) => cell.textContent),
+      ).toEqual(["Farmer", "Venda"]);
       expect(within(screen.getByLabelText("Percentual da Meta por vendedor")).getAllByRole("listitem")).toHaveLength(3);
     });
 
-    it("clicar no vendedor abre o detalhe com a faixa atual, as semanas e a evolução", async () => {
+    it("clicar no vendedor abre a visão por vendedor só com a conta dele, as faixas, o forecast e as semanas", async () => {
       renderPage(GoalsProgressPage);
       const table = within(await screen.findByRole("region", { name: "Vendedores" }));
 
       fireEvent.click(table.getByRole("button", { name: "Brenda Lima" }));
 
-      const detail = within(screen.getByRole("region", { name: "Detalhe de Brenda Lima" }));
-      expect(detail.getByRole("region", { name: "Mês" })).toBeInTheDocument();
-      expect(detail.getByRole("table", { name: "Semanas de Brenda Lima" })).toBeInTheDocument();
-      expect(detail.getByRole("img", { name: /Evolução do mês de Brenda Lima/ })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Por vendedor" })).toHaveAttribute("aria-pressed", "true");
+      const vendor = screen.getByRole("region", { name: "Vendedor Brenda Lima" });
+      expect(textOf(vendor)).toMatch(/Conta Venda: só as vendas novas contam/);
+      expect(screen.getByRole("region", { name: "Mês · Brenda Lima" })).toBeInTheDocument();
+      expect(screen.getByRole("region", { name: "Previsão do mês · Brenda Lima" })).toBeInTheDocument();
+      expect(screen.getByRole("table", { name: "Semanas de Brenda Lima" })).toBeInTheDocument();
+      expect(screen.queryByLabelText("Resumo das metas")).not.toBeInTheDocument();
+      expect(screen.queryByRole("table", { name: /Farmer e Venda/ })).not.toBeInTheDocument();
+
+      const select = screen.getByLabelText("Escolher vendedor");
+      const farmer = [...select.options].find((option) => option.textContent.endsWith("Farmer"));
+      fireEvent.change(select, { target: { value: farmer.value } });
+
+      expect(textOf(screen.getByRole("region", { name: /^Vendedor / }))).toMatch(/Conta Farmer: só as renovações/);
+    });
+
+    it("evolução diária, semanal e mensal (histórico dos meses)", async () => {
+      renderPage(GoalsProgressPage);
+      const evolution = within(await screen.findByRole("region", { name: "Evolução · Total" }));
+
+      expect(evolution.getByRole("img", { name: /Evolução diária acumulada de Total/ })).toBeInTheDocument();
+      expect(evolution.getByRole("img", { name: /Vendido por dia de Total/ })).toBeInTheDocument();
+
+      fireEvent.click(evolution.getByRole("button", { name: "Semanal" }));
+      expect(evolution.getByRole("img", { name: /Evolução semanal de Total/ })).toBeInTheDocument();
+
+      fireEvent.click(evolution.getByRole("button", { name: "Mensal" }));
+      expect(await evolution.findByRole("img", { name: /Evolução mensal de Total/ })).toBeInTheDocument();
+      expect(evolution.getByRole("table", { name: "Evolução mensal de Total" })).toBeInTheDocument();
     });
 
     it("mês sem metas avisa para cadastrar", async () => {
@@ -108,7 +154,7 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       renderPage(GoalsSetupPage);
       await screen.findByLabelText("Distribuição");
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta Farmer (R$)" }), { target: { value: "56000" } });
+      fireEvent.change(screen.getByLabelText("Meta Farmer (R$)"), { target: { value: "56000" } });
 
       expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(
         /Renovação: distribuído R\$ 56\.000,00 de R\$ 56\.000,00/,
@@ -118,7 +164,7 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       );
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
 
-      fireEvent.change(screen.getByRole("spinbutton", { name: "Meta Farmer (R$)" }), { target: { value: "70000" } });
+      fireEvent.change(screen.getByLabelText("Meta Farmer (R$)"), { target: { value: "70000" } });
 
       expect(screen.getByText(/Farmer: a Meta black precisa ser maior que a Super meta/)).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
@@ -126,8 +172,8 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
 
     it("Super meta e Meta black de cada vendedor são editáveis e voltam ao automático", async () => {
       renderPage(GoalsSetupPage);
-      const superInput = await screen.findByRole("spinbutton", { name: "Super meta de Brenda Lima" });
-      expect(screen.getByRole("spinbutton", { name: "Meta black de Brenda Lima" })).toBeInTheDocument();
+      const superInput = await screen.findByLabelText("Super meta de Brenda Lima");
+      expect(screen.getByLabelText("Meta black de Brenda Lima")).toBeInTheDocument();
       expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(/Super meta Vendas: distribuído/);
 
       fireEvent.change(superInput, { target: { value: "1" } });

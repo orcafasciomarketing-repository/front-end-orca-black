@@ -42,7 +42,7 @@
   composes: input from "../../../admin/components/UsersWidget/UsersWidget.module.css";
   display: flex;
   align-items: center;
-  background: var(--color-fill-light);
+  background: var(--color-background);
   font-weight: 600;
 }
 
@@ -51,11 +51,7 @@
 }
 
 .money {
-  width: 128px;
-}
-
-.invalid {
-  border-color: var(--color-error);
+  width: 136px;
 }
 
 .hint {
@@ -141,7 +137,7 @@
 .goalCell {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: flex-end;
   gap: 4px;
 }
 

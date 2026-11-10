@@ -1,0 +1,25 @@
+.input {
+  composes: input from "../../../admin/components/UsersWidget/UsersWidget.module.css";
+  font-variant-numeric: tabular-nums;
+}
+
+.plain {
+  padding: 0 10px;
+  border-color: transparent;
+  background: transparent;
+  text-align: right;
+  cursor: text;
+}
+
+.plain:hover {
+  border-color: var(--color-border);
+}
+
+.plain:focus-visible {
+  background: var(--color-surface);
+}
+
+.input.invalid {
+  border-color: var(--color-error);
+  color: var(--color-error);
+}

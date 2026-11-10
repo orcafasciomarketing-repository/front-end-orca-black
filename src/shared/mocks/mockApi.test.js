@@ -117,6 +117,27 @@ describe("mockApi", () => {
     expect(progress.summary.people).toBe(progress.people.length);
     expect(get("/goals/2026-09").data.data.segments.b2b.config).toBeNull();
     expect(get("/goals/2026-09/progress").data.data.people).toEqual([]);
+    expect(progress.total.month.tiers.goal).toBe(
+      progress.segments.reduce((sum, item) => sum + item.month.tiers.goal, 0),
+    );
+    expect(Object.keys(progress.total.forecast.tiers)).toEqual(["goal", "super", "black"]);
+    expect(progress.people[0].forecast.trajectory.realistic).toHaveLength(progress.days.length);
+  });
+
+  it("/goals/:mes/history traz os 6 meses até o escolhido; só o mês atual tem faixas", () => {
+    const history = get("/goals/2026-10/history").data.data;
+
+    expect(history.months.map((item) => item.month)).toEqual([
+      "2026-05",
+      "2026-06",
+      "2026-07",
+      "2026-08",
+      "2026-09",
+      "2026-10",
+    ]);
+    expect(history.months.at(-1).total.tiers.goal).toBeGreaterThan(0);
+    expect(history.months[0].total.tiers).toBeNull();
+    expect(history.months.at(-1).people.length).toBeGreaterThan(0);
   });
 
   it("rota que não existe devolve 404", () => {

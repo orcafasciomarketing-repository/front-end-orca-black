@@ -5,23 +5,21 @@ import { Suspense, useState } from "react";
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
 import { formatCurrency } from "../../../shared/utils/formatCurrency";
 import Avatar from "../../admin/components/Avatar/Avatar";
-import TimeSeriesChart from "../../admin/components/charts/TimeSeriesChart";
 import PageHeader from "../../admin/components/PageHeader/PageHeader";
 import { ChartCard } from "../../admin/components/SalesChartWidgets/SalesChartWidgets";
 import WidgetFallback from "../../admin/components/WidgetFallback/WidgetFallback";
 import { CHART_COLORS } from "../../admin/utils/chartColors";
-import { formatDay } from "../../admin/utils/chartData";
-import GoalTierCard from "../components/GoalTierCard/GoalTierCard";
+import GoalEvolution from "../components/GoalEvolution/GoalEvolution";
+import GoalForecastCard from "../components/GoalForecastCard/GoalForecastCard";
+import TierProgressCard from "../components/TierProgressCard/TierProgressCard";
 import { useGoalProgress } from "../hooks/useGoals";
 import {
   currentMonthKey,
   formatMonth,
   formatShortDay,
-  idealLine,
   STATUS_LABELS,
   TIER_LABELS,
   TYPE_LABELS,
-  untilToday,
 } from "../utils/goalMath";
 
 const SEGMENT_OPTIONS = [
@@ -30,7 +28,17 @@ const SEGMENT_OPTIONS = [
   { value: "b2g", label: "B2G" },
 ];
 
+const VIEW_OPTIONS = [
+  { value: "total", label: "Total" },
+  { value: "vendor", label: "Por vendedor" },
+];
+
 const PART_LABELS = { farm: "Farmer", sales: "Venda" };
+
+const TYPE_NOTES = {
+  farm: "Conta Farmer: só as renovações contam para a meta",
+  sales: "Conta Venda: só as vendas novas contam para a meta",
+};
 
 const TIER_CLASS = { goal: "tierGoal", super: "tierSuper", black: "tierBlack" };
 const TIER_COLORS = { goal: "var(--color-primary)", super: CHART_COLORS.aqua, black: "var(--color-text)" };
@@ -86,11 +94,12 @@ export default function GoalsProgressPage() {
 
 function ProgressContent({ month, segment }) {
   const { progress } = useGoalProgress(month);
+  const [view, setView] = useState("total");
   const [selectedId, setSelectedId] = useState(null);
   const segments = progress.segments.filter((item) => !segment || item.segment === segment);
   const people = progress.people.filter((person) => !segment || person.segment === segment);
   const weekIndex = progress.weeks.findIndex((week) => progress.today >= week.start && progress.today <= week.end);
-  const selected = people.find((person) => person.vendorId === selectedId) ?? null;
+  const selected = people.find((person) => person.vendorId === selectedId) ?? people[0] ?? null;
 
   if (!segments.length) {
     return (
@@ -101,12 +110,73 @@ function ProgressContent({ month, segment }) {
     );
   }
 
+  const openVendor = (vendorId) => {
+    setSelectedId(vendorId);
+    setView("vendor");
+  };
+
+  return (
+    <>
+      <div className={styles.toolbar}>
+        <div className={styles.tabs} role="group" aria-label="Ver os dados">
+          {VIEW_OPTIONS.map((option) => (
+            <button
+              key={option.value}
+              className={`${styles.tab} ${option.value === view ? styles.tabActive : ""}`}
+              type="button"
+              aria-pressed={option.value === view}
+              onClick={() => setView(option.value)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        {view === "vendor" && selected && (
+          <label className={styles.field}>
+            <span className={styles.label}>Vendedor</span>
+            <select
+              className={styles.select}
+              value={selected.vendorId}
+              aria-label="Escolher vendedor"
+              onChange={(event) => setSelectedId(event.target.value)}
+            >
+              {[...people]
+                .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"))
+                .map((person) => (
+                  <option key={person.vendorId} value={person.vendorId}>
+                    {person.name} · {person.segment.toUpperCase()} · {PART_LABELS[person.type]}
+                  </option>
+                ))}
+            </select>
+          </label>
+        )}
+      </div>
+
+      {view === "total" ? (
+        <TotalView
+          progress={progress}
+          segment={segment}
+          segments={segments}
+          people={people}
+          weekIndex={weekIndex}
+          onSelect={openVendor}
+        />
+      ) : selected ? (
+        <VendorView key={selected.vendorId} person={selected} progress={progress} weekIndex={weekIndex} />
+      ) : (
+        <p className={styles.empty}>Nenhum vendedor com meta</p>
+      )}
+    </>
+  );
+}
+
+function SummaryTiles({ people, hasBlack }) {
   const count = (test) => people.filter(test).length;
   const tiles = [
     { label: "Vendedores com meta", value: people.length },
     { label: "Bateram a Meta", value: count((person) => person.month.reached.includes("goal")) },
     { label: "Bateram a Super meta", value: count((person) => person.month.reached.includes("super")) },
-    ...(progress.black?.active
+    ...(hasBlack
       ? [{ label: "Bateram a Meta black", value: count((person) => person.month.reached.includes("black")) }]
       : []),
     { label: "No ritmo", value: count((person) => ["ahead", "done"].includes(person.month.pace.status)) },
@@ -114,97 +184,226 @@ function ProgressContent({ month, segment }) {
   ];
 
   return (
-    <>
-      <dl className={styles.tiles} aria-label="Resumo das metas">
-        {tiles.map((tile) => (
-          <div key={tile.label} className={`widget ${styles.tile}`}>
-            <dt className={styles.tileLabel}>{tile.label}</dt>
-            <dd className={styles.tileValue}>{tile.value}</dd>
-          </div>
-        ))}
-      </dl>
-
-      {segments.map((item) => (
-        <SegmentBlock key={item.segment} item={item} progress={progress} weekIndex={weekIndex} />
+    <dl className={styles.tiles} aria-label="Resumo das metas">
+      {tiles.map((tile) => (
+        <div key={tile.label} className={`widget ${styles.tile}`}>
+          <dt className={styles.tileLabel}>{tile.label}</dt>
+          <dd className={styles.tileValue}>{tile.value}</dd>
+        </div>
       ))}
+    </dl>
+  );
+}
+
+function ScopeOverview({ label, scope, weekIndex }) {
+  const week = weekIndex >= 0 ? scope.weeks[weekIndex] : null;
+
+  return (
+    <>
+      <section className={styles.segmentBlock} aria-label={`Mês · ${label}`}>
+        <h2 className={styles.sectionTitle}>Mês · {label}</h2>
+        <div className={styles.tierCards}>
+          {scope.month.available.map((tier) => (
+            <TierProgressCard key={tier} tier={tier} progress={scope.month} forecast={scope.forecast} />
+          ))}
+        </div>
+        {scope.forecast && <GoalForecastCard forecast={scope.forecast} title={`Previsão do mês · ${label}`} />}
+      </section>
+      {week && (
+        <section className={styles.segmentBlock} aria-label={`Semana atual · ${label}`}>
+          <h2 className={styles.sectionTitle}>
+            Semana atual <span className={styles.sectionPeriod}>{weekLabel(week)}</span>
+          </h2>
+          <div className={styles.tierCards}>
+            {week.available.map((tier) => (
+              <TierProgressCard key={tier} tier={tier} progress={week} period="semana atual" />
+            ))}
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
+function TotalView({ progress, segment, segments, people, weekIndex, onSelect }) {
+  const hasBlack = Boolean(progress.black?.active);
+  const scope = segment ? segments[0] : (progress.total ?? segments[0]);
+  const label = segment ? `Setor ${segment.toUpperCase()}` : "Total";
+  const rows = [
+    ...(segment
+      ? []
+      : segments.map((item) => ({
+          key: item.segment,
+          label: `Setor ${item.segment.toUpperCase()}`,
+          progress: item.month,
+        }))),
+    ...["farm", "sales"].map((type) => ({ key: type, label: PART_LABELS[type], progress: scope.parts[type] })),
+  ];
+
+  return (
+    <>
+      <SummaryTiles people={people} hasBlack={hasBlack} />
+      <ScopeOverview label={label} scope={scope} weekIndex={weekIndex} />
+      <TierTable
+        title={segment ? `Farmer e Venda · ${label}` : "Setores, Farmer e Venda"}
+        rows={rows}
+        hasBlack={hasBlack}
+      />
+      <GoalEvolution
+        label={label}
+        scope={scope}
+        progress={progress}
+        pickHistory={(item) => (segment ? item.segments[segment] : item.total)}
+      />
 
       <ChartCard
         title="Quanto cada vendedor já fez da Meta do mês"
-        description={`Barra = realizado ÷ Meta. As marcas mostram onde ficam a Meta (100%), a Super meta${progress.black?.active ? " e a Meta black" : ""}.`}
+        description={`Barra = realizado ÷ Meta. As marcas mostram onde ficam a Meta (100%), a Super meta${hasBlack ? " e a Meta black" : ""}. Clique no nome para ver o vendedor.`}
       >
-        <TierBars people={people} onSelect={setSelectedId} />
+        <TierBars people={people} onSelect={onSelect} />
       </ChartCard>
 
       <TeamsTable teams={segment ? null : progress.teams} />
 
       <ChartCard
         title="Vendedores"
-        description="Clique no nome para ver o detalhe do vendedor"
-        csvRows={vendorRows(people, Boolean(progress.black?.active))}
+        description="Clique no nome para ver o vendedor"
+        csvRows={vendorRows(people, hasBlack)}
       >
-        <VendorsTable people={people} selectedId={selectedId} onSelect={setSelectedId} />
+        <VendorsTable people={people} onSelect={onSelect} />
       </ChartCard>
-
-      {selected && <VendorDetail person={selected} progress={progress} weekIndex={weekIndex} />}
     </>
   );
 }
 
-function SegmentBlock({ item, progress, weekIndex }) {
-  const label = item.segment.toUpperCase();
-  const week = weekIndex >= 0 ? item.weeks[weekIndex] : null;
-  const series = [
-    {
-      key: "realized",
-      label: "Realizado",
-      color: CHART_COLORS.blue,
-      values: untilToday(item.cumulative, progress.days, progress.today),
-    },
-    {
-      key: "ideal",
-      label: "Ritmo da Meta",
-      color: CHART_COLORS.rest,
-      dashed: true,
-      values: idealLine(item.goal, progress.days),
-    },
-  ];
+function VendorView({ person, progress, weekIndex }) {
+  const hasBlack = Boolean(progress.black?.active);
+  const label = person.name;
 
   return (
-    <section className={styles.segmentBlock} aria-label={`Setor ${label}`}>
-      <h2 className={styles.sectionTitle}>Setor {label}</h2>
-      <div className={styles.cards}>
-        <GoalTierCard title={`Mês · ${label}`} period={formatMonth(progress.month)} progress={item.month} />
-        {week ? (
-          <GoalTierCard title={`Semana atual · ${label}`} period={weekLabel(week)} progress={week} />
-        ) : (
-          <p className={`widget ${styles.empty}`}>Hoje não está em nenhuma semana deste mês</p>
-        )}
-      </div>
-      <div className={styles.cards} aria-label={`Farmer e Venda do setor ${label}`}>
-        {["farm", "sales"].map((type) => (
-          <GoalTierCard
-            key={type}
-            title={`${PART_LABELS[type]} · ${label}`}
-            period={`Mês · Meta ${formatCurrency(item.parts[type].tiers.goal)}`}
-            progress={item.parts[type]}
-            showPace={false}
-          />
-        ))}
-      </div>
-      <ChartCard
-        title={`Evolução do mês · ${label}`}
-        description="Realizado acumulado comparado ao ritmo que bate a Meta no fim do mês"
-      >
-        <TimeSeriesChart
-          title={`Evolução do mês do setor ${label}`}
-          days={progress.days}
-          series={series}
-          reference={{ value: item.goal, label: `Meta ${formatCurrency(item.goal)}` }}
-          formatValue={formatCurrency}
-          formatLabel={formatDay}
-        />
+    <>
+      <section className={`widget ${styles.vendorCard}`} aria-label={`Vendedor ${person.name}`}>
+        <Avatar name={person.name} imageUrl={person.imageUrl} />
+        <span className={styles.vendorInfo}>
+          <h2 className="title">{person.name}</h2>
+          <span className={styles.job}>
+            {[person.job, person.levelName, person.segment.toUpperCase(), person.teamName].filter(Boolean).join(" · ")}
+          </span>
+          <span className={styles.vendorNote}>{TYPE_NOTES[person.type]}</span>
+        </span>
+        <span className={`${styles.status} ${styles.vendorStatus} ${styles[person.month.pace.status]}`}>
+          {STATUS_LABELS[person.month.pace.status]}
+        </span>
+      </section>
+
+      <ScopeOverview label={label} scope={person} weekIndex={weekIndex} />
+
+      <GoalEvolution
+        label={label}
+        scope={person}
+        progress={progress}
+        pickHistory={(item) =>
+          item.people.find((entry) => entry.vendorId === person.vendorId) ?? { realized: 0, tiers: null }
+        }
+      />
+
+      <ChartCard title={`Semanas de ${person.name}`} description="Meta, Super meta e Meta black de cada semana do mês">
+        <div className={styles.scroll}>
+          <table className={styles.table} aria-label={`Semanas de ${person.name}`}>
+            <thead>
+              <tr>
+                <th scope="col">Semana</th>
+                <th scope="col" className={styles.number}>
+                  Meta
+                </th>
+                <th scope="col" className={styles.number}>
+                  Super meta
+                </th>
+                {hasBlack && (
+                  <th scope="col" className={styles.number}>
+                    Meta black
+                  </th>
+                )}
+                <th scope="col" className={styles.number}>
+                  Realizado
+                </th>
+                <th scope="col">Faixa atual</th>
+                <th scope="col">Situação</th>
+              </tr>
+            </thead>
+            <tbody>
+              {person.weeks.map((item) => (
+                <tr key={item.start} className={item.index === weekIndex ? styles.selected : undefined}>
+                  <th scope="row">{weekLabel(item)}</th>
+                  <td className={styles.number}>{formatCurrency(item.tiers.goal)}</td>
+                  <td className={styles.number}>{formatCurrency(item.tiers.super)}</td>
+                  {hasBlack && <td className={styles.number}>{formatCurrency(item.tiers.black)}</td>}
+                  <td className={styles.number}>{formatCurrency(item.realized)}</td>
+                  <td>
+                    <span className={`${styles.tier} ${styles[TIER_CLASS[item.current]]}`}>
+                      {TIER_LABELS[item.current]}
+                    </span>
+                  </td>
+                  <td className={`${styles.status} ${styles[item.pace.status]}`}>{STATUS_LABELS[item.pace.status]}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </ChartCard>
-    </section>
+    </>
+  );
+}
+
+function TierTable({ title, rows, hasBlack }) {
+  const tiers = hasBlack ? ["goal", "super", "black"] : ["goal", "super"];
+
+  return (
+    <ChartCard title={title} description="Realizado de cada parte e quanto dele já cobre cada faixa">
+      <div className={styles.scroll}>
+        <table className={styles.table} aria-label={title}>
+          <thead>
+            <tr>
+              <th scope="col">Parte</th>
+              <th scope="col" className={styles.number}>
+                Realizado
+              </th>
+              {tiers.map((tier) => (
+                <th key={tier} scope="col" className={styles.number}>
+                  {TIER_LABELS[tier]}
+                </th>
+              ))}
+              <th scope="col">Faixa atual</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.key}>
+                <th scope="row">{row.label}</th>
+                <td className={styles.number}>{formatCurrency(row.progress.realized)}</td>
+                {tiers.map((tier) => (
+                  <td key={tier} className={styles.number}>
+                    {row.progress.tiers[tier] > 0 ? (
+                      <>
+                        {formatPercent((row.progress.realized / row.progress.tiers[tier]) * 100)}
+                        <span className={styles.job}>de {formatCurrency(row.progress.tiers[tier])}</span>
+                      </>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                ))}
+                <td>
+                  <span className={`${styles.tier} ${styles[TIER_CLASS[row.progress.current]]}`}>
+                    {TIER_LABELS[row.progress.current]}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </ChartCard>
   );
 }
 
@@ -340,7 +539,7 @@ function vendorRows(people, hasBlack) {
   ];
 }
 
-function VendorsTable({ people, selectedId, onSelect }) {
+function VendorsTable({ people, onSelect }) {
   if (!people.length) return <p className={styles.empty}>Nenhum vendedor com meta</p>;
 
   return (
@@ -361,19 +560,20 @@ function VendorsTable({ people, selectedId, onSelect }) {
               Falta
             </th>
             <th scope="col" className={styles.number}>
-              Ritmo p/ Meta
+              Chance da Meta
             </th>
             <th scope="col" className={styles.number}>
-              Projeção
+              Previsão realista
             </th>
             <th scope="col">Situação</th>
           </tr>
         </thead>
         <tbody>
           {people.map((person) => {
-            const { month } = person;
+            const { month, forecast } = person;
+            const chance = forecast?.tiers?.goal?.probability;
             return (
-              <tr key={person.vendorId} className={person.vendorId === selectedId ? styles.selected : undefined}>
+              <tr key={person.vendorId}>
                 <th scope="row">
                   <span className={styles.person}>
                     <Avatar name={person.name} imageUrl={person.imageUrl} size="small" />
@@ -401,13 +601,9 @@ function VendorsTable({ people, selectedId, onSelect }) {
                     : formatCurrency(month.remaining)}
                 </td>
                 <td className={styles.number}>
-                  {month.pace.status === "done" || month.pace.remainingDays === 0
-                    ? "—"
-                    : `${formatCurrency(month.pace.neededPerDay)}/dia`}
+                  {chance === null || chance === undefined ? "—" : formatPercent(chance)}
                 </td>
-                <td className={styles.number}>
-                  {month.pace.elapsedDays > 0 ? formatCurrency(month.pace.projection) : "—"}
-                </td>
+                <td className={styles.number}>{forecast ? formatCurrency(forecast.scenarios.realistic) : "—"}</td>
                 <td className={`${styles.status} ${styles[month.pace.status]}`}>{STATUS_LABELS[month.pace.status]}</td>
               </tr>
             );
@@ -415,98 +611,5 @@ function VendorsTable({ people, selectedId, onSelect }) {
         </tbody>
       </table>
     </div>
-  );
-}
-
-function VendorDetail({ person, progress, weekIndex }) {
-  const hasBlack = Boolean(progress.black?.active);
-  const week = weekIndex >= 0 ? person.weeks[weekIndex] : null;
-  const series = [
-    {
-      key: "realized",
-      label: "Realizado",
-      color: CHART_COLORS.blue,
-      values: untilToday(person.cumulative, progress.days, progress.today),
-    },
-    {
-      key: "ideal",
-      label: "Ritmo da Meta",
-      color: CHART_COLORS.rest,
-      dashed: true,
-      values: idealLine(person.month.tiers.goal, progress.days),
-    },
-  ];
-
-  return (
-    <section className={`widget ${styles.detail}`} aria-label={`Detalhe de ${person.name}`}>
-      <header className="header">
-        <span className={styles.detailHeader}>
-          <Avatar name={person.name} imageUrl={person.imageUrl} />
-          <span>
-            <h2 className="title">{person.name}</h2>
-            <span className={styles.job}>
-              {[person.job, person.levelName, person.teamName].filter(Boolean).join(" · ")} · conta{" "}
-              {TYPE_LABELS[person.type].toLowerCase()}
-            </span>
-          </span>
-        </span>
-      </header>
-      <div className={styles.detailBody}>
-        <div className={styles.cards}>
-          <GoalTierCard title="Mês" period={formatMonth(progress.month)} progress={person.month} />
-          {week && <GoalTierCard title="Semana atual" period={weekLabel(week)} progress={week} />}
-        </div>
-        <div className={styles.scroll}>
-          <table className={styles.table} aria-label={`Semanas de ${person.name}`}>
-            <thead>
-              <tr>
-                <th scope="col">Semana</th>
-                <th scope="col" className={styles.number}>
-                  Meta
-                </th>
-                <th scope="col" className={styles.number}>
-                  Super meta
-                </th>
-                {hasBlack && (
-                  <th scope="col" className={styles.number}>
-                    Meta black
-                  </th>
-                )}
-                <th scope="col" className={styles.number}>
-                  Realizado
-                </th>
-                <th scope="col">Faixa atual</th>
-                <th scope="col">Situação</th>
-              </tr>
-            </thead>
-            <tbody>
-              {person.weeks.map((item) => (
-                <tr key={item.start} className={item.index === weekIndex ? styles.selected : undefined}>
-                  <th scope="row">{weekLabel(item)}</th>
-                  <td className={styles.number}>{formatCurrency(item.tiers.goal)}</td>
-                  <td className={styles.number}>{formatCurrency(item.tiers.super)}</td>
-                  {hasBlack && <td className={styles.number}>{formatCurrency(item.tiers.black)}</td>}
-                  <td className={styles.number}>{formatCurrency(item.realized)}</td>
-                  <td>
-                    <span className={`${styles.tier} ${styles[TIER_CLASS[item.current]]}`}>
-                      {TIER_LABELS[item.current]}
-                    </span>
-                  </td>
-                  <td className={`${styles.status} ${styles[item.pace.status]}`}>{STATUS_LABELS[item.pace.status]}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <TimeSeriesChart
-          title={`Evolução do mês de ${person.name}`}
-          days={progress.days}
-          series={series}
-          reference={{ value: person.month.tiers.goal, label: `Meta ${formatCurrency(person.month.tiers.goal)}` }}
-          formatValue={formatCurrency}
-          formatLabel={formatDay}
-        />
-      </div>
-    </section>
   );
 }

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import Avatar from "../../../admin/components/Avatar/Avatar";
 import { getGoalErrorMessage } from "../../api/goalsApi";
+import MoneyInput from "../MoneyInput/MoneyInput";
 import { buildDraft, computeDraft, nextLevelKey, toPayload } from "../../utils/goalDraft";
 import { formatMonth, formatShortDay, TIER_LABELS, TYPE_LABELS } from "../../utils/goalMath";
 
@@ -255,11 +256,19 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                     <th scope="col">Vendedor</th>
                     <th scope="col">Conta</th>
                     <th scope="col">Nível</th>
-                    <th scope="col">Meta do mês</th>
-                    <th scope="col">Super meta</th>
-                    {black.active && <th scope="col">Meta black</th>}
+                    <th scope="col" className={styles.number}>
+                      Meta do mês
+                    </th>
+                    <th scope="col" className={styles.number}>
+                      Super meta
+                    </th>
+                    {black.active && (
+                      <th scope="col" className={styles.number}>
+                        Meta black
+                      </th>
+                    )}
                     {weeks.map((week) => (
-                      <th key={week.start} scope="col">
+                      <th key={week.start} scope="col" className={styles.number}>
                         Sem. {week.index + 1}
                         <span className={styles.weekDays}>
                           {formatShortDay(week.start)} a {formatShortDay(week.end)}
@@ -309,15 +318,13 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                       <td>
                         {person.included ? (
                           <span className={styles.goalCell}>
-                            <input
-                              className={`${styles.input} ${styles.money}`}
-                              type="number"
-                              min="0"
-                              step="0.01"
+                            <MoneyInput
+                              plain
+                              className={styles.money}
                               value={person.manualGoal ?? person.goal}
-                              aria-label={`Meta do mês de ${person.name}`}
-                              onChange={(event) =>
-                                updatePerson(person.vendorId, { manualGoal: event.target.value, manualWeeks: null })
+                              label={`Meta do mês de ${person.name}`}
+                              onChange={(manualGoal) =>
+                                updatePerson(person.vendorId, { manualGoal, manualWeeks: null })
                               }
                             />
                             {person.manualGoal !== null && (
@@ -361,14 +368,13 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                       {weeks.map((week, index) => (
                         <td key={week.start}>
                           {person.included && (
-                            <input
-                              className={`${styles.input} ${styles.money} ${person.weeksOk ? "" : styles.invalid}`}
-                              type="number"
-                              min="0"
-                              step="0.01"
+                            <MoneyInput
+                              plain
+                              className={styles.money}
+                              invalid={!person.weeksOk}
                               value={person.weeks[index]}
-                              aria-label={`Semana ${index + 1} de ${person.name}`}
-                              onChange={(event) => changeWeek(person, index, event.target.value)}
+                              label={`Semana ${index + 1} de ${person.name}`}
+                              onChange={(value) => changeWeek(person, index, value)}
                             />
                           )}
                         </td>
@@ -428,14 +434,7 @@ function MoneyField({ label, value, onChange }) {
   return (
     <label className={styles.field}>
       <span className={styles.label}>{label}</span>
-      <input
-        className={styles.input}
-        type="number"
-        min="0"
-        step="0.01"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <MoneyInput value={value} onChange={onChange} />
     </label>
   );
 }
@@ -443,15 +442,7 @@ function MoneyField({ label, value, onChange }) {
 function TierInput({ label, value, manual, invalid, onChange }) {
   return (
     <span className={styles.goalCell}>
-      <input
-        className={`${styles.input} ${styles.money} ${invalid ? styles.invalid : ""}`}
-        type="number"
-        min="0"
-        step="0.01"
-        value={value}
-        aria-label={label}
-        onChange={(event) => onChange(event.target.value)}
-      />
+      <MoneyInput plain className={styles.money} invalid={invalid} value={value} label={label} onChange={onChange} />
       {manual && (
         <button className={styles.linkButton} type="button" onClick={() => onChange(null)}>
           Voltar ao automático

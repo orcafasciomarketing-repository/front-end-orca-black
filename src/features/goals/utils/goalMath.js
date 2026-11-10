@@ -34,6 +34,14 @@ const daysBetween = (from, to) => Math.round((new Date(`${to}T00:00:00Z`) - new 
 export const toCents = (value) => Math.round(Number(value || 0) * 100);
 export const fromCents = (cents) => cents / 100;
 
+export function parseMoney(text) {
+  const clean = String(text).replace(/R\$|\s| /g, "");
+  if (!clean) return "";
+  const normalized = clean.includes(",") ? clean.replace(/\./g, "").replace(",", ".") : clean;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : "";
+}
+
 export const currentMonthKey = (now = new Date()) => dayKeyOf(now).slice(0, 7);
 
 const MONTH_NAMES = [

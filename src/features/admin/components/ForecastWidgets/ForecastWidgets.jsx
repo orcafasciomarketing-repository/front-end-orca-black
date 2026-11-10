@@ -152,9 +152,9 @@ export function ForecastPace({ segment }) {
   const { pace, productiveDays } = forecast.campaign;
   const title = "Como o ritmo é calculado";
   const parts = [
-    { label: "Últimos 7 dias produtivos", average: pace.last7, weight: pace.weights.last7 },
-    { label: "Últimos 30 dias produtivos", average: pace.last30, weight: pace.weights.last30 },
-    { label: "Campanha inteira", average: pace.campaign, weight: pace.weights.campaign },
+    { label: "Últimos 7 dias produtivos", average: pace.last7, weight: pace.weights?.last7 ?? null },
+    { label: "Últimos 30 dias produtivos", average: pace.last30, weight: pace.weights?.last30 ?? null },
+    { label: "Campanha inteira", average: pace.campaign, weight: pace.weights?.campaign ?? null },
   ];
 
   return (
@@ -163,7 +163,7 @@ export function ForecastPace({ segment }) {
       description={`${productiveDays.elapsed} dias produtivos passados (dias sem venda contam como R$ 0) e ${productiveDays.remaining} pela frente`}
       csvRows={[
         ["Média", "Valor por dia (R$)", "Peso"],
-        ...parts.map((part) => [part.label, formatCsvNumber(part.average), formatPercent(part.weight)]),
+        ...parts.map((part) => [part.label, formatCsvNumber(part.average), part.weight === null ? "" : formatPercent(part.weight)]),
         ["Ritmo atual", formatCsvNumber(pace.current), ""],
       ]}
       segment={segment}
@@ -181,7 +181,7 @@ export function ForecastPace({ segment }) {
             <tr key={part.label}>
               <th scope="row">{part.label}</th>
               <td>{formatCurrency(part.average)}</td>
-              <td>{formatPercent(part.weight)}</td>
+              <td>{part.weight === null ? "—" : formatPercent(part.weight)}</td>
             </tr>
           ))}
         </tbody>

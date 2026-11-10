@@ -97,6 +97,18 @@ describe("ForecastPage", () => {
     expect(textOf("Indicadores do forecast")).toContain("Chance de bater a metaSem histórico suficiente");
   });
 
+  it("total com setores de pesos diferentes (pace.weights null): o peso aparece como —", async () => {
+    const response = buildResponse();
+    getForecast.mockResolvedValue({
+      ...response,
+      campaign: { ...response.campaign, pace: { ...response.campaign.pace, weights: null } },
+    });
+    renderWithUser(<ForecastPage />);
+
+    await screen.findByRole("region", { name: "Como o ritmo é calculado" });
+    expect(textOf("Como o ritmo é calculado")).toContain("Últimos 7 dias produtivosR$ 39.248,00—");
+  });
+
   it("widget Forecast da tela Gráficos: realista e a faixa entre pessimista e otimista", async () => {
     renderWithUser(<ForecastSummary segment="" />);
 

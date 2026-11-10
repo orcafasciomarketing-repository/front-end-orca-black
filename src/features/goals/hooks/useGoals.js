@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { reportError } from "../../../shared/errorLogger";
-import { deleteGoalMonth, getGoalMonth, getGoalProgress, saveGoalMonth } from "../api/goalsApi";
+import { deleteGoalMonth, getGoalHistory, getGoalMonth, getGoalProgress, saveGoalMonth } from "../api/goalsApi";
 
 const GOALS_KEY = ["admin-goals"];
 
@@ -25,6 +25,15 @@ export function useGoalProgress(month) {
   });
 
   return { progress: data };
+}
+
+export function useGoalHistory(month) {
+  const { data } = useSuspenseQuery({
+    queryKey: [...GOALS_KEY, "history", month],
+    queryFn: () => getGoalHistory(month),
+  });
+
+  return { history: data };
 }
 
 export function useGoalMutations() {

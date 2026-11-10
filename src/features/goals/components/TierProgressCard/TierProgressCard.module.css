@@ -1,0 +1,116 @@
+.card {
+  gap: 12px;
+  padding: 16px 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.tierGoal {
+  background: var(--color-primary);
+}
+
+.tierSuper {
+  background: var(--chart-aqua, #1baf7a);
+}
+
+.tierBlack {
+  background: var(--color-text);
+}
+
+.state {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stateDone {
+  background: var(--color-success-field);
+  color: var(--color-success);
+}
+
+.stateCurrent {
+  background: var(--color-primary-field);
+  color: var(--color-primary);
+}
+
+.stateNext {
+  background: var(--color-background);
+  color: var(--color-muted);
+}
+
+.amounts {
+  composes: amounts from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.realized {
+  composes: sold from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.target {
+  composes: goal from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.percent {
+  composes: percent from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.track {
+  composes: track from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.8s ease;
+}
+
+.note {
+  color: var(--color-text);
+  font-size: 14px;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fact {
+  composes: fact from "../../../admin/components/WeekGoalWidget/WeekGoalWidget.module.css";
+}
+
+.fact .good {
+  color: var(--color-success);
+}
+
+.fact .bad {
+  color: var(--color-error);
+}
+
+@media (max-width: 600px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

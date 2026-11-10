@@ -3,8 +3,8 @@
 export const CAMPAIGN_START_DAY = "2026-11-03";
 export const CAMPAIGN_END_DAY = "2026-12-01";
 const HOLIDAYS = ["2026-10-12", "2026-11-02", "2026-11-20", "2026-12-25"];
-const PACE_WEIGHTS = { last7: 0.5, last30: 0.3, campaign: 0.2 };
-const SCENARIO_FACTORS = { pessimistic: 0.8, realistic: 1, optimistic: 1.2 };
+export const PACE_WEIGHTS = { last7: 0.5, last30: 0.3, campaign: 0.2 };
+export const SCENARIO_FACTORS = { pessimistic: 0.8, realistic: 1, optimistic: 1.2 };
 
 // O Brasil não tem mais horário de verão: São Paulo é sempre UTC-3
 const SAO_PAULO_OFFSET_MS = 3 * 60 * 60 * 1000;
@@ -21,7 +21,7 @@ const addDays = (day, amount) => {
 const weekDayOf = (day) => new Date(`${day}T00:00:00Z`).getUTCDay();
 
 // Dia produtivo: segunda a sábado, sem feriado
-const isProductiveDay = (day) => weekDayOf(day) !== 0 && !HOLIDAYS.includes(day);
+export const isProductiveDay = (day) => weekDayOf(day) !== 0 && !HOLIDAYS.includes(day);
 
 // Dias produtivos de from até to (os dois inclusive)
 const productiveDaysBetween = (from, to) => {
@@ -45,7 +45,7 @@ const standardDeviation = (values) => {
 };
 
 // Distribuição normal acumulada (aproximação de Abramowitz e Stegun, erro < 0,0000002)
-const normalCdf = (x) => {
+export const normalCdf = (x) => {
   const t = 1 / (1 + 0.3275911 * (Math.abs(x) / Math.SQRT2));
   const poly = t * (0.254829592 + t * (-0.284496736 + t * (1.421413741 + t * (-1.453152027 + t * 1.061405429))));
   const erf = 1 - poly * Math.exp(-((x * x) / 2));
