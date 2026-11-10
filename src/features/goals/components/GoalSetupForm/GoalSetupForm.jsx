@@ -15,9 +15,9 @@ const SOURCE_NOTES = {
 };
 
 export default function GoalSetupForm({ month, segment, weeks, segmentData, black: monthBlack, save, remove }) {
-  const [draft, setDraft] = useState(() => buildDraft(segmentData, weeks.length));
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const black = { active: monthBlack.active, sectorGoal: monthBlack.sectorGoals?.[segment] ?? 0 };
+  const [draft, setDraft] = useState(() => buildDraft(segmentData, weeks.length, black));
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const computed = computeDraft(draft, weeks.length, black);
   const label = segment.toUpperCase();
   const tierKeys = black.active ? ["goal", "super", "black"] : ["goal", "super"];
@@ -47,7 +47,15 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
   };
 
   const redistribute = () =>
-    update({ people: draft.people.map((person) => ({ ...person, manualGoal: null, manualWeeks: null })) });
+    update({
+      people: draft.people.map((person) => ({
+        ...person,
+        manualGoal: null,
+        manualSuper: null,
+        manualBlack: null,
+        manualWeeks: null,
+      })),
+    });
 
   const changeWeek = (person, index, value) =>
     updatePerson(person.vendorId, { manualWeeks: person.weeks.map((week, i) => (i === index ? value : week)) });
@@ -221,7 +229,22 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                 {formatCurrency(computed.parts[type])}
               </li>
             ))}
+            {tierKeys
+              .filter((tier) => tier !== "goal")
+              .flatMap((tier) =>
+                ["farm", "sales"].map((type) => (
+                  <li key={`${tier}-${type}`} className={computed.tiersOk[tier][type] ? styles.ok : styles.missing}>
+                    {TIER_LABELS[tier]} {TYPE_LABELS[type]}: distribuído{" "}
+                    {formatCurrency(computed.tierDistributed[tier][type])} de{" "}
+                    {formatCurrency(computed.byType[type][tier])}
+                  </li>
+                )),
+              )}
           </ul>
+          <p className={styles.hint}>
+            A Super meta e a Meta black de cada vendedor começam na proporção da Meta do mês dele e podem ser editadas.
+            O que sobra vai para quem não foi editado.
+          </p>
           {draft.people.length === 0 ? (
             <p className={styles.empty}>Nenhum vendedor com cargo {label}</p>
           ) : (
@@ -233,14 +256,8 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                     <th scope="col">Conta</th>
                     <th scope="col">Nível</th>
                     <th scope="col">Meta do mês</th>
-                    <th scope="col" className={styles.number}>
-                      Super meta
-                    </th>
-                    {black.active && (
-                      <th scope="col" className={styles.number}>
-                        Meta black
-                      </th>
-                    )}
+                    <th scope="col">Super meta</th>
+                    {black.active && <th scope="col">Meta black</th>}
                     {weeks.map((week) => (
                       <th key={week.start} scope="col">
                         Sem. {week.index + 1}
@@ -317,9 +334,29 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                           <span className={styles.muted}>Sem meta</span>
                         )}
                       </td>
-                      <td className={styles.number}>{person.included ? formatCurrency(person.tiers.super) : ""}</td>
+                      <td>
+                        {person.included && (
+                          <TierInput
+                            label={`Super meta de ${person.name}`}
+                            value={person.manualSuper ?? person.tiers.super}
+                            manual={person.manualSuper !== null}
+                            invalid={!person.superOk}
+                            onChange={(manualSuper) => updatePerson(person.vendorId, { manualSuper })}
+                          />
+                        )}
+                      </td>
                       {black.active && (
-                        <td className={styles.number}>{person.included ? formatCurrency(person.tiers.black) : ""}</td>
+                        <td>
+                          {person.included && (
+                            <TierInput
+                              label={`Meta black de ${person.name}`}
+                              value={person.manualBlack ?? person.tiers.black}
+                              manual={person.manualBlack !== null}
+                              invalid={!person.blackOk}
+                              onChange={(manualBlack) => updatePerson(person.vendorId, { manualBlack })}
+                            />
+                          )}
+                        </td>
                       )}
                       {weeks.map((week, index) => (
                         <td key={week.start}>
@@ -346,6 +383,12 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
             <p className={styles.error}>
               A soma das semanas precisa dar a meta do mês em cada vendedor (campos em vermelho).
             </p>
+          )}
+          {computed.people.some((person) => !person.superOk) && (
+            <p className={styles.error}>A Super meta de cada vendedor não pode ser menor que a Meta do mês dele.</p>
+          )}
+          {computed.people.some((person) => !person.blackOk) && (
+            <p className={styles.error}>A Meta black de cada vendedor não pode ser menor que a Super meta dele.</p>
           )}
         </div>
       </section>
@@ -394,6 +437,27 @@ function MoneyField({ label, value, onChange }) {
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
+  );
+}
+
+function TierInput({ label, value, manual, invalid, onChange }) {
+  return (
+    <span className={styles.goalCell}>
+      <input
+        className={`${styles.input} ${styles.money} ${invalid ? styles.invalid : ""}`}
+        type="number"
+        min="0"
+        step="0.01"
+        value={value}
+        aria-label={label}
+        onChange={(event) => onChange(event.target.value)}
+      />
+      {manual && (
+        <button className={styles.linkButton} type="button" onClick={() => onChange(null)}>
+          Voltar ao automático
+        </button>
+      )}
+    </span>
   );
 }
 

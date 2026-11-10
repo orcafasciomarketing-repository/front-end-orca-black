@@ -124,6 +124,24 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
     });
 
+    it("Super meta e Meta black de cada vendedor são editáveis e voltam ao automático", async () => {
+      renderPage(GoalsSetupPage);
+      const superInput = await screen.findByRole("spinbutton", { name: "Super meta de Brenda Lima" });
+      expect(screen.getByRole("spinbutton", { name: "Meta black de Brenda Lima" })).toBeInTheDocument();
+      expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(/Super meta Vendas: distribuído/);
+
+      fireEvent.change(superInput, { target: { value: "1" } });
+
+      expect(
+        screen.getByText(/A Super meta de cada vendedor não pode ser menor que a Meta do mês dele/),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
+
+      fireEvent.click(screen.getByRole("button", { name: "Voltar ao automático" }));
+
+      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
+    });
+
     it("com os dados de demonstração, salvar avisa que não grava", async () => {
       renderPage(GoalsSetupPage);
       await screen.findByLabelText("Distribuição");

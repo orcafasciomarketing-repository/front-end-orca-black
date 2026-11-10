@@ -179,9 +179,33 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
       salesBlack: null,
       levels: [{ key: "junior", name: "Júnior", weight: 1 }],
       people: [
-        { vendorId: "v1", type: "sales", level: "junior", goal: 6000, weeks: [3000, 1000, 1000, 1000] },
-        { vendorId: "v2", type: "sales", level: "junior", goal: 1000, weeks: [250, 250, 250, 250] },
-        { vendorId: "v3", type: "farm", level: "junior", goal: 3000, weeks: [750, 750, 750, 750] },
+        {
+          vendorId: "v1",
+          type: "sales",
+          level: "junior",
+          goal: 6000,
+          superGoal: 7000,
+          blackGoal: null,
+          weeks: [3000, 1000, 1000, 1000],
+        },
+        {
+          vendorId: "v2",
+          type: "sales",
+          level: "junior",
+          goal: 1000,
+          superGoal: 1400,
+          blackGoal: null,
+          weeks: [250, 250, 250, 250],
+        },
+        {
+          vendorId: "v3",
+          type: "farm",
+          level: "junior",
+          goal: 3000,
+          superGoal: 3600,
+          blackGoal: null,
+          weeks: [750, 750, 750, 750],
+        },
       ],
     };
 
@@ -190,9 +214,66 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
 
     expect(draft.source).toBe("saved");
     expect(toPayload(draft, computed).people).toEqual(
-      config.people.map(({ vendorId, level, goal, weeks }) => ({ vendorId, level, goal, weeks })),
+      config.people.map(({ vendorId, level, goal, superGoal, blackGoal, weeks }) => ({
+        vendorId,
+        level,
+        goal,
+        superGoal,
+        blackGoal,
+        weeks,
+      })),
     );
+    expect(draft.people.find((person) => person.vendorId === "v3").manualSuper).toBeNull();
+    expect(draft.people.find((person) => person.vendorId === "v1").manualSuper).toBe(7000);
     expect(computed.canSave).toBe(true);
+  });
+
+  it("Super e Black de cada pessoa podem ser editadas: o resto da parte vai para as outras na proporção da Meta", () => {
+    const black = { active: true, sectorGoal: 15000 };
+    const draft = newDraft();
+    draft.people = draft.people.map((person) =>
+      person.vendorId === "v1" ? { ...person, manualSuper: "5000", manualBlack: "6000" } : person,
+    );
+
+    const computed = computeDraft(draft, 4, black);
+    const v2 = computed.people.find((person) => person.vendorId === "v2");
+
+    expect(v2.tiers).toEqual({ goal: 3500, super: 3400, black: 4500 });
+    expect(v2.superOk).toBe(false);
+    expect(computed.tiersOk.super).toEqual({ farm: true, sales: true });
+    expect(computed.canSave).toBe(false);
+
+    draft.people = draft.people.map((person) =>
+      person.vendorId === "v1" ? { ...person, manualSuper: "4400" } : person,
+    );
+    const fixed = computeDraft(draft, 4, black);
+    expect(fixed.people.find((person) => person.vendorId === "v2").tiers.super).toBe(4000);
+    expect(fixed.canSave).toBe(true);
+    expect(toPayload(draft, fixed, black).people.find((person) => person.vendorId === "v1")).toMatchObject({
+      superGoal: 4400,
+      blackGoal: 6000,
+    });
+  });
+
+  it("Super ou Black editada em todas as pessoas de uma parte precisa fechar com a parte; Black menor que a Super não salva", () => {
+    const black = { active: true, sectorGoal: 15000 };
+    const draft = newDraft();
+    draft.people = draft.people.map((person) =>
+      person.vendorId === "v3" ? { ...person, manualSuper: "3500" } : person,
+    );
+    const computed = computeDraft(draft, 4, black);
+    expect(computed.tiersOk.super.farm).toBe(false);
+    expect(computed.tierDistributed.super.farm).toBe(3500);
+    expect(computed.canSave).toBe(false);
+
+    const lowBlack = newDraft();
+    lowBlack.people = lowBlack.people.map((person) =>
+      person.vendorId === "v1" ? { ...person, manualBlack: "1000" } : person,
+    );
+    const lowComputed = computeDraft(lowBlack, 4, black);
+    expect(lowComputed.people.find((person) => person.vendorId === "v1").blackOk).toBe(false);
+    expect(lowComputed.canSave).toBe(false);
+    expect(computeDraft(lowBlack, 4).canSave).toBe(true);
   });
 
   it("mês novo copia do anterior os percentuais, níveis e o nível de cada pessoa, e redistribui", () => {

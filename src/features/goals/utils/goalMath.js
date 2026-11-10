@@ -135,7 +135,7 @@ export function segmentTiers(byType) {
   return sumTiers(GOAL_TYPES.map((type) => byType[type]));
 }
 
-function shareLike(totalCents, keys, weightsCents) {
+export function shareLike(totalCents, keys, weightsCents) {
   const hasWeight = weightsCents.some((value) => value > 0);
   return distributeByWeight(
     totalCents,
@@ -150,10 +150,12 @@ export function peopleTiers(people, byType) {
   for (const tier of ["super", "black"]) {
     for (const type of GOAL_TYPES) {
       const members = people.filter((person) => person.type === type);
+      const field = `${tier}Goal`;
+      const saved = members.length > 0 && members.every((person) => person[field] != null);
       const shares = shareLike(
         toCents(byType[type][tier]),
         members.map((person) => person.vendorId),
-        members.map((person) => toCents(person.goal)),
+        members.map((person) => toCents(saved ? person[field] : person.goal)),
       );
       shares.forEach((cents, key) => {
         result.get(key)[tier] = fromCents(cents);
