@@ -38,6 +38,14 @@
   composes: input from "../../../admin/components/UsersWidget/UsersWidget.module.css";
 }
 
+.readonly {
+  composes: input from "../../../admin/components/UsersWidget/UsersWidget.module.css";
+  display: flex;
+  align-items: center;
+  background: var(--color-fill-light);
+  font-weight: 600;
+}
+
 .small {
   width: 96px;
 }

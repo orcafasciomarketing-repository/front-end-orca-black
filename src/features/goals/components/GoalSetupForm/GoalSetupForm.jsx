@@ -14,9 +14,10 @@ const SOURCE_NOTES = {
   new: () => "Mês sem metas. Preencha as metas do setor, os níveis e salve.",
 };
 
-export default function GoalSetupForm({ month, segment, weeks, segmentData, black, save, remove }) {
+export default function GoalSetupForm({ month, segment, weeks, segmentData, black: monthBlack, save, remove }) {
   const [draft, setDraft] = useState(() => buildDraft(segmentData, weeks.length));
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const black = { active: monthBlack.active, sectorGoal: monthBlack.sectorGoals?.[segment] ?? 0 };
   const computed = computeDraft(draft, weeks.length, black);
   const label = segment.toUpperCase();
   const tierKeys = black.active ? ["goal", "super", "black"] : ["goal", "super"];
@@ -92,22 +93,23 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
           {black.active && (
             <>
               <div className={styles.fields}>
+                <ReadOnlyField label={`Meta black do ${label}`} value={formatCurrency(black.sectorGoal)} />
                 <MoneyField
                   label="Meta black Farmer (R$)"
                   value={draft.farmBlack}
                   onChange={(farmBlack) => update({ farmBlack })}
                 />
-                <MoneyField
-                  label="Meta black Venda (R$)"
-                  value={draft.salesBlack}
-                  onChange={(salesBlack) => update({ salesBlack })}
-                />
+                <ReadOnlyField label="Meta black Venda (o resto)" value={formatCurrency(computed.byType.sales.black)} />
               </div>
-              {black.suggestedGoals?.[segment] > 0 && (
-                <p className={styles.hint}>
-                  Mês da campanha. Meta black do {label} cadastrada no backend (a mesma das TVs):{" "}
-                  {formatCurrency(black.suggestedGoals[segment])}. Somando Farmer e Venda aqui:{" "}
-                  {formatCurrency(computed.tiers.black)}.
+              <p className={styles.hint}>
+                Mês da campanha: a Meta black do setor vem do backend (a mesma das TVs) e não muda aqui. Digite quanto
+                dela é de Farmer; Venda fica com o resto.
+              </p>
+              {!computed.sectorBlackOk && (
+                <p className={styles.error}>
+                  {black.sectorGoal > 0
+                    ? `A Meta black Farmer não pode passar da Meta black do setor (${formatCurrency(black.sectorGoal)}).`
+                    : `A Meta black do ${label} não está configurada no backend.`}
                 </p>
               )}
             </>
@@ -392,5 +394,16 @@ function MoneyField({ label, value, onChange }) {
         onChange={(event) => onChange(event.target.value)}
       />
     </label>
+  );
+}
+
+function ReadOnlyField({ label, value }) {
+  return (
+    <div className={styles.field}>
+      <span className={styles.label}>{label}</span>
+      <output className={styles.readonly} aria-label={label}>
+        {value}
+      </output>
+    </div>
   );
 }

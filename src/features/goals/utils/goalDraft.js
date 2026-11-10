@@ -7,6 +7,7 @@ import {
   segmentParts,
   segmentTiers,
   typeTiers,
+  withSectorBlack,
   splitEqually,
   toCents,
 } from "./goalMath";
@@ -53,7 +54,8 @@ export function computeDraft(draft, weeksCount, black = NO_BLACK) {
     distributed[type] = fromCents(members.reduce((sum, person) => sum + goals.get(person.vendorId), 0));
   }
 
-  const byType = typeTiers(draft, black.active);
+  const sectorBlack = Number(black.sectorGoal) || 0;
+  const byType = typeTiers(black.active ? withSectorBlack(draft, sectorBlack) : draft, black.active);
   const tiers = segmentTiers(byType);
   const included = draft.people
     .filter((person) => person.included)
@@ -87,12 +89,14 @@ export function computeDraft(draft, weeksCount, black = NO_BLACK) {
     TYPES.map((type) => [type, !black.active || byType[type].goal === 0 || byType[type].black > byType[type].super]),
   );
   const superOk = Number(draft.superPercent) > 100;
-  const valuesOk = superOk && blackOk.farm && blackOk.sales;
+  const sectorBlackOk = !black.active || (sectorBlack > 0 && toCents(draft.farmBlack) <= toCents(sectorBlack));
+  const valuesOk = superOk && sectorBlackOk && blackOk.farm && blackOk.sales;
 
   return {
     tiers,
     byType,
     superOk,
+    sectorBlackOk,
     blackOk,
     parts,
     distributed,
@@ -160,7 +164,6 @@ export function buildDraft(segmentData, weeksCount) {
       source: "saved",
       sourceMonth: config.month,
       farmBlack: config.farmBlack ?? "",
-      salesBlack: config.salesBlack ?? "",
       ...fromConfig(config, vendors, weeksCount, { keepGoals: true }),
     };
   }
@@ -170,7 +173,6 @@ export function buildDraft(segmentData, weeksCount) {
       source: "previous",
       sourceMonth: previous.month,
       farmBlack: previous.farmBlack ?? "",
-      salesBlack: previous.salesBlack ?? "",
       ...fromConfig(previous, vendors, weeksCount, { keepGoals: false }),
     };
   }
@@ -182,7 +184,6 @@ export function buildDraft(segmentData, weeksCount) {
     salesGoal: "",
     superPercent: DEFAULT_SUPER_PERCENT,
     farmBlack: "",
-    salesBlack: "",
     levels: DEFAULT_LEVELS.map((level) => ({ ...level })),
     people: vendors.map((vendor) => ({ ...basePerson(vendor), level: DEFAULT_LEVELS[0].key })),
   };
@@ -194,7 +195,6 @@ export function toPayload(draft, computed, black = NO_BLACK) {
     salesGoal: fromCents(toCents(draft.salesGoal)),
     superPercent: Number(draft.superPercent),
     farmBlack: black.active ? fromCents(toCents(draft.farmBlack)) : null,
-    salesBlack: black.active ? fromCents(toCents(draft.salesBlack)) : null,
     levels: draft.levels.map((level) => ({ key: level.key, name: level.name.trim(), weight: Number(level.weight) })),
     people: computed.people
       .filter((person) => person.included)

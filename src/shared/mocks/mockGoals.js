@@ -11,6 +11,7 @@ import {
   segmentTiers,
   typeTiers,
   sumTiers,
+  withSectorBlack,
   tierProgress,
   toCents,
   weekTiers,
@@ -18,16 +19,18 @@ import {
 
 const SEGMENTS = ["b2b", "b2g"];
 
+const SECTOR_BLACK = { b2b: 200000, b2g: 240000 };
+
 const DEMO_SETTINGS = {
-  b2b: { farmGoal: 48000, salesGoal: 72000, superPercent: 125, farmBlack: 80000, salesBlack: 120000 },
-  b2g: { farmGoal: 45000, salesGoal: 105000, superPercent: 120, farmBlack: 70000, salesBlack: 170000 },
+  b2b: { farmGoal: 48000, salesGoal: 72000, superPercent: 125, farmBlack: 80000 },
+  b2g: { farmGoal: 45000, salesGoal: 105000, superPercent: 120, farmBlack: 70000 },
 };
 
 const blackInfo = (month, now) => ({
   month: currentMonthKey(now),
   active: month === currentMonthKey(now),
   total: 440000,
-  suggestedGoals: { b2b: 200000, b2g: 240000 },
+  sectorGoals: SECTOR_BLACK,
 });
 
 const segmentOfJob = (job) =>
@@ -63,7 +66,7 @@ function demoConfig(db, month, segment) {
     ...DEMO_SETTINGS[segment],
     people: draft.people.map((person, index) => ({ ...person, level: levelKeys[index % levelKeys.length] })),
   };
-  const black = { active: true };
+  const black = { active: true, sectorGoal: SECTOR_BLACK[segment] };
   const payload = toPayload(withSettings, computeDraft(withSettings, weeks.length, black), black);
 
   return {
@@ -139,7 +142,10 @@ export function getGoalProgress(db, month, now = new Date()) {
   const segments = [];
   for (const config of configs) {
     const levelNames = new Map(config.levels.map((level) => [level.key, level.name]));
-    const byType = typeTiers(config, black.active);
+    const byType = typeTiers(
+      black.active ? withSectorBlack(config, SECTOR_BLACK[config.segment]) : config,
+      black.active,
+    );
     const segmentTierValues = segmentTiers(byType);
     const tiersByPerson = peopleTiers(config.people, byType);
     const segmentPeople = config.people.map((person) => {

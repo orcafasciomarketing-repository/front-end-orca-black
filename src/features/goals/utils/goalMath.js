@@ -125,6 +125,12 @@ export function typeTiers(config, withBlack = false) {
   );
 }
 
+export function withSectorBlack(config, sectorGoal) {
+  const sector = toCents(sectorGoal);
+  const farm = Math.min(toCents(config.farmBlack), Math.max(sector, 0));
+  return { ...config, farmBlack: fromCents(farm), salesBlack: fromCents(Math.max(sector - farm, 0)) };
+}
+
 export function segmentTiers(byType) {
   return sumTiers(GOAL_TYPES.map((type) => byType[type]));
 }

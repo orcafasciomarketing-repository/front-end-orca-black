@@ -17,7 +17,6 @@ const newDraft = (changes = {}) => {
     salesGoal: 7000,
     superPercent: 120,
     farmBlack: 4500,
-    salesBlack: 10500,
     ...changes,
   };
 };
@@ -125,15 +124,26 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
   });
 
   it("Super acima de 100% da Meta; no mês da campanha, a Black de cada parte maior que a Super dela", () => {
+    const black = { active: true, sectorGoal: 15000 };
     expect(computeDraft(newDraft({ superPercent: 100 }), 4).canSave).toBe(false);
-    expect(computeDraft(newDraft({ farmBlack: 3000 }), 4, { active: true }).canSave).toBe(false);
+    expect(computeDraft(newDraft({ farmBlack: 3000 }), 4, black).canSave).toBe(false);
+    expect(computeDraft(newDraft({ farmBlack: 7000 }), 4, black).canSave).toBe(false);
     expect(computeDraft(newDraft({ farmBlack: 3000 }), 4).canSave).toBe(true);
-    expect(computeDraft(newDraft(), 4, { active: true }).canSave).toBe(true);
+    expect(computeDraft(newDraft(), 4, black).canSave).toBe(true);
+  });
+
+  it("a Black do setor vem do backend: Farmer é o que o gestor digita e Venda fica com o resto", () => {
+    const computed = computeDraft(newDraft(), 4, { active: true, sectorGoal: 15000 });
+    expect(computed.byType.sales.black).toBe(10500);
+
+    const tooMuch = computeDraft(newDraft({ farmBlack: 16000 }), 4, { active: true, sectorGoal: 15000 });
+    expect(tooMuch.sectorBlackOk).toBe(false);
+    expect(computeDraft(newDraft(), 4, { active: true, sectorGoal: 0 }).canSave).toBe(false);
   });
 
   it("mostra a Super e a Black de cada pessoa e só manda a Black no mês da campanha", () => {
     const draft = newDraft();
-    const black = { active: true };
+    const black = { active: true, sectorGoal: 15000 };
     const computed = computeDraft(draft, 4, black);
     const v3 = computed.people.find((person) => person.vendorId === "v3");
 
@@ -143,9 +153,9 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
       salesGoal: 7000,
       superPercent: 120,
       farmBlack: 4500,
-      salesBlack: 10500,
     });
-    expect(toPayload(draft, computeDraft(draft, 4))).toMatchObject({ farmBlack: null, salesBlack: null });
+    expect(toPayload(draft, computed, black)).not.toHaveProperty("salesBlack");
+    expect(toPayload(draft, computeDraft(draft, 4)).farmBlack).toBeNull();
   });
 
   it("quem fica sem meta não entra na divisão nem no envio", () => {
