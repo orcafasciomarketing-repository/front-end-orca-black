@@ -184,11 +184,12 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       await screen.findByRole("region", { name: "Níveis · Farmer" });
       expect(screen.getByRole("region", { name: "Níveis · Venda" })).toBeInTheDocument();
       expect(sectorTable()).toMatch(
-        /MetaR\$ 26\.000,00R\$ 82\.000,00R\$ 108\.000,00Super metaR\$ 32\.500,00R\$ 100\.000,00R\$ 132\.500,00Meta blackR\$ 80\.000,00R\$ 100\.000,00R\$ 180\.000,00/,
+        /MetaR\$ 26\.000,00R\$ 82\.000,00R\$ 108\.000,00Super metaR\$ 32\.500,00R\$ 100\.000,00R\$ 132\.500,00Meta blackR\$ [\d.]+,00R\$ 100\.000,00R\$ [\d.]+,00/,
       );
       expect(moneyOf(screen.getByLabelText("Meta do nível Júnior de Venda"))).toBe("R$ 12.000,00");
       expect(moneyOf(screen.getByLabelText("Super meta do nível Júnior de Venda"))).toBe("R$ 15.000,00");
-      expect(moneyOf(screen.getByLabelText("Meta black Venda (R$)"))).toBe("R$ 100.000,00");
+      expect(moneyOf(screen.getByLabelText("Meta black do nível Júnior de Venda"))).toBe("R$ 15.000,00");
+      expect(screen.getByLabelText("Meta black Venda (soma)")).toHaveTextContent("R$ 100.000,00");
       expect(screen.queryByLabelText(/Antecipação/)).not.toBeInTheDocument();
       expect(screen.getByLabelText("Conversão de leads Venda (%)")).toHaveValue(30);
       const salesLevels = within(screen.getByRole("table", { name: "Níveis · Venda" }));
@@ -235,13 +236,20 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       expect(saveButton()).toBeEnabled();
     });
 
-    it("no mês com Meta black, Farmer abaixo da Super trava o salvar", async () => {
+    it("no mês com Meta black, a Black de cada nível vai para quem é dele e soma no setor; abaixo da Super trava", async () => {
       renderPage(GoalsSetupPage);
-      await screen.findByLabelText("Meta black Farmer (R$)");
+      const levelBlack = await screen.findByLabelText("Meta black do nível Júnior de Venda");
+      expect(moneyOf(screen.getByLabelText("Meta black de Brenda Lima"))).toBe("R$ 15.000,00");
 
-      fireEvent.change(screen.getByLabelText("Meta black Farmer (R$)"), { target: { value: "20000" } });
+      fireEvent.change(levelBlack, { target: { value: "16000" } });
 
-      expect(screen.getByText(/Farmer: a Meta black não pode ser menor que a Super meta/)).toBeInTheDocument();
+      expect(moneyOf(screen.getByLabelText("Meta black de Brenda Lima"))).toBe("R$ 16.000,00");
+      expect(screen.getByLabelText("Meta black Venda (soma)")).toHaveTextContent("R$ 101.000,00");
+      expect(saveButton()).toBeEnabled();
+
+      fireEvent.change(levelBlack, { target: { value: "14000" } });
+
+      expect(screen.getByText(/Júnior: a Meta black precisa ser igual ou maior que a Super/)).toBeInTheDocument();
       expect(saveButton()).toBeDisabled();
     });
 

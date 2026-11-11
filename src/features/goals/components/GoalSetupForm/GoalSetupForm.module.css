@@ -76,22 +76,6 @@
   font-size: 13px;
 }
 
-.totals {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
-}
-
-.ok {
-  color: var(--color-success);
-}
-
-.missing {
-  color: var(--color-error);
-}
-
 .scroll {
   composes: scroll from "../../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
 }

@@ -5,7 +5,6 @@ import {
   fromCents,
   GOAL_TYPES,
   segmentTiers,
-  shareLike,
   toCents,
   typeTiers,
 } from "./goalMath";
@@ -46,28 +45,35 @@ const findLevel = (levels, type, key) => levels.find((level) => level.type === t
 
 const firstLevelKey = (levels, type) => levelsOfType(levels, type)[0]?.key ?? "";
 
-export function levelProblems(level) {
+export function levelProblems(level, black = NO_BLACK) {
   const problems = [];
   if (!String(level.name ?? "").trim()) problems.push("name");
   if (!isFilled(level.goal) || Number(level.goal) < 0) problems.push("goal");
   if (!isFilled(level.superGoal) || toCents(level.superGoal) < toCents(level.goal)) problems.push("super");
+  if (black.active && (!isFilled(level.blackGoal) || toCents(level.blackGoal) < toCents(level.superGoal))) {
+    problems.push("black");
+  }
   return problems;
 }
 
 export function computeDraft(draft, black = NO_BLACK) {
   const goals = new Map();
   const supers = new Map();
-  const totals = { farm: { goal: 0, super: 0 }, sales: { goal: 0, super: 0 } };
+  const blacks = new Map();
+  const totals = { farm: { goal: 0, super: 0, black: 0 }, sales: { goal: 0, super: 0, black: 0 } };
 
   for (const person of draft.people) {
     if (!person.included) continue;
     const level = findLevel(draft.levels, person.type, person.level);
     const goalCents = toCents(person.manualGoal ?? level?.goal ?? 0);
     const superCents = toCents(person.manualSuper ?? level?.superGoal ?? 0);
+    const blackCents = black.active ? toCents(person.manualBlack ?? level?.blackGoal ?? 0) : 0;
     goals.set(person.vendorId, goalCents);
     supers.set(person.vendorId, superCents);
+    blacks.set(person.vendorId, blackCents);
     totals[person.type].goal += goalCents;
     totals[person.type].super += superCents;
+    totals[person.type].black += blackCents;
   }
 
   const config = {
@@ -75,34 +81,18 @@ export function computeDraft(draft, black = NO_BLACK) {
     salesGoal: fromCents(totals.sales.goal),
     farmSuper: fromCents(totals.farm.super),
     salesSuper: fromCents(totals.sales.super),
-    farmBlack: draft.farmBlack,
-    salesBlack: draft.salesBlack,
+    farmBlack: fromCents(totals.farm.black),
+    salesBlack: fromCents(totals.sales.black),
   };
   const byType = typeTiers(config, black.active);
   const tiers = segmentTiers(byType);
-
-  const blackCents = new Map();
-  const blackDistributed = {};
-  for (const type of GOAL_TYPES) {
-    const members = draft.people.filter((person) => person.included && person.type === type);
-    const manual = black.active ? members.filter((person) => person.manualBlack !== null) : [];
-    const auto = members.filter((person) => !manual.includes(person));
-    manual.forEach((person) => blackCents.set(person.vendorId, toCents(person.manualBlack)));
-    const manualCents = manual.reduce((sum, person) => sum + toCents(person.manualBlack), 0);
-    const shares = shareLike(
-      black.active ? Math.max(toCents(byType[type].black) - manualCents, 0) : 0,
-      auto.map((person) => person.vendorId),
-      auto.map((person) => supers.get(person.vendorId) ?? 0),
-    );
-    auto.forEach((person) => blackCents.set(person.vendorId, shares.get(person.vendorId) ?? 0));
-    blackDistributed[type] = fromCents(members.reduce((sum, person) => sum + blackCents.get(person.vendorId), 0));
-  }
+  const blackDistributed = Object.fromEntries(GOAL_TYPES.map((type) => [type, fromCents(totals[type].black)]));
 
   const people = draft.people.map((person) => {
     if (!person.included) return { ...person, goal: 0, tiers: null, levelOk: true, superOk: true, blackOk: true };
     const goalCents = goals.get(person.vendorId);
     const superCents = supers.get(person.vendorId);
-    const personBlack = blackCents.get(person.vendorId) ?? 0;
+    const personBlack = blacks.get(person.vendorId);
     return {
       ...person,
       goal: fromCents(goalCents),
@@ -113,15 +103,16 @@ export function computeDraft(draft, black = NO_BLACK) {
     };
   });
 
-  const levels = draft.levels.map((level) => ({ ...level, problems: levelProblems(level) }));
+  const levels = draft.levels.map((level) => ({ ...level, problems: levelProblems(level, black) }));
   const levelsOk =
     GOAL_TYPES.every((type) => levelsOfType(draft.levels, type).length > 0) &&
     levels.every((level) => level.problems.length === 0);
-  const blackTiersOk = Object.fromEntries(
-    GOAL_TYPES.map((type) => [type, !black.active || sameCents(blackDistributed[type], byType[type].black)]),
-  );
+  const blackTiersOk = Object.fromEntries(GOAL_TYPES.map((type) => [type, true]));
   const blackFilled = Object.fromEntries(
-    GOAL_TYPES.map((type) => [type, !black.active || byType[type].goal === 0 || isFilled(draft[`${type}Black`])]),
+    GOAL_TYPES.map((type) => [
+      type,
+      !black.active || levelsOfType(draft.levels, type).every((level) => isFilled(level.blackGoal)),
+    ]),
   );
   const blackOk = Object.fromEntries(
     GOAL_TYPES.map((type) => [
@@ -156,7 +147,7 @@ export function computeDraft(draft, black = NO_BLACK) {
       levelsOk &&
       ticketsOk &&
       GOAL_TYPES.every((type) => conversionOk[type]) &&
-      GOAL_TYPES.every((type) => blackOk[type] && blackTiersOk[type]) &&
+      GOAL_TYPES.every((type) => blackOk[type]) &&
       people.every((person) => person.levelOk && person.superOk && person.blackOk),
   };
 }
@@ -168,7 +159,7 @@ function legacyLevels(config) {
       const goal = base?.goal ?? 0;
       const superGoal =
         base?.superGoal ?? fromCents(Math.round((toCents(goal) * Number(config.superPercent || 0)) / 100));
-      return { key: level.key, name: level.name, type, goal, superGoal };
+      return { key: level.key, name: level.name, type, goal, superGoal, blackGoal: null };
     }),
   );
 }
@@ -181,6 +172,7 @@ function levelsFromConfig(config) {
       type: level.type,
       goal: level.goal ?? 0,
       superGoal: level.superGoal ?? 0,
+      blackGoal: level.blackGoal ?? null,
     }));
   }
   return legacyLevels(config);
@@ -194,31 +186,28 @@ const ticketsFrom = (config) => ({
   sales: config?.tickets?.sales ?? DEFAULT_TICKET,
 });
 
-function keepSavedBlack(draft, saved, black) {
-  if (!black.active) return draft;
-  const auto = computeDraft(draft, black);
-  const mismatchTypes = new Set(
-    auto.people
-      .filter((person) => person.included && saved.get(person.vendorId)?.blackGoal != null)
-      .filter((person) => !sameCents(person.tiers.black, saved.get(person.vendorId).blackGoal))
-      .map((person) => person.type),
-  );
-  return {
-    ...draft,
-    people: draft.people.map((person) =>
-      person.included && mismatchTypes.has(person.type)
-        ? { ...person, manualBlack: saved.get(person.vendorId).blackGoal ?? 0 }
-        : person,
-    ),
-  };
+const mostCommon = (values) => {
+  const counts = new Map();
+  values.forEach((value) => counts.set(toCents(value), (counts.get(toCents(value)) ?? 0) + 1));
+  const [cents] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0] ?? [];
+  return cents === undefined ? null : fromCents(cents);
+};
+
+function withLevelBlacks(levels, config) {
+  return levels.map((level) => {
+    if (level.blackGoal != null) return level;
+    const saved = config.people
+      .filter((person) => person.type === level.type && person.level === level.key && person.blackGoal != null)
+      .map((person) => person.blackGoal);
+    return { ...level, blackGoal: mostCommon(saved) ?? "" };
+  });
 }
 
 function fromConfig(config, vendors, { keepGoals, black = NO_BLACK }) {
   const saved = new Map(config.people.map((person) => [person.vendorId, person]));
-  const levels = levelsFromConfig(config);
-  const draft = {
-    farmBlack: config.farmBlack ?? "",
-    salesBlack: config.salesBlack ?? "",
+  const baseLevels = levelsFromConfig(config);
+  const levels = keepGoals && black.active ? withLevelBlacks(baseLevels, config) : baseLevels.map((level) => ({ ...level, blackGoal: level.blackGoal ?? "" }));
+  return {
     tickets: ticketsFrom(config),
     conversion: conversionFrom(config),
     levels,
@@ -237,11 +226,15 @@ function fromConfig(config, vendors, { keepGoals, black = NO_BLACK }) {
           person.superGoal == null || (levelValues && sameCents(levelValues.superGoal, person.superGoal))
             ? null
             : person.superGoal,
+        manualBlack:
+          !black.active ||
+          person.blackGoal == null ||
+          (levelValues && isFilled(levelValues.blackGoal) && sameCents(levelValues.blackGoal, person.blackGoal))
+            ? null
+            : person.blackGoal,
       };
     }),
   };
-
-  return keepGoals ? keepSavedBlack(draft, saved, black) : draft;
 }
 
 function newLevels() {
@@ -252,6 +245,7 @@ function newLevels() {
       type,
       goal: "",
       superGoal: "",
+      blackGoal: "",
     })),
   );
 }
@@ -282,8 +276,6 @@ export function buildDraft(segmentData, black = NO_BLACK) {
     source: "new",
     sourceMonth: null,
     legacy: false,
-    farmBlack: "",
-    salesBlack: "",
     tickets: ticketsFrom(null),
     conversion: conversionFrom(null),
     levels,
@@ -303,11 +295,12 @@ export function toPayload(draft, computed, black = NO_BLACK) {
       type: level.type,
       goal: fromCents(toCents(level.goal)),
       superGoal: fromCents(toCents(level.superGoal)),
+      blackGoal: black.active ? fromCents(toCents(level.blackGoal)) : null,
     })),
     tickets: { farm: ticketValue(draft.tickets?.farm), sales: ticketValue(draft.tickets?.sales) },
     conversion: { farm: rateValue(draft.conversion?.farm), sales: rateValue(draft.conversion?.sales) },
-    farmBlack: black.active ? fromCents(toCents(draft.farmBlack)) : null,
-    salesBlack: black.active ? fromCents(toCents(draft.salesBlack)) : null,
+    farmBlack: black.active ? computed.byType.farm.black : null,
+    salesBlack: black.active ? computed.byType.sales.black : null,
     people: computed.people
       .filter((person) => person.included)
       .map((person) => ({
@@ -334,5 +327,6 @@ export function newLevel(levels, type) {
     type,
     goal: "",
     superGoal: "",
+    blackGoal: "",
   };
 }

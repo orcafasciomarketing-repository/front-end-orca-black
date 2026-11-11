@@ -23,16 +23,17 @@ const SEGMENTS = ["b2b", "b2g"];
 
 const SECTOR_BLACK = { b2b: 200000, b2g: 240000 };
 
-const level = (goal, superGoal) => ({ goal, superGoal });
+const level = (goal, superGoal, blackGoal) => ({ goal, superGoal, blackGoal });
 
+// No B2B a Meta black de Venda é a própria Super de Venda; só Farmer tem uma Black acima da Super
 const DEMO_LEVELS = {
   b2b: {
-    farm: { junior: level(8000, 10000), pleno: level(10000, 12500), senior: level(14000, 17000) },
-    sales: { junior: level(12000, 15000), pleno: level(15000, 18500), senior: level(20000, 24000) },
+    farm: { junior: level(8000, 10000, 13000), pleno: level(10000, 12500, 16000), senior: level(14000, 17000, 22000) },
+    sales: { junior: level(12000, 15000, 15000), pleno: level(15000, 18500, 18500), senior: level(20000, 24000, 24000) },
   },
   b2g: {
-    farm: { junior: level(9000, 11000), pleno: level(11000, 13500), senior: level(15000, 18000) },
-    sales: { junior: level(18000, 21500), pleno: level(21000, 25000), senior: level(26000, 31000) },
+    farm: { junior: level(9000, 11000, 14000), pleno: level(11000, 13500, 17000), senior: level(15000, 18000, 23000) },
+    sales: { junior: level(18000, 21500, 34000), pleno: level(21000, 25000, 40000), senior: level(26000, 31000, 50000) },
   },
 };
 
@@ -40,8 +41,6 @@ const DEMO_TICKETS = { b2b: { farm: 2000, sales: 3000 }, b2g: { farm: null, sale
 
 const DEMO_CONVERSION = { b2b: { farm: null, sales: 30 }, b2g: { farm: null, sales: null } };
 
-// No B2B a Meta black de Venda é a própria Super de Venda (R$ 100.000); só Farmer tem uma Black acima da Super
-const DEMO_BLACK = { b2b: { farm: 80000, sales: 100000 }, b2g: { farm: 70000, sales: 170000 } };
 
 const blackInfo = (month, now) => ({
   month: currentMonthKey(now),
@@ -83,8 +82,6 @@ function demoConfig(db, month, segment) {
     levels,
     tickets: DEMO_TICKETS[segment],
     conversion: DEMO_CONVERSION[segment],
-    farmBlack: DEMO_BLACK[segment].farm,
-    salesBlack: DEMO_BLACK[segment].sales,
     people: draft.people.map((person, index) => {
       const options = levelsOfType(levels, person.type);
       return { ...person, level: options[index % options.length].key };
