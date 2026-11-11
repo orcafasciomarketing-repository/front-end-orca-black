@@ -81,7 +81,7 @@ describe("GoalWidget", () => {
     renderWithQuery(<GoalWidget />);
 
     await screen.findByRole("region", { name: "Vendas por setor" });
-    expect(getAdminSales).toHaveBeenCalledWith("");
+    expect(getAdminSales).toHaveBeenCalledWith("", "");
     expect(itemsOf("Vendas por setor")).toEqual(["B2B2", "B2G1"]);
     expect(itemsOf("Passagens por setor")).toEqual(["CS1", "SDR1", "Suporte1"]);
     expect(itemsOf("Renovações por setor")).toEqual(["B2G1"]);

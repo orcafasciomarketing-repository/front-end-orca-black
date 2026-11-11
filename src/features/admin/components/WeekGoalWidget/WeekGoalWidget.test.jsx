@@ -58,7 +58,7 @@ describe("WeekGoalWidget", () => {
     renderWithQuery(<WeekGoalWidget segment="B2B" />);
 
     await screen.findByRole("progressbar");
-    expect(getForecast).toHaveBeenCalledWith("B2B", null);
+    expect(getForecast).toHaveBeenCalledWith("B2B", null, "");
     expect(text()).toContain("09/11 a 14/11 · B2B");
   });
 

@@ -250,7 +250,7 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
       "Prefeitura de Santos",
     ]);
 
-    const goal = sectionOf("Meta da Black Friday");
+    const goal = sectionOf("Meta da campanha");
     await waitFor(() => expect(goal).toHaveTextContent("B2G representa 56,6% do total vendido"));
     // Meta do B2G (1 milhão), não mais a meta total
     expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("B2GR$ 120.000,00de R$ 1.000.000,00 (meta B2G)");
@@ -285,7 +285,7 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
 
     fireEvent.change(screen.getByRole("combobox", { name: "Filtrar por setor" }), { target: { value: "" } });
     await expectListToShow(ALL_DEALS);
-    await waitFor(() => expect(sectionOf("Meta da Black Friday")).toHaveTextContent("Faltam"));
+    await waitFor(() => expect(sectionOf("Meta da campanha")).toHaveTextContent("Faltam"));
   });
 
   it("usuário b2g: abre no B2G, sem poder trocar o setor, e a meta é a do B2G", async () => {
@@ -309,7 +309,7 @@ describe("Admin com os dados falsos (quarta, 21/10/2026)", () => {
       "Câmara Municipal BH",
       "Prefeitura de Santos",
     ]);
-    const goal = sectionOf("Meta da Black Friday");
+    const goal = sectionOf("Meta da campanha");
     await waitFor(() => expect(goal.textContent.replace(/\u00a0/g, " ")).toContain("de R$ 1.000.000,00 (meta B2G)"));
   });
 

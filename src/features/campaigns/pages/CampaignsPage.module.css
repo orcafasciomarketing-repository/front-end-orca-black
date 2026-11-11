@@ -1,0 +1,110 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+}
+
+.count {
+  composes: count from "../../admin/components/UsersWidget/UsersWidget.module.css";
+}
+
+.help {
+  composes: help from "../../admin/components/UsersWidget/UsersWidget.module.css";
+}
+
+.error {
+  composes: error from "../../admin/components/UsersWidget/UsersWidget.module.css";
+}
+
+.scroll {
+  composes: scroll from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.table {
+  composes: table from "../../admin/components/PrizesWidgets/PrizesWidgets.module.css";
+}
+
+.table .number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.selected {
+  background: var(--color-primary-field);
+}
+
+.name {
+  display: block;
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.activeTag,
+.blackTag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.activeTag {
+  background: var(--color-success-field);
+  color: var(--color-success);
+}
+
+.blackTag {
+  background: var(--color-text);
+  color: var(--color-surface);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.secondaryButton {
+  composes: secondaryButton from "../../admin/components/UsersWidget/UsersWidget.module.css";
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.dangerButton {
+  composes: dangerButton from "../../admin/components/UsersWidget/UsersWidget.module.css";
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 700px) {
+  .page {
+    padding: 16px;
+  }
+}

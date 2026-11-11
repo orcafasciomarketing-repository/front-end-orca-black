@@ -2,6 +2,7 @@ import {
   findActiveSalesOfCurrentWeek,
   findAllSales,
   findSalesByVendor,
+  getCampaigns,
   getForecast,
   getGoalProgress,
   getScoreboard,
@@ -15,9 +16,11 @@ import {
   getPrizeWithdrawals,
   getSdrRanking,
   getVendorRanking,
+  MOCK_PERSON,
 } from "./mockBackend";
 import { buildMockDatabase } from "./mockDatabase";
-import { getGoalHistory, getGoalMonth, getGoalProgress as getMonthlyGoalProgress } from "./mockGoals";
+import { currentMonthKey } from "../../features/goals/utils/goalMath";
+import { getGoalHistory, getGoalMonth, getGoalProgress as getMonthlyGoalProgress, getMyGoals } from "./mockGoals";
 
 const MOCK_DELAY = 300;
 
@@ -86,6 +89,12 @@ const ROUTES = [
   { pattern: /^\/me$/, handle: ({ db }) => getMe(db) },
   { pattern: /^\/me\/sales$/, handle: ({ db }) => getMySales(db) },
   { pattern: /^\/me\/prizes$/, handle: ({ db, now }) => getMyPrizes(db, now) },
+  {
+    pattern: /^\/me\/goals$/,
+    handle: ({ db, now, params }) =>
+      getMyGoals(db, /^\d{4}-\d{2}$/.test(params.month ?? "") ? params.month : currentMonthKey(now), now, MOCK_PERSON.id),
+  },
+  { pattern: /^\/campaigns$/, handle: ({ db }) => getCampaigns(db) },
   {
     pattern: /^\/me\/team$/,
     handle: ({ db, now, params }) =>

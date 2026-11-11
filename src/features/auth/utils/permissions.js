@@ -43,5 +43,7 @@ export function getPermissions(role) {
     isPerson,
     canSeeAdmin: !isPerson,
     canSeeGoals: isMaster || knownRole === "admin",
+    canManageCampaigns: isMaster || knownRole === "admin",
+    isVendor: knownRole === "vendor",
   };
 }

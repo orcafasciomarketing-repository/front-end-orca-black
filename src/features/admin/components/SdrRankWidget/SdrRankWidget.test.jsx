@@ -43,7 +43,7 @@ describe("SdrRankWidget", () => {
     renderWithQuery(<SdrRankWidget segment="B2B" />);
 
     const items = within(await screen.findByRole("list")).getAllByRole("listitem");
-    expect(getRankSdrs).toHaveBeenCalledWith({ period: "all", segment: "B2B" });
+    expect(getRankSdrs).toHaveBeenCalledWith({ period: "all", segment: "B2B", campaign: "" });
     expect(items.map((item) => item.textContent)).toEqual(["1ºPaulaB2B SDR1 ponto"]);
   });
 

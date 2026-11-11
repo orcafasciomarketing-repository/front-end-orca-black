@@ -16,6 +16,8 @@ import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
 import GoalsProgressPage from "../features/goals/pages/GoalsProgressPage";
 import GoalsSetupPage from "../features/goals/pages/GoalsSetupPage";
+import CampaignsPage from "../features/campaigns/pages/CampaignsPage";
+import MyGoalsPage from "../features/person/pages/MyGoalsPage";
 import PersonPage from "../features/person/pages/PersonPage";
 
 const router = createBrowserRouter([
@@ -51,6 +53,10 @@ const router = createBrowserRouter([
                 children: [{ path: "usuarios", element: <UsersPage /> }],
               },
               {
+                element: <RestrictedRoute allow="canManageCampaigns" />,
+                children: [{ path: "campanhas", element: <CampaignsPage /> }],
+              },
+              {
                 element: <RestrictedRoute allow="canSeeGoals" />,
                 children: [
                   { path: "metas", element: <GoalsSetupPage /> },
@@ -73,7 +79,13 @@ const router = createBrowserRouter([
         children: [
           {
             element: <AdminLayout />,
-            children: [{ index: true, element: <PersonPage /> }],
+            children: [
+              { index: true, element: <PersonPage /> },
+              {
+                element: <RestrictedRoute allow="isVendor" redirectTo="/minha-area" />,
+                children: [{ path: "metas", element: <MyGoalsPage /> }],
+              },
+            ],
           },
         ],
       },

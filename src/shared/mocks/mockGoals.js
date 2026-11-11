@@ -481,3 +481,22 @@ export function getGoalHistory(db, month, now = new Date(), count = 6) {
     }),
   };
 }
+
+export function getMyGoals(db, month, now = new Date(), vendorId = "vendor-brenda") {
+  const progress = getGoalProgress(db, month, now);
+  const history = getGoalHistory(db, month, now);
+  const mine = (people) => people.filter((person) => person.vendorId === vendorId);
+
+  return {
+    month: progress.month,
+    today: progress.today,
+    weeks: progress.weeks,
+    days: progress.days,
+    black: progress.black,
+    person: mine(progress.people)[0] ?? null,
+    history: {
+      month: history.month,
+      months: history.months.map((item) => ({ month: item.month, start: item.start, end: item.end, people: mine(item.people) })),
+    },
+  };
+}

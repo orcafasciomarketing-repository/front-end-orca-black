@@ -171,7 +171,7 @@ describe("ChartsPage", () => {
 
     expect(print).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByText("Relatório de vendas · Black Friday")).toBeInTheDocument();
+    expect(screen.getByText("Relatório de vendas · Campanha")).toBeInTheDocument();
     expect(screen.getByText(/Período: Todo o período · Setor: Todos · Gerado em/)).toBeInTheDocument();
 
     const printed = (title) => !screen.getByRole("region", { name: title }).closest("div[class*='notPrinted']");
@@ -181,7 +181,7 @@ describe("ChartsPage", () => {
     expect(printed("Cancelamentos")).toBe(false);
 
     fireEvent(window, new Event("afterprint"));
-    await waitFor(() => expect(screen.queryByText("Relatório de vendas · Black Friday")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText("Relatório de vendas · Campanha")).not.toBeInTheDocument());
     expect(printed("Vendas acumuladas")).toBe(true);
     print.mockRestore();
   });

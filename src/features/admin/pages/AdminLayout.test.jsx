@@ -85,7 +85,7 @@ describe("AdminLayout", () => {
       renderAs("master");
 
       const groups = [...document.querySelectorAll("nav p")].map((label) => label.textContent);
-      expect(groups).toEqual(["Campanha Black", "Metas do mês", "Administração"]);
+      expect(groups).toEqual(["Campanha", "Metas do mês", "Administração"]);
 
       expect(menuLinks()).toEqual([
         "Dashboard",
@@ -94,6 +94,7 @@ describe("AdminLayout", () => {
         "Prêmios",
         "Metas por vendedor",
         "Cadastro de metas",
+        "Campanhas",
         "Importação",
         "Erros",
         "Usuários",
@@ -110,6 +111,7 @@ describe("AdminLayout", () => {
         "Prêmios",
         "Metas por vendedor",
         "Cadastro de metas",
+        "Campanhas",
         "Usuários",
       ]);
     });
@@ -124,6 +126,7 @@ describe("AdminLayout", () => {
         "Prêmios",
         "Metas por vendedor",
         "Cadastro de metas",
+        "Campanhas",
         "Importação",
         "Erros",
         "Usuários",

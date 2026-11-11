@@ -140,7 +140,7 @@ function GoalCard({ goal, total, percent, segment, note, reached, isTotalGoal = 
   return (
     <section className="widget">
       <header className="header">
-        <h2 className="title">Meta da Black Friday</h2>
+        <h2 className="title">Meta da campanha</h2>
         <Celebration percent={percent} />
         <span className={styles.percent}>{percentFormatter.format(percent)}%</span>
       </header>

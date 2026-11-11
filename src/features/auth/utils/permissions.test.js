@@ -12,6 +12,8 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: true,
+      canManageCampaigns: true,
+      isVendor: false,
     });
   });
 
@@ -24,6 +26,8 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: true,
+      canManageCampaigns: true,
+      isVendor: false,
     });
   });
 
@@ -36,6 +40,8 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: false,
+      canManageCampaigns: false,
+      isVendor: false,
     });
     expect(getPermissions("b2g")).toEqual({
       role: "b2g",
@@ -45,6 +51,8 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: false,
+      canManageCampaigns: false,
+      isVendor: false,
     });
   });
 
@@ -58,6 +66,8 @@ describe("getPermissions", () => {
         isPerson: true,
         canSeeAdmin: false,
         canSeeGoals: false,
+        canManageCampaigns: false,
+        isVendor: role === "vendor",
       });
     }
   });

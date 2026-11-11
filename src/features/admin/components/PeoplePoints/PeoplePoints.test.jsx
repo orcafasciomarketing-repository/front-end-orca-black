@@ -58,7 +58,7 @@ describe("PeoplePoints", () => {
     renderWithQuery(<PeoplePointsWidget />);
 
     await screen.findByText("Bruno");
-    expect(getPeoplePoints).toHaveBeenCalledWith({ period: "all", segment: "", from: "", to: "" });
+    expect(getPeoplePoints).toHaveBeenCalledWith({ period: "all", segment: "", from: "", to: "", campaign: "" });
     expect(rows()).toEqual([
       expect.stringMatching(/^1ºBrunoBeta · B2B Sales8 pontosvenda 6, renovação 2, passagem 0$/),
       expect.stringMatching(/^2ºCarlaAlfa · CS3 pontos/),
@@ -96,7 +96,7 @@ describe("PeoplePoints", () => {
         expect.stringMatching(/^2ºCarla.*0 pontos/),
       ]),
     );
-    expect(getPeoplePoints).toHaveBeenLastCalledWith({ period: "week", segment: "B2B", from: "", to: "" });
+    expect(getPeoplePoints).toHaveBeenLastCalledWith({ period: "week", segment: "B2B", from: "", to: "", campaign: "" });
     expect(screen.getByRole("combobox", { name: "Filtrar pontos por equipe" })).toHaveValue("a");
   });
 
@@ -105,7 +105,7 @@ describe("PeoplePoints", () => {
     renderWithQuery(<PeoplePointsChart period={period} segment="" />);
     await screen.findByText("Bruno");
 
-    expect(getPeoplePoints).toHaveBeenCalledWith({ period: "all", segment: "", from: "2026-11-01", to: "2026-11-07" });
+    expect(getPeoplePoints).toHaveBeenCalledWith({ period: "all", segment: "", from: "2026-11-01", to: "2026-11-07", campaign: "" });
 
     fireEvent.change(screen.getByRole("combobox", { name: "Filtrar pontos por equipe" }), { target: { value: "b" } });
     fireEvent.click(screen.getByRole("button", { name: "Exportar CSV: Pontos por pessoa" }));

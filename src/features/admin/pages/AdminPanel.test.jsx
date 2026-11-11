@@ -164,7 +164,7 @@ describe("AdminPanel › filtros e exportação de vendas", () => {
     fireEvent.change(vendorSelect(), { target: { value: "v2" } });
 
     await waitFor(() => expect(visibleSales()).toEqual(["b", "c"]));
-    expect(getAdminSales).toHaveBeenCalledWith("v2");
+    expect(getAdminSales).toHaveBeenCalledWith("v2", "");
 
     const { csv, fileName } = await exportAndGetCsv();
     expect(csv).not.toContain("Negócio a");

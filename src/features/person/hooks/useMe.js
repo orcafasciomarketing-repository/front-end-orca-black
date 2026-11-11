@@ -1,6 +1,6 @@
 import { useSuspenseQuery } from "@tanstack/react-query";
 
-import { getMe, getMyPrizes, getMySales, getMyTeam } from "../api/meApi";
+import { getMe, getMyGoals, getMyPrizes, getMySales, getMyTeam } from "../api/meApi";
 
 const byNewestSale = (a, b) => new Date(b.realizedAt ?? 0) - new Date(a.realizedAt ?? 0);
 
@@ -33,4 +33,16 @@ export function useMyPrizes() {
   const { data } = useSuspenseQuery({ queryKey: ["admin-me-prizes"], queryFn: getMyPrizes });
 
   return { prizes: data };
+}
+
+export function useMyGoals(month) {
+  const { data } = useSuspenseQuery({ queryKey: ["admin-me-goals", month], queryFn: () => getMyGoals(month) });
+
+  return { goals: data };
+}
+
+export function useMyGoalHistory(month) {
+  const { goals } = useMyGoals(month);
+
+  return { history: goals.history };
 }

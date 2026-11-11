@@ -48,12 +48,12 @@ const menuItems = () =>
 
 describe("Área do colaborador nas rotas", () => {
   for (const role of ["vendor", "sdr"]) {
-    it(`${role} abrindo o admin pelo endereço vai para a própria área, com só "Minha área" no menu`, () => {
+    it(`${role} abrindo o admin pelo endereço vai para a própria área, com só a área dele no menu`, () => {
       renderAt("/admin/graficos", role);
 
       expect(screen.getByText("Página minha área")).toBeInTheDocument();
       expect(screen.queryByText("Página gráficos")).not.toBeInTheDocument();
-      expect(menuItems()).toEqual(["Minha área"]);
+      expect(menuItems()).toEqual(role === "vendor" ? ["Minha área", "Minhas metas"] : ["Minha área"]);
     });
   }
 

@@ -1,5 +1,5 @@
 import { dayKeyOf as goalDayKeyOf, monthWeeks } from "../../features/goals/utils/goalMath";
-import { buildForecast } from "./mockForecast";
+import { buildForecast, CAMPAIGN_END_DAY, CAMPAIGN_START_DAY } from "./mockForecast";
 import { getMonthTiers } from "./mockGoals";
 
 export const POINTS = { sales: 2, farm: 1, passage: 1 };
@@ -303,6 +303,26 @@ export function getPeoplePoints(db, { period = "all", segment = null, from = nul
       ...db.sdrs.map((sdr) => toPerson("sdr", sdr, sdr.name, sdrPoints.get(sdr._id))),
     ].sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "pt-BR")),
   };
+}
+
+export function getCampaigns(db) {
+  const active = db.sales.filter(isActive);
+
+  return [
+    {
+      id: "campaign-demo",
+      name: "Campanha Black",
+      start: CAMPAIGN_START_DAY,
+      end: CAMPAIGN_END_DAY,
+      goals: { ...SEGMENT_GOALS },
+      goal: BLACK_FRIDAY_GOAL,
+      active: true,
+      hasBlackTier: true,
+      updatedBy: null,
+      updatedAt: null,
+      sales: { count: active.length, total: active.reduce((sum, sale) => sum + sale.value, 0) },
+    },
+  ];
 }
 
 export const MOCK_PERSON = { kind: "vendor", id: "vendor-brenda" };

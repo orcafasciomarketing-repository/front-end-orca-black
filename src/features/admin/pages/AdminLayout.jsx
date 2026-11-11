@@ -5,12 +5,15 @@ import { NavLink, Outlet } from "react-router";
 
 import useTheme from "../../../shared/hooks/useTheme";
 import ChangePasswordDialog from "../../auth/components/ChangePasswordDialog/ChangePasswordDialog";
+import CampaignSelect from "../../campaigns/components/CampaignSelect/CampaignSelect";
+import { campaignKey, useSelectedCampaign } from "../../campaigns/utils/campaignSelection";
 import { AuthContext } from "../../auth/context/AuthContext";
 import usePermissions from "../../auth/hooks/usePermissions";
 import {
   AlertIcon,
   ChartIcon,
   DashboardIcon,
+  FlagIcon,
   ForecastIcon,
   GiftIcon,
   KeyIcon,
@@ -27,10 +30,14 @@ import SaleToasts from "../components/SaleToasts/SaleToasts";
 const NAV_GROUPS = [
   {
     label: null,
-    items: [{ to: "/minha-area", label: "Minha área", end: true, Icon: DashboardIcon, allow: "isPerson" }],
+    items: [
+      { to: "/minha-area", label: "Minha área", end: true, Icon: DashboardIcon, allow: "isPerson" },
+      { to: "/minha-area/metas", label: "Minhas metas", end: false, Icon: TargetIcon, allow: "isVendor" },
+    ],
   },
   {
-    label: "Campanha Black",
+    label: "Campanha",
+    campaignSelect: true,
     items: [
       { to: "/admin", label: "Dashboard", end: true, Icon: DashboardIcon, allow: "canSeeAdmin" },
       { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon, allow: "canSeeAdmin" },
@@ -54,12 +61,15 @@ const NAV_GROUPS = [
   {
     label: "Administração",
     items: [
+      { to: "/admin/campanhas", label: "Campanhas", end: false, Icon: FlagIcon, allow: "canManageCampaigns" },
       { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
       { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
       { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },
     ],
   },
 ];
+
+const PERSON_REFRESH_SPREAD_MS = 3000;
 
 const navLinkClass = ({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`;
 
@@ -73,6 +83,7 @@ export default function AdminLayout() {
   const auth = useContext(AuthContext);
   const isLoggedIn = Boolean(auth?.state.user);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const selectedCampaign = useSelectedCampaign();
 
   const handlePasswordChanged = ({ user, token }) => {
     auth.dispatch({ type: "SET_USER", payload: { user, token } });
@@ -86,6 +97,7 @@ export default function AdminLayout() {
           {navGroups.map((group) => (
             <div key={group.label ?? "pessoal"} className={styles.navGroup}>
               {group.label && <p className={styles.navGroupLabel}>{group.label}</p>}
+              {group.campaignSelect && <CampaignSelect />}
               <ul className={styles.nav}>
                 {group.items.map(({ to, label, end, Icon }) => (
                   <li key={to}>
@@ -119,9 +131,9 @@ export default function AdminLayout() {
         </div>
       </aside>
       <main className={styles.main}>
-        <Outlet />
+        <Outlet key={permissions.canSeeAdmin ? campaignKey(selectedCampaign) : "pessoal"} />
       </main>
-      <SaleToasts />
+      <SaleToasts spreadMs={permissions.isPerson ? PERSON_REFRESH_SPREAD_MS : 0} />
       {isChangingPassword && (
         <ChangePasswordDialog onClose={() => setIsChangingPassword(false)} onChanged={handlePasswordChanged} />
       )}

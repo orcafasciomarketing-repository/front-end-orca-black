@@ -28,7 +28,7 @@ export default function AdminPanel() {
 
   return (
     <div className={styles.page}>
-      <PageHeader title="Dashboard" description="Vendas e rankings da Black Friday">
+      <PageHeader title="Dashboard" description="Vendas e rankings da campanha">
         <SalesFilters
           selectedVendorId={selectedVendorId}
           onVendorChange={setSelectedVendorId}
@@ -42,7 +42,7 @@ export default function AdminPanel() {
       <div className={styles.grid}>
         <div className={styles.full}>
           <ErrorBoundary location="Admin › meta">
-            <Suspense fallback={<WidgetFallback title="Meta da Black Friday" />}>
+            <Suspense fallback={<WidgetFallback title="Meta da campanha" />}>
               <GoalWidget segment={selectedSegment} />
             </Suspense>
           </ErrorBoundary>

@@ -8,7 +8,7 @@ import Avatar from "../Avatar/Avatar";
 export const TOAST_DURATION_MS = 8000;
 const MAX_TOASTS = 3;
 
-export default function SaleToasts() {
+export default function SaleToasts({ spreadMs = 0 }) {
   const [toasts, setToasts] = useState([]);
   const timers = useRef(new Map());
 
@@ -35,7 +35,7 @@ export default function SaleToasts() {
     return () => pending.forEach((timer) => clearTimeout(timer));
   }, []);
 
-  useLiveSales(addToast);
+  useLiveSales(addToast, { spreadMs });
 
   return (
     <div className={styles.toasts} role="status" aria-live="polite">

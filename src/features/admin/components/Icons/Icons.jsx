@@ -102,6 +102,15 @@ export function TargetIcon() {
   );
 }
 
+export function FlagIcon() {
+  return (
+    <svg {...iconProps}>
+      <path d="M4 22V4" />
+      <path d="M4 4h12l-2 4 2 4H4" />
+    </svg>
+  );
+}
+
 export function MoonIcon() {
   return (
     <svg {...iconProps}>

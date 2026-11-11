@@ -34,7 +34,7 @@ const tierSeries = (tiers, valuesOf, { dashed = false } = {}) =>
       values: valuesOf(tier),
     }));
 
-export default function GoalEvolution({ label, scope, progress, pickHistory }) {
+export default function GoalEvolution({ label, scope, progress, pickHistory, useHistory = useGoalHistory }) {
   const [view, setView] = useState("daily");
 
   return (
@@ -56,7 +56,7 @@ export default function GoalEvolution({ label, scope, progress, pickHistory }) {
       {view === "weekly" && <WeeklyView label={label} scope={scope} />}
       {view === "monthly" && (
         <Suspense fallback={<WidgetFallback title="Histórico dos meses" />}>
-          <MonthlyView label={label} month={progress.month} pickHistory={pickHistory} />
+          <MonthlyView label={label} month={progress.month} pickHistory={pickHistory} useHistory={useHistory} />
         </Suspense>
       )}
     </ChartCard>
@@ -145,8 +145,8 @@ function WeeklyView({ label, scope }) {
   );
 }
 
-function MonthlyView({ label, month, pickHistory }) {
-  const { history } = useGoalHistory(month);
+function MonthlyView({ label, month, pickHistory, useHistory }) {
+  const { history } = useHistory(month);
   const rows = history.months.map((item) => ({ month: item.month, ...pickHistory(item) }));
   const series = [
     { key: "realized", label: "Realizado", color: CHART_COLORS.blue, values: rows.map((row) => row.realized) },

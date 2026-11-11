@@ -16,8 +16,8 @@ const reachedLabel = (row) => {
   return reached.length ? `Bateu a ${TIER_LABELS[reached[reached.length - 1]]}` : "Não bateu a Meta";
 };
 
-export default function MonthComparison({ label, month, scope, pickHistory }) {
-  const { history } = useGoalHistory(month);
+export default function MonthComparison({ label, month, scope, pickHistory, useHistory = useGoalHistory }) {
+  const { history } = useHistory(month);
   const previousItem = history.months.length > 1 ? history.months[history.months.length - 2] : null;
   const previous = previousItem ? { month: previousItem.month, ...pickHistory(previousItem) } : null;
   const realized = scope.month.realized;

@@ -66,12 +66,12 @@ describe("ForecastPage", () => {
   it("admin troca o setor e o forecast é pedido para o setor", async () => {
     renderWithUser(<ForecastPage />);
     await screen.findByRole("region", { name: "Cenários da campanha" });
-    expect(getForecast).toHaveBeenCalledWith("", null);
+    expect(getForecast).toHaveBeenCalledWith("", null, "");
 
     getForecast.mockResolvedValue(buildResponse({ segment: "b2g", goal: 1000000, goalIsTotal: false }));
     fireEvent.change(screen.getByRole("combobox", { name: "Filtrar previsão por setor" }), { target: { value: "B2G" } });
 
-    await waitFor(() => expect(getForecast).toHaveBeenCalledWith("B2G", null));
+    await waitFor(() => expect(getForecast).toHaveBeenCalledWith("B2G", null, ""));
     await waitFor(() => expect(textOf("Cenários da campanha")).toContain("Meta B2GR$ 1.000.000,00"));
   });
 
@@ -84,7 +84,7 @@ describe("ForecastPage", () => {
     fireEvent.change(screen.getByRole("combobox", { name: "Período da previsão" }), { target: { value: "month" } });
     fireEvent.change(screen.getByLabelText("Mês da previsão"), { target: { value: "2026-11" } });
 
-    await waitFor(() => expect(getForecast).toHaveBeenCalledWith("", "2026-11"));
+    await waitFor(() => expect(getForecast).toHaveBeenCalledWith("", "2026-11", ""));
     await waitFor(() => expect(textOf("Cenários do mês")).toContain("Meta do mêsR$ 120.000,00"));
   });
 
@@ -108,7 +108,7 @@ describe("ForecastPage", () => {
     const select = screen.getByRole("combobox", { name: "Filtrar previsão por setor" });
     expect(select).toBeDisabled();
     expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual(["B2B"]);
-    expect(getForecast).toHaveBeenCalledWith("B2B", null);
+    expect(getForecast).toHaveBeenCalledWith("B2B", null, "");
   });
 
   it("sem histórico (antes da campanha) a chance aparece como sem histórico suficiente", async () => {

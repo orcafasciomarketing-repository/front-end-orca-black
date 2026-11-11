@@ -16,6 +16,11 @@ export const getMyTeam = async (period = "all") => {
   return response.data.data;
 };
 
+export const getMyGoals = async (month) => {
+  const response = await http.get("/me/goals", { params: { month } });
+  return response.data.data;
+};
+
 export const getMyPrizes = async () => {
   const response = await http.get("/me/prizes");
   return response.data.data;

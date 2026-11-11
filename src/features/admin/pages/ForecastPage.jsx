@@ -39,7 +39,7 @@ export default function ForecastPage() {
         description={
           selectedMonth
             ? "Forecast do mês: cenários pessimista, realista e otimista contra a Meta do cadastro de metas"
-            : "Forecast da Black Friday: cenários pessimista, realista e otimista"
+            : "Forecast da campanha: cenários pessimista, realista e otimista"
         }
       >
         <label className={styles.field}>
@@ -50,7 +50,7 @@ export default function ForecastPage() {
             value={period}
             onChange={(event) => setPeriod(event.target.value)}
           >
-            <option value="campaign">Campanha Black</option>
+            <option value="campaign">Campanha</option>
             <option value="month">Mês</option>
           </select>
         </label>

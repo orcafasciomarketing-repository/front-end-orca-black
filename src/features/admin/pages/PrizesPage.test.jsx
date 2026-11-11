@@ -95,7 +95,7 @@ describe("PrizesPage", () => {
 
     expect(screen.queryByRole("button", { name: "Registrar retirada" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: /Excluir retirada/ })).not.toBeInTheDocument();
-    expect(getPrizes).toHaveBeenCalledWith("");
+    expect(getPrizes).toHaveBeenCalledWith("", "");
   });
 
   it("filtros: só quem tem prêmio para retirar e só pessoas de passagem", async () => {
@@ -128,7 +128,7 @@ describe("PrizesPage", () => {
         kind: "vendor",
         quantity: 1,
         withdrawnAt: "2026-11-09",
-      }),
+      }, ""),
     );
     expect(confirm).not.toHaveBeenCalled();
     expect(await screen.findByText("Retirada registrada")).toBeInTheDocument();
@@ -183,6 +183,7 @@ describe("PrizesPage", () => {
     await waitFor(() =>
       expect(createPrizeWithdrawal).toHaveBeenCalledWith(
         expect.objectContaining({ quantity: 2, confirmOverBalance: true }),
+        "",
       ),
     );
   });
@@ -219,8 +220,8 @@ describe("PrizesPage", () => {
 
     const select = screen.getByRole("combobox", { name: "Filtrar prêmios por setor" });
     expect(select).toBeDisabled();
-    expect(getPrizes).toHaveBeenCalledWith("B2B");
-    expect(getPrizeWithdrawals).toHaveBeenCalledWith("B2B");
+    expect(getPrizes).toHaveBeenCalledWith("B2B", "");
+    expect(getPrizeWithdrawals).toHaveBeenCalledWith("B2B", "");
     expect(screen.queryByRole("button", { name: "Registrar retirada" })).not.toBeInTheDocument();
   });
 });

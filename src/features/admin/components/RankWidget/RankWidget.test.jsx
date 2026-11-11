@@ -61,7 +61,7 @@ describe("RankWidget", () => {
     renderWithQuery(<RankWidget segment="B2G" />);
 
     const items = within(await screen.findByRole("list")).getAllByRole("listitem");
-    expect(getRankVendors).toHaveBeenCalledWith("sales", { period: "all", segment: "B2G" });
+    expect(getRankVendors).toHaveBeenCalledWith("sales", { period: "all", segment: "B2G", campaign: "" });
     expect(items.map((item) => item.textContent)).toEqual(["1ºZecaB2G Sales9 pontos"]);
   });
 

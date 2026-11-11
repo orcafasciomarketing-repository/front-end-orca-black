@@ -126,14 +126,14 @@ export default function ChartsPage() {
     <div className={styles.page}>
       {printItems && (
         <div className={styles.printHeader}>
-          <p className={styles.printTitle}>Relatório de vendas · Black Friday</p>
+          <p className={styles.printTitle}>Relatório de vendas · Campanha</p>
           <p className={styles.printDetails}>
             Período: {periodLabel} · Setor: {segmentLabel} · Gerado em{" "}
             {printDateFormatter.format(printItems.generatedAt)}
           </p>
         </div>
       )}
-      <PageHeader title="Gráficos" description="Acompanhamento das vendas da Black Friday">
+      <PageHeader title="Gráficos" description="Acompanhamento das vendas da campanha">
         <div className={styles.controls}>
           <button className={styles.actionButton} type="button" onClick={() => setIsChoosing(true)}>
             <DownloadIcon />

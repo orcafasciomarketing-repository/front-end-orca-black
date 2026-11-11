@@ -88,6 +88,36 @@ describe("SaleToasts (tempo real no admin)", () => {
     expect(screen.queryByText("Nova venda")).not.toBeInTheDocument();
   });
 
+  it("o perfil da área do colaborador não é recarregado a cada venda (não muda com vendas)", () => {
+    renderToasts();
+
+    act(() => emit(newSale));
+
+    const { predicate } = queryClient.invalidateQueries.mock.calls[0][0];
+    expect(predicate({ queryKey: ["admin-me"] })).toBe(false);
+    expect(predicate({ queryKey: ["admin-me-sales"] })).toBe(true);
+    expect(predicate({ queryKey: ["admin-me-goals", "2026-11"] })).toBe(true);
+  });
+
+  it("com spreadMs (área do colaborador), a atualização espera um tempo sorteado, e o aviso aparece na hora", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0.5);
+    render(
+      <QueryClientProvider client={queryClient}>
+        <SaleToasts spreadMs={3000} />
+      </QueryClientProvider>,
+    );
+
+    act(() => emit(newSale));
+    expect(screen.getByText("Nova venda")).toBeInTheDocument();
+    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+
+    act(() => vi.advanceTimersByTime(1499));
+    expect(queryClient.invalidateQueries).not.toHaveBeenCalled();
+    act(() => vi.advanceTimersByTime(1));
+    expect(queryClient.invalidateQueries).toHaveBeenCalledTimes(1);
+    vi.mocked(Math.random).mockRestore();
+  });
+
   it("para de escutar ao sair do admin", () => {
     const { unmount } = renderToasts();
 

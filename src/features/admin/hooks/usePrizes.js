@@ -7,6 +7,7 @@ import {
   getPrizes,
   getPrizeWithdrawals,
 } from "../api/prizesApi";
+import { campaignKey, getSelectedCampaign, useSelectedCampaign } from "../../campaigns/utils/campaignSelection";
 
 const PRIZES_KEY = ["admin-prizes"];
 
@@ -16,18 +17,20 @@ const reportUnexpected = (location) => (error) => {
 };
 
 export function usePrizes(segment = "") {
+  const campaign = useSelectedCampaign();
   const { data } = useSuspenseQuery({
-    queryKey: [...PRIZES_KEY, "summary", segment],
-    queryFn: () => getPrizes(segment),
+    queryKey: [...PRIZES_KEY, "summary", campaignKey(campaign), segment],
+    queryFn: () => getPrizes(segment, campaign),
   });
 
   return { prizes: data };
 }
 
 export function usePrizeWithdrawals(segment = "") {
+  const campaign = useSelectedCampaign();
   const { data } = useSuspenseQuery({
-    queryKey: [...PRIZES_KEY, "withdrawals", segment],
-    queryFn: () => getPrizeWithdrawals(segment),
+    queryKey: [...PRIZES_KEY, "withdrawals", campaignKey(campaign), segment],
+    queryFn: () => getPrizeWithdrawals(segment, campaign),
   });
 
   return { withdrawals: data };
@@ -39,7 +42,7 @@ export function usePrizeMutations() {
   const refreshPrizes = () => queryClient.invalidateQueries({ queryKey: PRIZES_KEY });
 
   const create = useMutation({
-    mutationFn: (withdrawal) => createPrizeWithdrawal(withdrawal),
+    mutationFn: (withdrawal) => createPrizeWithdrawal(withdrawal, getSelectedCampaign()),
     onSuccess: refreshPrizes,
     onError: reportUnexpected("Admin › registro de prêmio"),
   });
