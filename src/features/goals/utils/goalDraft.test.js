@@ -145,36 +145,43 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
     expect(computed.canSave).toBe(false);
   });
 
-  it("nível com problema trava o salvar: sem nome, Super menor que a Meta ou origens passando de 100%", () => {
+  it("nível com problema trava o salvar: sem nome ou Super menor que a Meta", () => {
     const draft = filledDraft();
     const withProblems = {
       ...draft,
-      levels: draft.levels.map((level, index) =>
-        index === 0 ? { ...level, name: " ", superGoal: 100, anticipation: 60, upsell: 30, churn: 20 } : level,
-      ),
+      levels: draft.levels.map((level, index) => (index === 0 ? { ...level, name: " ", superGoal: 100 } : level)),
     };
     const computed = computeDraft(withProblems);
-    expect(computed.levels[0].problems).toEqual(["name", "super", "origins"]);
+    expect(computed.levels[0].problems).toEqual(["name", "super"]);
     expect(computed.levelsOk).toBe(false);
     expect(computed.canSave).toBe(false);
   });
 
-  it("mês com Meta black: Farmer é o que o gestor digita, Venda o resto; cada pessoa na proporção da Meta", () => {
-    const computed = computeDraft(filledDraft({ farmBlack: 4000 }), BLACK);
+  it("mês com Meta black: Farmer e Venda são digitadas; cada pessoa começa na proporção da Super dela", () => {
+    const computed = computeDraft(filledDraft({ farmBlack: 4000, salesBlack: 11000 }), BLACK);
     expect(computed.byType.farm.black).toBe(4000);
     expect(computed.byType.sales.black).toBe(11000);
+    expect(computed.tiers.black).toBe(15000);
     expect(computed.people.map((person) => person.tiers.black)).toEqual([4714.29, 6285.71, 4000]);
     expect(computed.canSave).toBe(true);
+  });
 
-    const tooHigh = computeDraft(filledDraft({ farmBlack: 16000 }), BLACK);
-    expect(tooHigh.sectorBlackOk).toBe(false);
-    const belowSuper = computeDraft(filledDraft({ farmBlack: 2000 }), BLACK);
-    expect(belowSuper.blackOk.farm).toBe(false);
-    expect(belowSuper.canSave).toBe(false);
+  it("a Black pode ser igual à Super (cada pessoa fica com Black = Super), mas não menor nem vazia", () => {
+    const equal = computeDraft(filledDraft({ farmBlack: 2500, salesBlack: 8400 }), BLACK);
+    expect(equal.people.map((person) => person.tiers.black)).toEqual([3600, 4800, 2500]);
+    expect(equal.canSave).toBe(true);
+
+    const below = computeDraft(filledDraft({ farmBlack: 2500, salesBlack: 8399.99 }), BLACK);
+    expect(below.blackOk).toEqual({ farm: true, sales: false });
+    expect(below.canSave).toBe(false);
+
+    const empty = computeDraft(filledDraft({ farmBlack: 2500, salesBlack: "" }), BLACK);
+    expect(empty.blackFilled.sales).toBe(false);
+    expect(empty.canSave).toBe(false);
   });
 
   it("Black editada à mão: o resto vai para os outros; Black menor que a Super da pessoa trava", () => {
-    const draft = filledDraft({ farmBlack: 4000 });
+    const draft = filledDraft({ farmBlack: 4000, salesBlack: 11000 });
     const edited = {
       ...draft,
       people: draft.people.map((person) => (person.vendorId === "v1" ? { ...person, manualBlack: 5000 } : person)),
@@ -194,7 +201,7 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
     expect(low.canSave).toBe(false);
   });
 
-  it("envio: níveis com Meta, Super e origens, tickets e a Meta e a Super finais de cada pessoa; quem fica sem meta não vai", () => {
+  it("envio: níveis com Meta e Super, tickets e a Meta e a Super finais de cada pessoa; quem fica sem meta não vai", () => {
     const draft = filledDraft({ tickets: { farm: 2000, sales: "" } });
     const withoutBia = {
       ...draft,
@@ -207,13 +214,11 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
       type: "farm",
       goal: 2000,
       superGoal: 2500,
-      anticipation: 0,
-      upsell: 0,
-      churn: 0,
     });
     expect(payload.tickets).toEqual({ farm: 2000, sales: null });
     expect(payload.conversion).toEqual({ farm: null, sales: 30 });
     expect(payload.farmBlack).toBeNull();
+    expect(payload.salesBlack).toBeNull();
     expect(payload.people).toEqual([
       { vendorId: "v1", level: "junior", goal: 3000, superGoal: 3600, blackGoal: null },
       { vendorId: "v3", level: "junior", goal: 2000, superGoal: 2500, blackGoal: null },
@@ -221,11 +226,11 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
   });
 
   it("mês salvo volta exatamente como foi salvo, inclusive os ajustes à mão", () => {
-    const draft = filledDraft({ farmBlack: 4000 });
+    const draft = filledDraft({ farmBlack: 4000, salesBlack: 11000 });
     const adjusted = {
       ...draft,
       people: draft.people.map((person) =>
-        person.vendorId === "v1" ? { ...person, manualGoal: 3500, manualSuper: 4000, manualBlack: 5000 } : person,
+        person.vendorId === "v1" ? { ...person, manualGoal: 3500, manualSuper: 4000, manualBlack: 5500 } : person,
       ),
     };
     const payload = toPayload(adjusted, computeDraft(adjusted, BLACK), BLACK);
@@ -242,7 +247,7 @@ describe("goalDraft (rascunho da tela de cadastro)", () => {
     const reopened = buildDraft({ config, previous: null, vendors }, BLACK);
     expect(reopened.source).toBe("saved");
     expect(reopened.legacy).toBe(false);
-    expect(reopened.people[0]).toMatchObject({ manualGoal: 3500, manualSuper: 4000, manualBlack: 5000 });
+    expect(reopened.people[0]).toMatchObject({ manualGoal: 3500, manualSuper: 4000, manualBlack: 5500 });
     expect(reopened.people[1]).toMatchObject({ manualGoal: null, manualSuper: null });
     expect(toPayload(reopened, computeDraft(reopened, BLACK), BLACK)).toEqual(payload);
   });

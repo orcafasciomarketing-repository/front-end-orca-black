@@ -4,12 +4,10 @@ import {
   DEFAULT_TICKET,
   fromCents,
   GOAL_TYPES,
-  ORIGINS,
   segmentTiers,
   shareLike,
   toCents,
   typeTiers,
-  withSectorBlack,
 } from "./goalMath";
 
 const sameCents = (a, b) => toCents(a) === toCents(b);
@@ -48,14 +46,11 @@ const findLevel = (levels, type, key) => levels.find((level) => level.type === t
 
 const firstLevelKey = (levels, type) => levelsOfType(levels, type)[0]?.key ?? "";
 
-export const originsTotal = (level) => ORIGINS.reduce((sum, origin) => sum + (Number(level[origin.key]) || 0), 0);
-
 export function levelProblems(level) {
   const problems = [];
   if (!String(level.name ?? "").trim()) problems.push("name");
   if (!isFilled(level.goal) || Number(level.goal) < 0) problems.push("goal");
   if (!isFilled(level.superGoal) || toCents(level.superGoal) < toCents(level.goal)) problems.push("super");
-  if (ORIGINS.some((origin) => Number(level[origin.key]) < 0) || originsTotal(level) > 100) problems.push("origins");
   return problems;
 }
 
@@ -81,9 +76,9 @@ export function computeDraft(draft, black = NO_BLACK) {
     farmSuper: fromCents(totals.farm.super),
     salesSuper: fromCents(totals.sales.super),
     farmBlack: draft.farmBlack,
+    salesBlack: draft.salesBlack,
   };
-  const sectorBlack = Number(black.sectorGoal) || 0;
-  const byType = typeTiers(black.active ? withSectorBlack(config, sectorBlack) : config, black.active);
+  const byType = typeTiers(config, black.active);
   const tiers = segmentTiers(byType);
 
   const blackCents = new Map();
@@ -97,7 +92,7 @@ export function computeDraft(draft, black = NO_BLACK) {
     const shares = shareLike(
       black.active ? Math.max(toCents(byType[type].black) - manualCents, 0) : 0,
       auto.map((person) => person.vendorId),
-      auto.map((person) => goals.get(person.vendorId) ?? 0),
+      auto.map((person) => supers.get(person.vendorId) ?? 0),
     );
     auto.forEach((person) => blackCents.set(person.vendorId, shares.get(person.vendorId) ?? 0));
     blackDistributed[type] = fromCents(members.reduce((sum, person) => sum + blackCents.get(person.vendorId), 0));
@@ -125,13 +120,17 @@ export function computeDraft(draft, black = NO_BLACK) {
   const blackTiersOk = Object.fromEntries(
     GOAL_TYPES.map((type) => [type, !black.active || sameCents(blackDistributed[type], byType[type].black)]),
   );
+  const blackFilled = Object.fromEntries(
+    GOAL_TYPES.map((type) => [type, !black.active || byType[type].goal === 0 || isFilled(draft[`${type}Black`])]),
+  );
   const blackOk = Object.fromEntries(
     GOAL_TYPES.map((type) => [
       type,
-      !black.active || byType[type].goal === 0 || byType[type].black > byType[type].super,
+      !black.active ||
+        byType[type].goal === 0 ||
+        (blackFilled[type] && toCents(byType[type].black) >= toCents(byType[type].super)),
     ]),
   );
-  const sectorBlackOk = !black.active || (sectorBlack > 0 && toCents(draft.farmBlack) <= toCents(sectorBlack));
   const ticketsOk = GOAL_TYPES.every((type) => !isFilled(draft.tickets?.[type]) || Number(draft.tickets[type]) >= 0);
   const conversionOk = Object.fromEntries(
     GOAL_TYPES.map((type) => {
@@ -145,7 +144,7 @@ export function computeDraft(draft, black = NO_BLACK) {
     byType,
     levels,
     levelsOk,
-    sectorBlackOk,
+    blackFilled,
     blackOk,
     blackDistributed,
     blackTiersOk,
@@ -157,7 +156,6 @@ export function computeDraft(draft, black = NO_BLACK) {
       levelsOk &&
       ticketsOk &&
       GOAL_TYPES.every((type) => conversionOk[type]) &&
-      sectorBlackOk &&
       GOAL_TYPES.every((type) => blackOk[type] && blackTiersOk[type]) &&
       people.every((person) => person.levelOk && person.superOk && person.blackOk),
   };
@@ -170,7 +168,7 @@ function legacyLevels(config) {
       const goal = base?.goal ?? 0;
       const superGoal =
         base?.superGoal ?? fromCents(Math.round((toCents(goal) * Number(config.superPercent || 0)) / 100));
-      return { key: level.key, name: level.name, type, goal, superGoal, anticipation: 0, upsell: 0, churn: 0 };
+      return { key: level.key, name: level.name, type, goal, superGoal };
     }),
   );
 }
@@ -183,9 +181,6 @@ function levelsFromConfig(config) {
       type: level.type,
       goal: level.goal ?? 0,
       superGoal: level.superGoal ?? 0,
-      anticipation: level.anticipation ?? 0,
-      upsell: level.upsell ?? 0,
-      churn: level.churn ?? 0,
     }));
   }
   return legacyLevels(config);
@@ -223,6 +218,7 @@ function fromConfig(config, vendors, { keepGoals, black = NO_BLACK }) {
   const levels = levelsFromConfig(config);
   const draft = {
     farmBlack: config.farmBlack ?? "",
+    salesBlack: config.salesBlack ?? "",
     tickets: ticketsFrom(config),
     conversion: conversionFrom(config),
     levels,
@@ -256,9 +252,6 @@ function newLevels() {
       type,
       goal: "",
       superGoal: "",
-      anticipation: 0,
-      upsell: 0,
-      churn: 0,
     })),
   );
 }
@@ -290,6 +283,7 @@ export function buildDraft(segmentData, black = NO_BLACK) {
     sourceMonth: null,
     legacy: false,
     farmBlack: "",
+    salesBlack: "",
     tickets: ticketsFrom(null),
     conversion: conversionFrom(null),
     levels,
@@ -309,13 +303,11 @@ export function toPayload(draft, computed, black = NO_BLACK) {
       type: level.type,
       goal: fromCents(toCents(level.goal)),
       superGoal: fromCents(toCents(level.superGoal)),
-      anticipation: Number(level.anticipation) || 0,
-      upsell: Number(level.upsell) || 0,
-      churn: Number(level.churn) || 0,
     })),
     tickets: { farm: ticketValue(draft.tickets?.farm), sales: ticketValue(draft.tickets?.sales) },
     conversion: { farm: rateValue(draft.conversion?.farm), sales: rateValue(draft.conversion?.sales) },
     farmBlack: black.active ? fromCents(toCents(draft.farmBlack)) : null,
+    salesBlack: black.active ? fromCents(toCents(draft.salesBlack)) : null,
     people: computed.people
       .filter((person) => person.included)
       .map((person) => ({
@@ -342,8 +334,5 @@ export function newLevel(levels, type) {
     type,
     goal: "",
     superGoal: "",
-    anticipation: 0,
-    upsell: 0,
-    churn: 0,
   };
 }

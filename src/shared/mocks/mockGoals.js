@@ -23,24 +23,25 @@ const SEGMENTS = ["b2b", "b2g"];
 
 const SECTOR_BLACK = { b2b: 200000, b2g: 240000 };
 
-const level = (goal, superGoal, anticipation, upsell, churn) => ({ goal, superGoal, anticipation, upsell, churn });
+const level = (goal, superGoal) => ({ goal, superGoal });
 
 const DEMO_LEVELS = {
   b2b: {
-    farm: { junior: level(8000, 10000, 60, 10, 20), pleno: level(10000, 12500, 35, 15, 18), senior: level(14000, 17000, 29, 15, 15) },
-    sales: { junior: level(12000, 15000, 0, 0, 0), pleno: level(15000, 18500, 0, 0, 0), senior: level(20000, 24000, 0, 0, 0) },
+    farm: { junior: level(8000, 10000), pleno: level(10000, 12500), senior: level(14000, 17000) },
+    sales: { junior: level(12000, 15000), pleno: level(15000, 18500), senior: level(20000, 24000) },
   },
   b2g: {
-    farm: { junior: level(9000, 11000, 60, 10, 20), pleno: level(11000, 13500, 35, 15, 18), senior: level(15000, 18000, 29, 15, 15) },
-    sales: { junior: level(18000, 21500, 0, 0, 0), pleno: level(21000, 25000, 0, 0, 0), senior: level(26000, 31000, 0, 0, 0) },
+    farm: { junior: level(9000, 11000), pleno: level(11000, 13500), senior: level(15000, 18000) },
+    sales: { junior: level(18000, 21500), pleno: level(21000, 25000), senior: level(26000, 31000) },
   },
 };
 
-const DEMO_TICKETS = { farm: 2000, sales: 3000 };
+const DEMO_TICKETS = { b2b: { farm: 2000, sales: 3000 }, b2g: { farm: null, sales: null } };
 
-const DEMO_CONVERSION = { farm: null, sales: 30 };
+const DEMO_CONVERSION = { b2b: { farm: null, sales: 30 }, b2g: { farm: null, sales: null } };
 
-const DEMO_FARM_BLACK = { b2b: 80000, b2g: 70000 };
+// No B2B a Meta black de Venda é a própria Super de Venda (R$ 100.000); só Farmer tem uma Black acima da Super
+const DEMO_BLACK = { b2b: { farm: 80000, sales: 100000 }, b2g: { farm: 70000, sales: 170000 } };
 
 const blackInfo = (month, now) => ({
   month: currentMonthKey(now),
@@ -80,9 +81,10 @@ function demoConfig(db, month, segment) {
   const withSettings = {
     ...draft,
     levels,
-    tickets: DEMO_TICKETS,
-    conversion: DEMO_CONVERSION,
-    farmBlack: DEMO_FARM_BLACK[segment],
+    tickets: DEMO_TICKETS[segment],
+    conversion: DEMO_CONVERSION[segment],
+    farmBlack: DEMO_BLACK[segment].farm,
+    salesBlack: DEMO_BLACK[segment].sales,
     people: draft.people.map((person, index) => {
       const options = levelsOfType(levels, person.type);
       return { ...person, level: options[index % options.length].key };
@@ -102,6 +104,7 @@ function demoConfig(db, month, segment) {
     superPercent: null,
     farmBlack: computed.byType.farm.black,
     salesBlack: computed.byType.sales.black,
+    blackTyped: true,
     people: payload.people.map((person) => ({
       ...person,
       type: vendors.find((vendor) => vendor.vendorId === person.vendorId).type,
@@ -298,17 +301,6 @@ export function getGoalProgress(db, month, now = new Date()) {
         levelName: personLevel?.name ?? person.level,
         ticket,
         conversion,
-        origins: personLevel
-          ? Object.fromEntries(
-              ["anticipation", "upsell", "churn"].map((key) => [
-                key,
-                {
-                  percent: personLevel[key] ?? 0,
-                  value: fromCents(Math.round((toCents(tiers.goal) * (personLevel[key] ?? 0)) / 100)),
-                },
-              ]),
-            )
-          : null,
         month: progressOf(realized, tiers, first, last, ticket, conversion),
         forecast: forecastOf(daily, tiers),
         weeks: weeks.map((week, index) => ({

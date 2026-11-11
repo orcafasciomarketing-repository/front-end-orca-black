@@ -20,12 +20,6 @@ export const DEFAULT_TICKET = 2000;
 
 export const DEFAULT_CONVERSION = { farm: "", sales: 30 };
 
-export const ORIGINS = [
-  { key: "anticipation", label: "Antecipação" },
-  { key: "upsell", label: "Up-sell" },
-  { key: "churn", label: "Churn" },
-];
-
 export const HOLIDAYS = ["2026-10-12", "2026-11-02", "2026-11-20", "2026-12-25"];
 
 export const GOAL_TYPES = ["farm", "sales"];
@@ -157,6 +151,7 @@ export function typeTiers(config, withBlack = false) {
 }
 
 export function withSectorBlack(config, sectorGoal) {
+  if (config.blackTyped && config.farmBlack != null && config.salesBlack != null) return config;
   const sector = toCents(sectorGoal);
   const farm = Math.min(toCents(config.farmBlack), Math.max(sector, 0));
   return { ...config, farmBlack: fromCents(farm), salesBlack: fromCents(Math.max(sector - farm, 0)) };
@@ -186,7 +181,9 @@ export function peopleTiers(people, byType) {
       const shares = shareLike(
         toCents(byType[type][tier]),
         members.map((person) => person.vendorId),
-        members.map((person) => toCents(saved ? person[field] : person.goal)),
+        members.map((person) =>
+          toCents(saved ? person[field] : tier === "black" ? (person.superGoal ?? person.goal) : person.goal),
+        ),
       );
       shares.forEach((cents, key) => {
         result.get(key)[tier] = fromCents(cents);

@@ -116,6 +116,53 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       expect(evolution.getByRole("table", { name: "Evolução mensal de Total" })).toBeInTheDocument();
     });
 
+    it("abas: Todos mostra tudo; cada aba mostra só os widgets dela", async () => {
+      renderPage(GoalsProgressPage);
+      await screen.findByLabelText("Resumo das metas");
+
+      const nav = screen.getByRole("navigation", { name: "Seções do painel" });
+      expect(
+        within(nav)
+          .getAllByRole("button")
+          .map((button) => button.textContent),
+      ).toEqual(["Todos", "Resumo e alertas", "Mês", "Semana atual", "Evolução", "Setores e times", "Vendedores"]);
+      expect(within(nav).getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+      expect(screen.getByRole("region", { name: "Mês · Total" })).toBeInTheDocument();
+
+      fireEvent.click(within(nav).getByRole("button", { name: "Vendedores" }));
+
+      expect(screen.getByRole("heading", { name: "Vendedores" })).toBeInTheDocument();
+      expect(screen.queryByLabelText("Resumo das metas")).not.toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: "Mês · Total" })).not.toBeInTheDocument();
+
+      fireEvent.click(within(nav).getByRole("button", { name: "Mês" }));
+      const month = screen.getByRole("region", { name: "Mês · Total" });
+      expect(within(month).getByRole("region", { name: "Previsão do mês · Total" })).toBeInTheDocument();
+      expect(screen.queryByRole("heading", { name: "Vendedores" })).not.toBeInTheDocument();
+    });
+
+    it("na visão por vendedor as abas são as do vendedor, e trocar de visão volta para Todos", async () => {
+      renderPage(GoalsProgressPage);
+      await screen.findByLabelText("Resumo das metas");
+      fireEvent.click(
+        within(screen.getByRole("navigation", { name: "Seções do painel" })).getByRole("button", { name: "Mês" }),
+      );
+
+      fireEvent.click(screen.getByRole("button", { name: "Por vendedor" }));
+
+      const nav = screen.getByRole("navigation", { name: "Seções do painel" });
+      expect(
+        within(nav)
+          .getAllByRole("button")
+          .map((button) => button.textContent),
+      ).toEqual(["Todos", "Mês", "Semana atual", "Como chegar na meta", "Evolução", "Semanas"]);
+      expect(within(nav).getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+
+      fireEvent.click(within(nav).getByRole("button", { name: "Semanas" }));
+      expect(screen.getByRole("table", { name: /^Semanas de / })).toBeInTheDocument();
+      expect(screen.queryByRole("region", { name: /^Mês · / })).not.toBeInTheDocument();
+    });
+
     it("mês sem metas avisa para cadastrar", async () => {
       renderPage(GoalsProgressPage);
       await screen.findByLabelText("Resumo das metas");
@@ -137,11 +184,12 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
       await screen.findByRole("region", { name: "Níveis · Farmer" });
       expect(screen.getByRole("region", { name: "Níveis · Venda" })).toBeInTheDocument();
       expect(sectorTable()).toMatch(
-        /MetaR\$ 26\.000,00R\$ 82\.000,00R\$ 108\.000,00Super metaR\$ 32\.500,00R\$ 100\.000,00R\$ 132\.500,00Meta blackR\$ 80\.000,00R\$ 120\.000,00R\$ 200\.000,00/,
+        /MetaR\$ 26\.000,00R\$ 82\.000,00R\$ 108\.000,00Super metaR\$ 32\.500,00R\$ 100\.000,00R\$ 132\.500,00Meta blackR\$ 80\.000,00R\$ 100\.000,00R\$ 180\.000,00/,
       );
       expect(moneyOf(screen.getByLabelText("Meta do nível Júnior de Venda"))).toBe("R$ 12.000,00");
       expect(moneyOf(screen.getByLabelText("Super meta do nível Júnior de Venda"))).toBe("R$ 15.000,00");
-      expect(screen.getByLabelText("Antecipação do nível Júnior de Farmer (%)")).toHaveValue(60);
+      expect(moneyOf(screen.getByLabelText("Meta black Venda (R$)"))).toBe("R$ 100.000,00");
+      expect(screen.queryByLabelText(/Antecipação/)).not.toBeInTheDocument();
       expect(screen.getByLabelText("Conversão de leads Venda (%)")).toHaveValue(30);
       const salesLevels = within(screen.getByRole("table", { name: "Níveis · Venda" }));
       expect(textOf(salesLevels.getAllByRole("row")[1])).toMatch(/414Remover$/);
@@ -193,8 +241,20 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
 
       fireEvent.change(screen.getByLabelText("Meta black Farmer (R$)"), { target: { value: "20000" } });
 
-      expect(screen.getByText(/Farmer: a Meta black precisa ser maior que a Super meta/)).toBeInTheDocument();
+      expect(screen.getByText(/Farmer: a Meta black não pode ser menor que a Super meta/)).toBeInTheDocument();
       expect(saveButton()).toBeDisabled();
+    });
+
+    it("B2G não tem ticket médio nem conversão (nem as colunas de vendas e leads necessários)", async () => {
+      renderPage(GoalsSetupPage);
+      await screen.findByLabelText("Ticket médio Farmer (R$)");
+
+      fireEvent.change(screen.getByLabelText("Setor das metas"), { target: { value: "b2g" } });
+
+      await screen.findByRole("form", { name: /Metas B2G/ });
+      expect(screen.queryByLabelText(/Ticket médio/)).not.toBeInTheDocument();
+      expect(screen.queryByLabelText(/Conversão de leads/)).not.toBeInTheDocument();
+      expect(within(screen.getByRole("table", { name: "Níveis · Venda" })).queryByText("Leads necessários")).toBeNull();
     });
 
     it("adicionar e remover nível de um tipo", async () => {

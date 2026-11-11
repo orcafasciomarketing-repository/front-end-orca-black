@@ -238,9 +238,28 @@
 
 .tierCards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(300px, 100%), 1fr));
+  grid-auto-flow: row dense;
   gap: 16px;
   align-items: start;
+}
+
+@container (min-width: 720px) {
+  .wide {
+    grid-column: span 2;
+  }
+}
+
+.sectionNav {
+  composes: sectionNav from "../../admin/pages/ChartsPage.module.css";
+}
+
+.sectionLink {
+  composes: sectionLink from "../../admin/pages/ChartsPage.module.css";
+}
+
+.sectionLinkActive {
+  composes: sectionLinkActive from "../../admin/pages/ChartsPage.module.css";
 }
 
 .sectionPeriod {

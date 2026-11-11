@@ -77,17 +77,23 @@ function MyGoalsContent({ month }) {
           {person.month.available.map((tier) => (
             <TierProgressCard key={tier} tier={tier} progress={person.month} forecast={person.forecast} />
           ))}
+          {person.forecast && (
+            <div className={styles.wide}>
+              <GoalForecastCard forecast={person.forecast} title="Minha previsão do mês" />
+            </div>
+          )}
+          <div className={styles.wide}>
+            <Suspense fallback={<WidgetFallback title="Comparação com o mês anterior" />}>
+              <MonthComparison
+                label={label}
+                month={goals.month}
+                scope={person}
+                pickHistory={pickMine}
+                useHistory={useMyGoalHistory}
+              />
+            </Suspense>
+          </div>
         </div>
-        {person.forecast && <GoalForecastCard forecast={person.forecast} title="Minha previsão do mês" />}
-        <Suspense fallback={<WidgetFallback title="Comparação com o mês anterior" />}>
-          <MonthComparison
-            label={label}
-            month={goals.month}
-            scope={person}
-            pickHistory={pickMine}
-            useHistory={useMyGoalHistory}
-          />
-        </Suspense>
       </section>
 
       <GoalBreakdown person={person} week={week} />

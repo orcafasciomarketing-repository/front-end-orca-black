@@ -1,4 +1,5 @@
 .card {
+  container-type: inline-size;
   gap: 12px;
   padding: 16px 20px;
 }
@@ -112,5 +113,24 @@
 @media (max-width: 600px) {
   .facts {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 400px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .facts .fact {
+    flex-direction: row;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 10px;
+  }
+
+  .facts .fact dd {
+    text-align: right;
   }
 }

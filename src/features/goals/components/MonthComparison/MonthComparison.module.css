@@ -34,3 +34,13 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.card {
+  container-type: inline-size;
+}
+
+@container (max-width: 440px) {
+  .facts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

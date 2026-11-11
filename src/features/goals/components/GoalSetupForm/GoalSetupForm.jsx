@@ -6,8 +6,8 @@ import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import Avatar from "../../../admin/components/Avatar/Avatar";
 import { getGoalErrorMessage } from "../../api/goalsApi";
 import MoneyInput from "../MoneyInput/MoneyInput";
-import { buildDraft, computeDraft, levelsOfType, newLevel, originsTotal, toPayload } from "../../utils/goalDraft";
-import { formatMonth, GOAL_TYPES, ORIGINS, TIER_LABELS, toCents } from "../../utils/goalMath";
+import { buildDraft, computeDraft, levelsOfType, newLevel, toPayload } from "../../utils/goalDraft";
+import { formatMonth, GOAL_TYPES, TIER_LABELS, toCents } from "../../utils/goalMath";
 
 const SOURCE_NOTES = {
   previous: (month) =>
@@ -21,8 +21,11 @@ const PROBLEM_TEXT = {
   name: "dê um nome",
   goal: "preencha a Meta",
   super: "a Super precisa ser igual ou maior que a Meta",
-  origins: "antecipação + up-sell + churn não pode passar de 100%",
 };
+
+const SEGMENTS_WITH_TICKETS = ["b2b"];
+
+const NO_TICKETS = { farm: null, sales: null };
 
 const salesNeeded = (value, ticket) =>
   Number(ticket) > 0 && Number(value) > 0 ? Math.ceil(toCents(value) / toCents(ticket)) : null;
@@ -39,6 +42,7 @@ export default function GoalSetupForm({ month, segment, segmentData, black: mont
   const computed = computeDraft(draft, black);
   const label = segment.toUpperCase();
   const tierKeys = black.active ? ["goal", "super", "black"] : ["goal", "super"];
+  const usesTickets = SEGMENTS_WITH_TICKETS.includes(segment);
 
   const update = (changes) => {
     save.reset();
@@ -78,7 +82,12 @@ export default function GoalSetupForm({ month, segment, segmentData, black: mont
   const handleSubmit = (event) => {
     event.preventDefault();
     if (!computed.canSave) return;
-    save.mutate({ month, segment, payload: toPayload(draft, computed, black) });
+    const payload = toPayload(draft, computed, black);
+    save.mutate({
+      month,
+      segment,
+      payload: usesTickets ? payload : { ...payload, tickets: NO_TICKETS, conversion: NO_TICKETS },
+    });
   };
 
   const handleDelete = () => {
@@ -132,68 +141,70 @@ export default function GoalSetupForm({ month, segment, segmentData, black: mont
               </tbody>
             </table>
           </div>
-          <div className={styles.fields}>
-            {GOAL_TYPES.map((type) => (
-              <MoneyField
-                key={type}
-                label={`Ticket médio ${TYPE_NAMES[type]} (R$)`}
-                value={draft.tickets[type]}
-                onChange={(value) => update({ tickets: { ...draft.tickets, [type]: value } })}
-              />
-            ))}
-          </div>
-          <div className={styles.fields}>
-            {GOAL_TYPES.map((type) => (
-              <label key={type} className={styles.field}>
-                <span className={styles.label}>Conversão de leads {TYPE_NAMES[type]} (%)</span>
-                <input
-                  className={styles.input}
-                  type="number"
-                  min="0"
-                  max="100"
-                  step="1"
-                  value={draft.conversion[type]}
-                  aria-invalid={!computed.conversionOk[type] || undefined}
-                  onChange={(event) => update({ conversion: { ...draft.conversion, [type]: event.target.value } })}
-                />
-              </label>
-            ))}
-          </div>
-          <p className={styles.hint}>
-            O ticket médio mostra quantas vendas faltam para a meta (o que falta ÷ ticket) e, com a conversão, quantos
-            leads faltam (o que falta ÷ (ticket × conversão)). Vazio, não mostra.
-          </p>
-          {GOAL_TYPES.filter((type) => !computed.conversionOk[type]).map((type) => (
-            <p key={type} className={styles.error}>
-              A conversão de {TYPE_NAMES[type]} precisa ser maior que 0 e no máximo 100%.
-            </p>
-          ))}
+          {usesTickets && (
+            <>
+              <div className={styles.fields}>
+                {GOAL_TYPES.map((type) => (
+                  <MoneyField
+                    key={type}
+                    label={`Ticket médio ${TYPE_NAMES[type]} (R$)`}
+                    value={draft.tickets[type]}
+                    onChange={(value) => update({ tickets: { ...draft.tickets, [type]: value } })}
+                  />
+                ))}
+              </div>
+              <div className={styles.fields}>
+                {GOAL_TYPES.map((type) => (
+                  <label key={type} className={styles.field}>
+                    <span className={styles.label}>Conversão de leads {TYPE_NAMES[type]} (%)</span>
+                    <input
+                      className={styles.input}
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      value={draft.conversion[type]}
+                      aria-invalid={!computed.conversionOk[type] || undefined}
+                      onChange={(event) => update({ conversion: { ...draft.conversion, [type]: event.target.value } })}
+                    />
+                  </label>
+                ))}
+              </div>
+              <p className={styles.hint}>
+                O ticket médio mostra quantas vendas faltam para a meta (o que falta ÷ ticket) e, com a conversão,
+                quantos leads faltam (o que falta ÷ (ticket × conversão)). Vazio, não mostra.
+              </p>
+              {GOAL_TYPES.filter((type) => !computed.conversionOk[type]).map((type) => (
+                <p key={type} className={styles.error}>
+                  A conversão de {TYPE_NAMES[type]} precisa ser maior que 0 e no máximo 100%.
+                </p>
+              ))}
+            </>
+          )}
           {black.active && (
             <>
               <div className={styles.fields}>
-                <ReadOnlyField label={`Meta black do ${label}`} value={formatCurrency(black.sectorGoal)} />
-                <MoneyField
-                  label="Meta black Farmer (R$)"
-                  value={draft.farmBlack}
-                  onChange={(farmBlack) => update({ farmBlack })}
-                />
-                <ReadOnlyField label="Meta black Venda (o resto)" value={formatCurrency(computed.byType.sales.black)} />
+                {GOAL_TYPES.map((type) => (
+                  <MoneyField
+                    key={type}
+                    label={`Meta black ${TYPE_NAMES[type]} (R$)`}
+                    value={draft[`${type}Black`]}
+                    onChange={(value) => update({ [`${type}Black`]: value })}
+                  />
+                ))}
+                <ReadOnlyField label={`Meta black do ${label} (soma)`} value={formatCurrency(computed.tiers.black)} />
               </div>
               <p className={styles.hint}>
-                Mês da campanha com Meta black: a do setor é a meta da campanha (Cadastro de campanhas) e não muda aqui.
-                Digite quanto dela é de Farmer; Venda fica com o resto.
+                Mês da campanha com Meta black: digite a Meta black de Farmer e a de Venda. Cada uma pode ser igual à
+                Super meta da parte, mas não menor.
+                {black.sectorGoal > 0 &&
+                  ` Para referência, a meta do ${label} na campanha é ${formatCurrency(black.sectorGoal)}.`}
               </p>
-              {!computed.sectorBlackOk && (
-                <p className={styles.error}>
-                  {black.sectorGoal > 0
-                    ? `A Meta black Farmer não pode passar da Meta black do setor (${formatCurrency(black.sectorGoal)}).`
-                    : `A meta ${label} da campanha não está cadastrada.`}
-                </p>
-              )}
               {GOAL_TYPES.filter((type) => !computed.blackOk[type]).map((type) => (
                 <p key={type} className={styles.error}>
-                  {TYPE_NAMES[type]}: a Meta black precisa ser maior que a Super meta (
-                  {formatCurrency(computed.byType[type].super)}).
+                  {computed.blackFilled[type]
+                    ? `${TYPE_NAMES[type]}: a Meta black não pode ser menor que a Super meta (${formatCurrency(computed.byType[type].super)}).`
+                    : `Informe a Meta black de ${TYPE_NAMES[type]}.`}
                 </p>
               ))}
             </>
@@ -206,8 +217,9 @@ export default function GoalSetupForm({ month, segment, segmentData, black: mont
           key={type}
           type={type}
           levels={computed.levels.filter((level) => level.type === type)}
-          ticket={draft.tickets[type]}
-          conversion={draft.conversion[type]}
+          ticket={usesTickets ? draft.tickets[type] : null}
+          conversion={usesTickets ? draft.conversion[type] : null}
+          showNeeded={usesTickets}
           onChange={(key, changes) => updateLevel(type, key, changes)}
           onAdd={() => addLevel(type)}
           onRemove={(key) => removeLevel(type, key)}
@@ -386,7 +398,7 @@ export default function GoalSetupForm({ month, segment, segmentData, black: mont
   );
 }
 
-function LevelsTable({ type, levels, ticket, conversion, onChange, onAdd, onRemove }) {
+function LevelsTable({ type, levels, ticket, conversion, showNeeded, onChange, onAdd, onRemove }) {
   const title = `Níveis · ${TYPE_NAMES[type]}`;
 
   return (
@@ -398,10 +410,7 @@ function LevelsTable({ type, levels, ticket, conversion, onChange, onAdd, onRemo
         </button>
       </header>
       <div className={styles.body}>
-        <p className={styles.hint}>
-          Meta e Super em R$ de cada nível; o vendedor recebe as do nível dele. A divisão por origem mostra quanto da
-          meta vem de antecipação, up-sell e churn.
-        </p>
+        <p className={styles.hint}>Meta e Super em R$ de cada nível; o vendedor recebe as do nível dele.</p>
         <div className={styles.scroll}>
           <table className={styles.table} aria-label={title}>
             <thead>
@@ -413,17 +422,16 @@ function LevelsTable({ type, levels, ticket, conversion, onChange, onAdd, onRemo
                 <th scope="col" className={styles.number}>
                   Super meta
                 </th>
-                {ORIGINS.map((origin) => (
-                  <th key={origin.key} scope="col" className={styles.number}>
-                    {origin.label} (%)
-                  </th>
-                ))}
-                <th scope="col" className={styles.number}>
-                  Vendas necessárias
-                </th>
-                <th scope="col" className={styles.number}>
-                  Leads necessários
-                </th>
+                {showNeeded && (
+                  <>
+                    <th scope="col" className={styles.number}>
+                      Vendas necessárias
+                    </th>
+                    <th scope="col" className={styles.number}>
+                      Leads necessários
+                    </th>
+                  </>
+                )}
                 <th scope="col">
                   <span className={styles.srOnly}>Ações</span>
                 </th>
@@ -465,23 +473,12 @@ function LevelsTable({ type, levels, ticket, conversion, onChange, onAdd, onRemo
                         onChange={(superGoal) => onChange(level.key, { superGoal })}
                       />
                     </td>
-                    {ORIGINS.map((origin) => (
-                      <td key={origin.key}>
-                        <input
-                          className={`${styles.input} ${styles.small}`}
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="1"
-                          value={level[origin.key]}
-                          aria-label={`${origin.label} do nível ${name} de ${TYPE_NAMES[type]} (%)`}
-                          aria-invalid={level.problems.includes("origins") || undefined}
-                          onChange={(event) => onChange(level.key, { [origin.key]: event.target.value })}
-                        />
-                      </td>
-                    ))}
-                    <td className={styles.number}>{needed ?? "—"}</td>
-                    <td className={styles.number}>{leads ?? "—"}</td>
+                    {showNeeded && (
+                      <>
+                        <td className={styles.number}>{needed ?? "—"}</td>
+                        <td className={styles.number}>{leads ?? "—"}</td>
+                      </>
+                    )}
                     <td>
                       <button
                         className={styles.dangerButton}
@@ -504,8 +501,7 @@ function LevelsTable({ type, levels, ticket, conversion, onChange, onAdd, onRemo
             level.problems.length > 0 && (
               <p key={level.key} className={styles.error}>
                 {level.name.trim() || `Nível ${index + 1}`}:{" "}
-                {level.problems.map((problem) => PROBLEM_TEXT[problem]).join("; ")}
-                {level.problems.includes("origins") ? ` (hoje ${originsTotal(level)}%)` : ""}.
+                {level.problems.map((problem) => PROBLEM_TEXT[problem]).join("; ")}.
               </p>
             ),
         )}
