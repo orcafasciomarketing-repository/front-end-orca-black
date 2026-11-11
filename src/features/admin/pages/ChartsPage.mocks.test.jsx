@@ -329,6 +329,7 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
 
     const nav = screen.getByRole("navigation", { name: "Seções dos gráficos" });
     expect(within(nav).getAllByRole("button").map((button) => button.textContent)).toEqual([
+      "Todos",
       "Visão geral",
       "Vendas",
       "Pessoas e equipes",
@@ -345,6 +346,30 @@ describe("Gráficos com os dados falsos (quarta, 21/10/2026)", () => {
     expect(within(widget("Evolução dos pontos")).getByRole("img")).toBeInTheDocument();
     expect(textOf(within(widget("Evolução dos pontos")).getByRole("img"))).not.toContain("R$");
     expect(lastRowOf("Evolução dos pontos")[0]).toBe("21/10");
+  });
+
+  it("Todos vem marcado e mostra todas as seções; escolher uma seção mostra só os widgets dela, logo abaixo do menu", async () => {
+    renderPage();
+    await ready();
+
+    const nav = screen.getByRole("navigation", { name: "Seções dos gráficos" });
+    const sectionNames = () =>
+      screen
+        .queryAllByRole("region")
+        .map((region) => region.getAttribute("aria-labelledby"))
+        .filter((id) => id?.endsWith("-titulo"));
+    expect(within(nav).getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "true");
+    expect(sectionNames()).toEqual(["visao-geral-titulo", "vendas-titulo", "pessoas-e-equipes-titulo", "analises-titulo"]);
+
+    fireEvent.click(within(nav).getByRole("button", { name: "Análises" }));
+    expect(within(nav).getByRole("button", { name: "Análises" })).toHaveAttribute("aria-pressed", "true");
+    expect(within(nav).getByRole("button", { name: "Todos" })).toHaveAttribute("aria-pressed", "false");
+    expect(sectionNames()).toEqual(["analises-titulo"]);
+    expect(screen.queryByRole("heading", { name: "Vendas acumuladas" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Concentração" })).toBeInTheDocument();
+
+    fireEvent.click(within(nav).getByRole("button", { name: "Todos" }));
+    expect(sectionNames()).toHaveLength(4);
   });
 
   it("clicar num vendedor abre o perfil dele; Esc e o X fecham", async () => {

@@ -28,7 +28,7 @@ export default function CampaignsPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="Campanhas"
+        title="Cadastro de campanhas"
         description="Cadastre as campanhas e escolha a ativa, que é a das TVs e da área dos vendedores. No menu, dá para ver qualquer campanha"
       />
       <ErrorBoundary location="Admin › campanhas">

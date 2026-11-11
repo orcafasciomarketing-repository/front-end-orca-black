@@ -24,11 +24,12 @@ const loggedAuth = () => ({
 });
 
 describe("AdminLayout: sair e trocar senha", () => {
-  it("logado: Trocar senha, Modo escuro e Sair no pé do menu, nessa ordem", () => {
+  it("logado: Trocar senha, Modo escuro e Sair no pé do menu, nessa ordem, só com o símbolo (nome no title)", () => {
     renderLayout(loggedAuth());
 
     const buttons = screen.getByRole("complementary").querySelectorAll("button");
-    expect([...buttons].map((button) => button.textContent)).toEqual(["Trocar senha", "Modo escuro", "Sair"]);
+    expect([...buttons].map((button) => button.getAttribute("aria-label"))).toEqual(["Trocar senha", "Modo escuro", "Sair"]);
+    expect([...buttons].every((button) => button.textContent === "" && button.title)).toBe(true);
   });
 
   it("Sair chama o logout", () => {

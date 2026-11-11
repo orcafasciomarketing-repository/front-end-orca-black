@@ -43,6 +43,13 @@ const NAV_GROUPS = [
       { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon, allow: "canSeeAdmin" },
       { to: "/admin/previsao", label: "Previsão", end: false, Icon: ForecastIcon, allow: "canSeeAdmin" },
       { to: "/admin/premios", label: "Prêmios", end: false, Icon: GiftIcon, allow: "canSeeAdmin" },
+      {
+        to: "/admin/campanhas",
+        label: "Cadastro de campanhas",
+        end: false,
+        Icon: FlagIcon,
+        allow: "canManageCampaigns",
+      },
     ],
   },
   {
@@ -61,7 +68,6 @@ const NAV_GROUPS = [
   {
     label: "Administração",
     items: [
-      { to: "/admin/campanhas", label: "Campanhas", end: false, Icon: FlagIcon, allow: "canManageCampaigns" },
       { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
       { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
       { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },
@@ -113,19 +119,35 @@ export default function AdminLayout() {
         </nav>
         <div className={styles.sidebarFooter}>
           {isLoggedIn && (
-            <button className={styles.footerButton} type="button" onClick={() => setIsChangingPassword(true)}>
+            <button
+              className={styles.footerButton}
+              type="button"
+              aria-label="Trocar senha"
+              title="Trocar senha"
+              onClick={() => setIsChangingPassword(true)}
+            >
               <KeyIcon />
-              <span>Trocar senha</span>
             </button>
           )}
-          <button className={styles.themeToggle} type="button" aria-pressed={isDark} onClick={toggleTheme}>
+          <button
+            className={styles.themeToggle}
+            type="button"
+            aria-label="Modo escuro"
+            title={isDark ? "Desligar o modo escuro" : "Ligar o modo escuro"}
+            aria-pressed={isDark}
+            onClick={toggleTheme}
+          >
             {isDark ? <SunIcon /> : <MoonIcon />}
-            <span>Modo escuro</span>
           </button>
           {isLoggedIn && (
-            <button className={styles.footerButton} type="button" onClick={() => auth.logout()}>
+            <button
+              className={styles.footerButton}
+              type="button"
+              aria-label="Sair"
+              title="Sair"
+              onClick={() => auth.logout()}
+            >
               <LogoutIcon />
-              <span>Sair</span>
             </button>
           )}
         </div>

@@ -1,6 +1,6 @@
 import styles from "./ChartsPage.module.css";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
 import usePermissions from "../../auth/hooks/usePermissions";
@@ -86,7 +86,9 @@ const CHARTS = SECTIONS.flatMap((section) => section.charts);
 
 const PRINT_ITEMS = [KPIS_TITLE, ...CHARTS.map((chart) => chart.title)];
 
-const goToSection = (id) => document.getElementById(id)?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+const ALL_SECTIONS = "todos";
+
+const SECTION_TABS = [{ id: ALL_SECTIONS, title: "Todos" }, ...SECTIONS.map(({ id, title }) => ({ id, title }))];
 
 const printDateFormatter = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short" });
 
@@ -98,6 +100,8 @@ export default function ChartsPage() {
   const [isChoosing, setIsChoosing] = useState(false);
   const [printItems, setPrintItems] = useState(null);
   const [profileVendor, setProfileVendor] = useState(null);
+  const [activeSection, setActiveSection] = useState(ALL_SECTIONS);
+  const navRef = useRef(null);
   const period = useMemo(() => resolvePeriod(periodSelection), [periodSelection]);
 
   useEffect(() => {
@@ -118,6 +122,20 @@ export default function ChartsPage() {
   };
 
   const printClass = (title) => (printItems && !printItems.titles.has(title) ? styles.notPrinted : "");
+
+  const chooseSection = (id) => {
+    setActiveSection(id);
+    const nav = navRef.current;
+    const main = nav?.closest("main");
+    if (nav && main && main.scrollTop > nav.offsetTop) {
+      main.scrollTo?.({ top: nav.offsetTop - main.offsetTop });
+    }
+  };
+
+  const visibleSections =
+    printItems || activeSection === ALL_SECTIONS
+      ? SECTIONS
+      : SECTIONS.filter((section) => section.id === activeSection);
 
   const periodLabel = period?.label ?? "Todo o período";
   const segmentLabel = SEGMENT_OPTIONS.find((option) => option.value === selectedSegment)?.label;
@@ -169,14 +187,20 @@ export default function ChartsPage() {
           </Suspense>
         </ErrorBoundary>
       </div>
-      <nav className={styles.sectionNav} aria-label="Seções dos gráficos">
-        {SECTIONS.map((section) => (
-          <button key={section.id} className={styles.sectionLink} type="button" onClick={() => goToSection(section.id)}>
-            {section.title}
+      <nav ref={navRef} className={styles.sectionNav} aria-label="Seções dos gráficos">
+        {SECTION_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            className={`${styles.sectionLink} ${tab.id === activeSection ? styles.sectionLinkActive : ""}`}
+            type="button"
+            aria-pressed={tab.id === activeSection}
+            onClick={() => chooseSection(tab.id)}
+          >
+            {tab.title}
           </button>
         ))}
       </nav>
-      {SECTIONS.map((section) => (
+      {visibleSections.map((section) => (
         <section key={section.id} id={section.id} className={styles.section} aria-labelledby={`${section.id}-titulo`}>
           <p id={`${section.id}-titulo`} className={styles.sectionTitle}>
             {section.title}
