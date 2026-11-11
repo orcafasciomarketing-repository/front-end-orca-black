@@ -111,7 +111,8 @@ describe("mockApi", () => {
     const progress = get("/goals/2026-10/progress").data.data;
 
     expect(month.weeks).toHaveLength(4);
-    expect(month.segments.b2b.config.people.every((person) => person.weeks.length === 4)).toBe(true);
+    expect(month.segments.b2b.config.model).toBe("levels");
+    expect(month.segments.b2b.config.levels.every((level) => ["farm", "sales"].includes(level.type))).toBe(true);
     expect(month.segments.b2g.vendors.every((vendor) => vendor.job.startsWith("B2G"))).toBe(true);
     expect(progress.segments.map((item) => item.segment)).toEqual(["b2b", "b2g"]);
     expect(progress.summary.people).toBe(progress.people.length);

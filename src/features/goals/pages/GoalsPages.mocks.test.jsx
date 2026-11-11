@@ -127,88 +127,109 @@ describe("Telas de metas com os dados falsos (quarta 21/10/2026)", () => {
   });
 
   describe("Cadastro de metas", () => {
-    it("abre o mês salvo do B2B com a distribuição fechando e o salvar liberado", async () => {
+    const sectorTable = () => textOf(screen.getByRole("table", { name: "Divisão das metas do setor" }));
+    const saveButton = () => screen.getByRole("button", { name: "Salvar metas" });
+    const moneyOf = (input) => input.value.replace(/\u00a0/g, " ");
+
+    it("abre o mês salvo do B2B com os níveis de Farmer e de Venda, a soma do setor e o salvar liberado", async () => {
       renderPage(GoalsSetupPage);
 
-      const totals = await screen.findByLabelText("Distribuição");
-      expect(textOf(screen.getByRole("table", { name: "Divisão das metas do setor" }))).toMatch(
-        /MetaR\$ 48\.000,00R\$ 72\.000,00R\$ 120\.000,00Super metaR\$ 60\.000,00R\$ 90\.000,00R\$ 150\.000,00Meta blackR\$ 80\.000,00R\$ 120\.000,00R\$ 200\.000,00/,
+      await screen.findByRole("region", { name: "Níveis · Farmer" });
+      expect(screen.getByRole("region", { name: "Níveis · Venda" })).toBeInTheDocument();
+      expect(sectorTable()).toMatch(
+        /MetaR\$ 26\.000,00R\$ 82\.000,00R\$ 108\.000,00Super metaR\$ 32\.500,00R\$ 100\.000,00R\$ 132\.500,00Meta blackR\$ 80\.000,00R\$ 120\.000,00R\$ 200\.000,00/,
       );
-      expect(textOf(totals)).toMatch(/Renovação: distribuído R\$ 48\.000,00 de R\$ 48\.000,00/);
-      expect(textOf(totals)).toMatch(/Vendas: distribuído R\$ 72\.000,00 de R\$ 72\.000,00/);
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
+      expect(moneyOf(screen.getByLabelText("Meta do nível Júnior de Venda"))).toBe("R$ 12.000,00");
+      expect(moneyOf(screen.getByLabelText("Super meta do nível Júnior de Venda"))).toBe("R$ 15.000,00");
+      expect(screen.getByLabelText("Antecipação do nível Júnior de Farmer (%)")).toHaveValue(60);
+      expect(screen.getByLabelText("Conversão de leads Venda (%)")).toHaveValue(30);
+      const salesLevels = within(screen.getByRole("table", { name: "Níveis · Venda" }));
+      expect(textOf(salesLevels.getAllByRole("row")[1])).toMatch(/414Remover$/);
+      expect(moneyOf(screen.getByLabelText("Meta do mês de Brenda Lima"))).toBe("R$ 12.000,00");
+      expect(screen.queryByLabelText(/Semana 1 de/)).not.toBeInTheDocument();
+      expect(screen.getByText(/A meta da semana é calculada sozinha/)).toBeInTheDocument();
+      expect(saveButton()).toBeEnabled();
       expect(screen.queryByText(/Mês sem metas/)).not.toBeInTheDocument();
     });
 
-    it("semana que não fecha trava o salvar; redistribuir resolve", async () => {
+    it("mudar a Meta de um nível muda a meta de quem é dele e a do setor; Super menor que a Meta trava", async () => {
       renderPage(GoalsSetupPage);
-      const week = await screen.findByLabelText("Semana 1 de Brenda Lima");
+      const levelGoal = await screen.findByLabelText("Meta do nível Júnior de Venda");
 
-      fireEvent.change(week, { target: { value: "1" } });
+      fireEvent.change(levelGoal, { target: { value: "13000" } });
 
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
-      expect(screen.getByText(/A soma das semanas precisa dar a meta do mês/)).toBeInTheDocument();
+      expect(moneyOf(screen.getByLabelText("Meta do mês de Brenda Lima"))).toBe("R$ 13.000,00");
+      expect(sectorTable()).toMatch(/MetaR\$ 26\.000,00R\$ 83\.000,00R\$ 109\.000,00/);
+      expect(saveButton()).toBeEnabled();
 
-      fireEvent.click(screen.getByRole("button", { name: "Redistribuir pelos pesos" }));
+      fireEvent.change(levelGoal, { target: { value: "16000" } });
 
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
+      expect(screen.getByText(/Júnior: a Super precisa ser igual ou maior que a Meta/)).toBeInTheDocument();
+      expect(saveButton()).toBeDisabled();
     });
 
-    it("mudar a Meta Farmer redistribui as metas dos Farmers pelos pesos e a Super acompanha o %", async () => {
-      renderPage(GoalsSetupPage);
-      await screen.findByLabelText("Distribuição");
-
-      fireEvent.change(screen.getByLabelText("Meta Farmer (R$)"), { target: { value: "56000" } });
-
-      expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(
-        /Renovação: distribuído R\$ 56\.000,00 de R\$ 56\.000,00/,
-      );
-      expect(textOf(screen.getByRole("table", { name: "Divisão das metas do setor" }))).toMatch(
-        /Super metaR\$ 70\.000,00/,
-      );
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
-
-      fireEvent.change(screen.getByLabelText("Meta Farmer (R$)"), { target: { value: "70000" } });
-
-      expect(screen.getByText(/Farmer: a Meta black precisa ser maior que a Super meta/)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
-    });
-
-    it("Super meta e Meta black de cada vendedor são editáveis e voltam ao automático", async () => {
+    it("Meta, Super e Meta black de cada vendedor são editáveis e voltam ao nível", async () => {
       renderPage(GoalsSetupPage);
       const superInput = await screen.findByLabelText("Super meta de Brenda Lima");
       expect(screen.getByLabelText("Meta black de Brenda Lima")).toBeInTheDocument();
-      expect(textOf(screen.getByLabelText("Distribuição"))).toMatch(/Super meta Vendas: distribuído/);
 
       fireEvent.change(superInput, { target: { value: "1" } });
 
       expect(
         screen.getByText(/A Super meta de cada vendedor não pode ser menor que a Meta do mês dele/),
       ).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
+      expect(saveButton()).toBeDisabled();
 
-      fireEvent.click(screen.getByRole("button", { name: "Voltar ao automático" }));
+      fireEvent.blur(superInput);
+      fireEvent.click(screen.getByRole("button", { name: "Voltar ao nível" }));
 
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeEnabled();
+      expect(moneyOf(screen.getByLabelText("Super meta de Brenda Lima"))).toBe("R$ 15.000,00");
+      expect(saveButton()).toBeEnabled();
+    });
+
+    it("no mês com Meta black, Farmer abaixo da Super trava o salvar", async () => {
+      renderPage(GoalsSetupPage);
+      await screen.findByLabelText("Meta black Farmer (R$)");
+
+      fireEvent.change(screen.getByLabelText("Meta black Farmer (R$)"), { target: { value: "20000" } });
+
+      expect(screen.getByText(/Farmer: a Meta black precisa ser maior que a Super meta/)).toBeInTheDocument();
+      expect(saveButton()).toBeDisabled();
+    });
+
+    it("adicionar e remover nível de um tipo", async () => {
+      renderPage(GoalsSetupPage);
+      const farm = within(await screen.findByRole("region", { name: "Níveis · Farmer" }));
+
+      fireEvent.click(farm.getByRole("button", { name: "Adicionar nível" }));
+
+      expect(farm.getAllByRole("row")).toHaveLength(5);
+      expect(screen.getByText(/Nível 4: dê um nome; preencha a Meta/)).toBeInTheDocument();
+      expect(saveButton()).toBeDisabled();
+
+      fireEvent.click(farm.getByRole("button", { name: "Remover o nível Nível 4 de Farmer" }));
+
+      expect(farm.getAllByRole("row")).toHaveLength(4);
+      expect(saveButton()).toBeEnabled();
     });
 
     it("com os dados de demonstração, salvar avisa que não grava", async () => {
       renderPage(GoalsSetupPage);
-      await screen.findByLabelText("Distribuição");
+      await screen.findByRole("region", { name: "Níveis · Farmer" });
 
-      fireEvent.click(screen.getByRole("button", { name: "Salvar metas" }));
+      fireEvent.click(saveButton());
 
       expect(await screen.findByText(/não funciona com os dados de demonstração/)).toBeInTheDocument();
     });
 
     it("mês sem metas e sem mês anterior começa em branco", async () => {
       renderPage(GoalsSetupPage);
-      await screen.findByLabelText("Distribuição");
+      await screen.findByRole("region", { name: "Níveis · Farmer" });
 
       fireEvent.change(screen.getByLabelText("Mês das metas"), { target: { value: "2026-12" } });
 
       expect(await screen.findByText(/Mês sem metas. Preencha/)).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Salvar metas" })).toBeDisabled();
+      expect(saveButton()).toBeDisabled();
     });
   });
 });

@@ -1,8 +1,9 @@
 // Cópia do cálculo do backend (features/analytics/service/forecastCalculator.js) para os dados
 // de demonstração. Se mudar a regra lá, mude aqui também (mockForecast.test.js confere os números do PDF)
+import { HOLIDAYS } from "../../features/goals/utils/goalMath";
+
 export const CAMPAIGN_START_DAY = "2026-11-03";
 export const CAMPAIGN_END_DAY = "2026-12-01";
-const HOLIDAYS = ["2026-10-12", "2026-11-02", "2026-11-20", "2026-12-25"];
 export const PACE_WEIGHTS = { last7: 0.5, last30: 0.3, campaign: 0.2 };
 export const SCENARIO_FACTORS = { pessimistic: 0.8, realistic: 1, optimistic: 1.2 };
 

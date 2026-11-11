@@ -62,7 +62,7 @@ export default function GoalTierCard({ title, period, progress, showPace = true 
           <div className={styles.fact}>
             <dt>Ritmo para a Meta</dt>
             <dd>
-              {pace.status === "done" || pace.remainingDays === 0 ? "—" : `${formatCurrency(pace.neededPerDay)}/dia`}
+              {pace.status === "done" || (pace.daysToGo ?? pace.remainingDays) === 0 ? "—" : `${formatCurrency(pace.neededPerDay)}/dia`}
             </dd>
           </div>
           <div className={styles.fact}>

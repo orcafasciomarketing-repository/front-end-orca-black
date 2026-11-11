@@ -88,7 +88,6 @@ function SetupContent({ month, segment, save, remove }) {
       key={`${month}-${segment}-${segmentData.config?.updatedAt ?? "novo"}`}
       month={month}
       segment={segment}
-      weeks={goalMonth.weeks}
       segmentData={segmentData}
       black={goalMonth.black ?? NO_BLACK}
       save={save}

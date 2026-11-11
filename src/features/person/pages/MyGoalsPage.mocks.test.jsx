@@ -50,6 +50,9 @@ describe("Minhas metas com os dados falsos (Brenda Lima, quarta 21/10/2026)", ()
     expect(within(month).getByRole("region", { name: "Minha previsão do mês" })).toBeInTheDocument();
     expect(screen.getByRole("region", { name: "Minha semana atual" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Evolução · Você" })).toBeInTheDocument();
+    expect(textOf(screen.getByRole("region", { name: "Como chegar na meta" }))).toContain(
+      "Pelo ticket médio de R$ 3.000,00",
+    );
 
     const weeks = screen.getByRole("table", { name: "Minhas metas por semana" });
     expect(within(weeks).getAllByRole("row")).toHaveLength(5);

@@ -1,7 +1,9 @@
-import { buildDraft, computeDraft, toPayload } from "../../features/goals/utils/goalDraft";
+import { buildDraft, computeDraft, levelsOfType, toPayload } from "../../features/goals/utils/goalDraft";
 import {
   currentMonthKey,
   dayKeyOf,
+  dynamicWeekTiers,
+  isWorkday,
   fromCents,
   monthDays,
   monthWeeks,
@@ -14,18 +16,31 @@ import {
   withSectorBlack,
   tierProgress,
   toCents,
-  weekTiers,
 } from "../../features/goals/utils/goalMath";
-import { isProductiveDay, normalCdf, PACE_WEIGHTS, SCENARIO_FACTORS } from "./mockForecast";
+import { normalCdf, PACE_WEIGHTS, SCENARIO_FACTORS } from "./mockForecast";
 
 const SEGMENTS = ["b2b", "b2g"];
 
 const SECTOR_BLACK = { b2b: 200000, b2g: 240000 };
 
-const DEMO_SETTINGS = {
-  b2b: { farmGoal: 48000, salesGoal: 72000, superPercent: 125, farmBlack: 80000 },
-  b2g: { farmGoal: 45000, salesGoal: 105000, superPercent: 120, farmBlack: 70000 },
+const level = (goal, superGoal, anticipation, upsell, churn) => ({ goal, superGoal, anticipation, upsell, churn });
+
+const DEMO_LEVELS = {
+  b2b: {
+    farm: { junior: level(8000, 10000, 60, 10, 20), pleno: level(10000, 12500, 35, 15, 18), senior: level(14000, 17000, 29, 15, 15) },
+    sales: { junior: level(12000, 15000, 0, 0, 0), pleno: level(15000, 18500, 0, 0, 0), senior: level(20000, 24000, 0, 0, 0) },
+  },
+  b2g: {
+    farm: { junior: level(9000, 11000, 60, 10, 20), pleno: level(11000, 13500, 35, 15, 18), senior: level(15000, 18000, 29, 15, 15) },
+    sales: { junior: level(18000, 21500, 0, 0, 0), pleno: level(21000, 25000, 0, 0, 0), senior: level(26000, 31000, 0, 0, 0) },
+  },
 };
+
+const DEMO_TICKETS = { farm: 2000, sales: 3000 };
+
+const DEMO_CONVERSION = { farm: null, sales: 30 };
+
+const DEMO_FARM_BLACK = { b2b: 80000, b2g: 70000 };
 
 const blackInfo = (month, now) => ({
   month: currentMonthKey(now),
@@ -58,24 +73,39 @@ function segmentVendors(db, segment) {
 }
 
 function demoConfig(db, month, segment) {
-  const weeks = monthWeeks(month);
   const vendors = segmentVendors(db, segment);
-  const draft = buildDraft({ config: null, previous: null, vendors }, weeks.length);
-  const levelKeys = draft.levels.map((level) => level.key);
+  const black = { active: true, sectorGoal: SECTOR_BLACK[segment] };
+  const draft = buildDraft({ config: null, previous: null, vendors }, black);
+  const levels = draft.levels.map((item) => ({ ...item, ...DEMO_LEVELS[segment][item.type][item.key] }));
   const withSettings = {
     ...draft,
-    ...DEMO_SETTINGS[segment],
-    people: draft.people.map((person, index) => ({ ...person, level: levelKeys[index % levelKeys.length] })),
+    levels,
+    tickets: DEMO_TICKETS,
+    conversion: DEMO_CONVERSION,
+    farmBlack: DEMO_FARM_BLACK[segment],
+    people: draft.people.map((person, index) => {
+      const options = levelsOfType(levels, person.type);
+      return { ...person, level: options[index % options.length].key };
+    }),
   };
-  const black = { active: true, sectorGoal: SECTOR_BLACK[segment] };
-  const payload = toPayload(withSettings, computeDraft(withSettings, weeks.length, black), black);
+  const computed = computeDraft(withSettings, black);
+  const payload = toPayload(withSettings, computed, black);
 
   return {
     month,
+    model: "levels",
     ...payload,
+    farmGoal: computed.byType.farm.goal,
+    salesGoal: computed.byType.sales.goal,
+    farmSuper: computed.byType.farm.super,
+    salesSuper: computed.byType.sales.super,
+    superPercent: null,
+    farmBlack: computed.byType.farm.black,
+    salesBlack: computed.byType.sales.black,
     people: payload.people.map((person) => ({
       ...person,
       type: vendors.find((vendor) => vendor.vendorId === person.vendorId).type,
+      weeks: [],
     })),
     updatedBy: "master@demo.com",
     updatedAt: `${month}-01T12:00:00.000Z`,
@@ -119,7 +149,7 @@ function chanceOf({ realized, target, realistic, stdDev, daysLeft }) {
 }
 
 function monthForecast({ days, dailyCents, tiers, today }) {
-  const productive = days.filter(isProductiveDay);
+  const productive = days.filter(isWorkday);
   const elapsed = productive.filter((day) => day <= today);
   const remaining = productive.filter((day) => day > today);
   const perDay = new Map(elapsed.map((day) => [day, 0]));
@@ -146,7 +176,7 @@ function monthForecast({ days, dailyCents, tiers, today }) {
     let count = 0;
     return days.map((day) => {
       if (day < today) return null;
-      if (day > today && isProductiveDay(day)) count += 1;
+      if (day > today && isWorkday(day)) count += 1;
       return roundMoney(realized + pace * factor * count);
     });
   };
@@ -220,10 +250,16 @@ export function getGoalProgress(db, month, now = new Date()) {
 
   const sumRange = (daily, start, end) =>
     days.reduce((sum, day, index) => (day >= start && day <= end ? sum + daily[index] : sum), 0);
-  const progressOf = (realized, tiers, start, end) => ({
-    ...tierProgress(realized, tiers),
-    pace: paceOf({ realized, goal: tiers.goal, start, end, today }),
-  });
+  const progressOf = (realized, tiers, start, end, ticket = null, conversion = null) => {
+    const progress = tierProgress(realized, tiers);
+    return {
+      ...progress,
+      pace: paceOf({ realized, goal: tiers.goal, start, end, today }),
+      ...(ticket > 0 && { salesNeeded: Math.ceil(progress.remaining / ticket) }),
+      ...(ticket > 0 &&
+        conversion > 0 && { leadsNeeded: Math.ceil(progress.remaining / ((ticket * conversion) / 100)) }),
+    };
+  };
   const forecastOf = (dailyCents, tiers) => monthForecast({ days, dailyCents, tiers, today });
   const sumDaily = (list) => days.map((_, index) => list.reduce((sum, daily) => sum + daily[index], 0));
   const allByType = { farm: [], sales: [] };
@@ -231,7 +267,7 @@ export function getGoalProgress(db, month, now = new Date()) {
   const people = [];
   const segments = [];
   for (const config of configs) {
-    const levelNames = new Map(config.levels.map((level) => [level.key, level.name]));
+    const levelOf = (type, key) => config.levels.find((item) => item.key === key && item.type === type) ?? null;
     const byType = typeTiers(
       black.active ? withSectorBlack(config, SECTOR_BLACK[config.segment]) : config,
       black.active,
@@ -244,10 +280,10 @@ export function getGoalProgress(db, month, now = new Date()) {
       const daily = dailyByKey.get(`${person.vendorId}-${person.type}`) ?? new Array(days.length).fill(0);
       const realized = fromCents(daily.reduce((sum, value) => sum + value, 0));
       const tiers = tiersByPerson.get(person.vendorId);
-      const personWeekTiers = weekTiers(
-        tiers,
-        weeks.map((_, index) => person.weeks[index] ?? 0),
-      );
+      const personWeekTiers = dynamicWeekTiers({ personTiers: tiers, daily, days, weeks, today });
+      const personLevel = levelOf(person.type, person.level);
+      const ticket = config.tickets?.[person.type] ?? null;
+      const conversion = config.conversion?.[person.type] ?? null;
 
       return {
         vendorId: person.vendorId,
@@ -259,14 +295,34 @@ export function getGoalProgress(db, month, now = new Date()) {
         teamId: vendor?.teamId ?? null,
         teamName: team?.name ?? null,
         level: person.level,
-        levelName: levelNames.get(person.level) ?? person.level,
-        month: progressOf(realized, tiers, first, last),
+        levelName: personLevel?.name ?? person.level,
+        ticket,
+        conversion,
+        origins: personLevel
+          ? Object.fromEntries(
+              ["anticipation", "upsell", "churn"].map((key) => [
+                key,
+                {
+                  percent: personLevel[key] ?? 0,
+                  value: fromCents(Math.round((toCents(tiers.goal) * (personLevel[key] ?? 0)) / 100)),
+                },
+              ]),
+            )
+          : null,
+        month: progressOf(realized, tiers, first, last, ticket, conversion),
         forecast: forecastOf(daily, tiers),
         weeks: weeks.map((week, index) => ({
           index,
           start: week.start,
           end: week.end,
-          ...progressOf(fromCents(sumRange(daily, week.start, week.end)), personWeekTiers[index], week.start, week.end),
+          ...progressOf(
+            fromCents(sumRange(daily, week.start, week.end)),
+            personWeekTiers[index],
+            week.start,
+            week.end,
+            ticket,
+            conversion,
+          ),
         })),
         daily,
       };

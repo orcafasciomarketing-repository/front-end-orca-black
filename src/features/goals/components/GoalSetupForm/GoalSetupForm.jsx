@@ -6,20 +6,37 @@ import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import Avatar from "../../../admin/components/Avatar/Avatar";
 import { getGoalErrorMessage } from "../../api/goalsApi";
 import MoneyInput from "../MoneyInput/MoneyInput";
-import { buildDraft, computeDraft, nextLevelKey, toPayload } from "../../utils/goalDraft";
-import { formatMonth, formatShortDay, TIER_LABELS, TYPE_LABELS } from "../../utils/goalMath";
+import { buildDraft, computeDraft, levelsOfType, newLevel, originsTotal, toPayload } from "../../utils/goalDraft";
+import { formatMonth, GOAL_TYPES, ORIGINS, TIER_LABELS, toCents } from "../../utils/goalMath";
 
 const SOURCE_NOTES = {
   previous: (month) =>
-    `Mês sem metas: as metas do setor, o percentual, os níveis e o nível de cada vendedor vieram de ${formatMonth(month)}. Revise e salve.`,
-  new: () => "Mês sem metas. Preencha as metas do setor, os níveis e salve.",
+    `Mês sem metas: os níveis, os tickets e o nível de cada vendedor vieram de ${formatMonth(month)}. Revise e salve.`,
+  new: () => "Mês sem metas. Preencha a Meta e a Super de cada nível, escolha o nível de cada vendedor e salve.",
 };
 
-export default function GoalSetupForm({ month, segment, weeks, segmentData, black: monthBlack, save, remove }) {
+const TYPE_NAMES = { farm: "Farmer", sales: "Venda" };
+
+const PROBLEM_TEXT = {
+  name: "dê um nome",
+  goal: "preencha a Meta",
+  super: "a Super precisa ser igual ou maior que a Meta",
+  origins: "antecipação + up-sell + churn não pode passar de 100%",
+};
+
+const salesNeeded = (value, ticket) =>
+  Number(ticket) > 0 && Number(value) > 0 ? Math.ceil(toCents(value) / toCents(ticket)) : null;
+
+const leadsNeeded = (value, ticket, conversion) =>
+  Number(ticket) > 0 && Number(conversion) > 0 && Number(value) > 0
+    ? Math.ceil(toCents(value) / ((toCents(ticket) * Number(conversion)) / 100))
+    : null;
+
+export default function GoalSetupForm({ month, segment, segmentData, black: monthBlack, save, remove }) {
   const black = { active: monthBlack.active, sectorGoal: monthBlack.sectorGoals?.[segment] ?? 0 };
-  const [draft, setDraft] = useState(() => buildDraft(segmentData, weeks.length, black));
+  const [draft, setDraft] = useState(() => buildDraft(segmentData, black));
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const computed = computeDraft(draft, weeks.length, black);
+  const computed = computeDraft(draft, black);
   const label = segment.toUpperCase();
   const tierKeys = black.active ? ["goal", "super", "black"] : ["goal", "super"];
 
@@ -33,33 +50,30 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
       people: draft.people.map((person) => (person.vendorId === vendorId ? { ...person, ...changes } : person)),
     });
 
-  const updateLevel = (key, changes) =>
-    update({ levels: draft.levels.map((level) => (level.key === key ? { ...level, ...changes } : level)) });
+  const updateLevel = (type, key, changes) =>
+    update({
+      levels: draft.levels.map((level) =>
+        level.type === type && level.key === key ? { ...level, ...changes } : level,
+      ),
+    });
 
-  const addLevel = () =>
-    update({ levels: [...draft.levels, { key: nextLevelKey(draft.levels), name: "", weight: 1 }] });
+  const addLevel = (type) => update({ levels: [...draft.levels, newLevel(draft.levels, type)] });
 
-  const removeLevel = (key) => {
-    const levels = draft.levels.filter((level) => level.key !== key);
+  const removeLevel = (type, key) => {
+    const levels = draft.levels.filter((level) => !(level.type === type && level.key === key));
+    const fallback = levelsOfType(levels, type)[0]?.key ?? "";
     update({
       levels,
-      people: draft.people.map((person) => (person.level === key ? { ...person, level: levels[0].key } : person)),
+      people: draft.people.map((person) =>
+        person.type === type && person.level === key ? { ...person, level: fallback } : person,
+      ),
     });
   };
 
-  const redistribute = () =>
+  const backToLevels = () =>
     update({
-      people: draft.people.map((person) => ({
-        ...person,
-        manualGoal: null,
-        manualSuper: null,
-        manualBlack: null,
-        manualWeeks: null,
-      })),
+      people: draft.people.map((person) => ({ ...person, manualGoal: null, manualSuper: null, manualBlack: null })),
     });
-
-  const changeWeek = (person, index, value) =>
-    updatePerson(person.vendorId, { manualWeeks: person.weeks.map((week, i) => (i === index ? value : week)) });
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -74,55 +88,22 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
   return (
     <form className={styles.form} onSubmit={handleSubmit} aria-label={`Metas ${label} de ${formatMonth(month)}`}>
       {draft.source !== "saved" && <p className={styles.notice}>{SOURCE_NOTES[draft.source](draft.sourceMonth)}</p>}
+      {draft.legacy && (
+        <p className={styles.notice}>
+          Este mês foi salvo no modelo antigo (pesos e % da Super). Os níveis abaixo vieram das metas salvas de cada
+          vendedor; ao salvar, o mês passa para o modelo novo, com as mesmas metas.
+        </p>
+      )}
 
       <section className="widget" aria-label={`Meta do setor ${label}`}>
         <header className="header">
           <h2 className="title">Meta do setor {label}</h2>
         </header>
         <div className={styles.body}>
-          <div className={styles.fields}>
-            <MoneyField label="Meta Farmer (R$)" value={draft.farmGoal} onChange={(farmGoal) => update({ farmGoal })} />
-            <MoneyField
-              label="Meta Venda (R$)"
-              value={draft.salesGoal}
-              onChange={(salesGoal) => update({ salesGoal })}
-            />
-            <label className={styles.field}>
-              <span className={styles.label}>Super meta (% da Meta)</span>
-              <input
-                className={styles.input}
-                type="number"
-                min="101"
-                step="0.1"
-                value={draft.superPercent}
-                onChange={(event) => update({ superPercent: event.target.value })}
-              />
-            </label>
-          </div>
-          {black.active && (
-            <>
-              <div className={styles.fields}>
-                <ReadOnlyField label={`Meta black do ${label}`} value={formatCurrency(black.sectorGoal)} />
-                <MoneyField
-                  label="Meta black Farmer (R$)"
-                  value={draft.farmBlack}
-                  onChange={(farmBlack) => update({ farmBlack })}
-                />
-                <ReadOnlyField label="Meta black Venda (o resto)" value={formatCurrency(computed.byType.sales.black)} />
-              </div>
-              <p className={styles.hint}>
-                Mês da campanha: a Meta black do setor vem do backend (a mesma das TVs) e não muda aqui. Digite quanto
-                dela é de Farmer; Venda fica com o resto.
-              </p>
-              {!computed.sectorBlackOk && (
-                <p className={styles.error}>
-                  {black.sectorGoal > 0
-                    ? `A Meta black Farmer não pode passar da Meta black do setor (${formatCurrency(black.sectorGoal)}).`
-                    : `A Meta black do ${label} não está configurada no backend.`}
-                </p>
-              )}
-            </>
-          )}
+          <p className={styles.hint}>
+            A meta do setor é a soma das metas dos vendedores, que vêm do nível de cada um. A meta da semana é calculada
+            sozinha: no começo de cada semana, o que falta para o mês ÷ as semanas que faltam.
+          </p>
           <div className={styles.scroll}>
             <table className={styles.table} aria-label="Divisão das metas do setor">
               <thead>
@@ -151,100 +132,110 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
               </tbody>
             </table>
           </div>
-          {!computed.superOk && <p className={styles.error}>A Super meta precisa passar de 100% da Meta.</p>}
-          {["farm", "sales"]
-            .filter((type) => !computed.blackOk[type])
-            .map((type) => (
-              <p key={type} className={styles.error}>
-                {type === "farm" ? "Farmer" : "Venda"}: a Meta black precisa ser maior que a Super meta (
-                {formatCurrency(computed.byType[type].super)}).
-              </p>
+          <div className={styles.fields}>
+            {GOAL_TYPES.map((type) => (
+              <MoneyField
+                key={type}
+                label={`Ticket médio ${TYPE_NAMES[type]} (R$)`}
+                value={draft.tickets[type]}
+                onChange={(value) => update({ tickets: { ...draft.tickets, [type]: value } })}
+              />
             ))}
-        </div>
-      </section>
-
-      <section className="widget" aria-label="Níveis de senioridade">
-        <header className="header">
-          <h2 className="title">Níveis de senioridade</h2>
-        </header>
-        <div className={styles.body}>
+          </div>
+          <div className={styles.fields}>
+            {GOAL_TYPES.map((type) => (
+              <label key={type} className={styles.field}>
+                <span className={styles.label}>Conversão de leads {TYPE_NAMES[type]} (%)</span>
+                <input
+                  className={styles.input}
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  value={draft.conversion[type]}
+                  aria-invalid={!computed.conversionOk[type] || undefined}
+                  onChange={(event) => update({ conversion: { ...draft.conversion, [type]: event.target.value } })}
+                />
+              </label>
+            ))}
+          </div>
           <p className={styles.hint}>
-            A Meta Farmer e a Meta Venda são divididas pelos pesos: um nível com peso 2 recebe o dobro de um com peso 1.
+            O ticket médio mostra quantas vendas faltam para a meta (o que falta ÷ ticket) e, com a conversão, quantos
+            leads faltam (o que falta ÷ (ticket × conversão)). Vazio, não mostra.
           </p>
-          <ul className={styles.levels}>
-            {draft.levels.map((level, index) => (
-              <li key={level.key} className={styles.levelRow}>
-                <label className={styles.field}>
-                  <span className={styles.label}>Nível {index + 1}</span>
-                  <input
-                    className={styles.input}
-                    value={level.name}
-                    aria-label={`Nome do nível ${index + 1}`}
-                    onChange={(event) => updateLevel(level.key, { name: event.target.value })}
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span className={styles.label}>Peso</span>
-                  <input
-                    className={`${styles.input} ${styles.small}`}
-                    type="number"
-                    min="0.1"
-                    step="0.1"
-                    value={level.weight}
-                    aria-label={`Peso do nível ${level.name || index + 1}`}
-                    onChange={(event) => updateLevel(level.key, { weight: event.target.value })}
-                  />
-                </label>
-                <button
-                  className={styles.dangerButton}
-                  type="button"
-                  disabled={draft.levels.length === 1}
-                  onClick={() => removeLevel(level.key)}
-                >
-                  Remover
-                </button>
-              </li>
-            ))}
-          </ul>
-          <button className={styles.secondaryButton} type="button" onClick={addLevel}>
-            Adicionar nível
-          </button>
-          {!computed.levelsOk && (
-            <p className={styles.error}>Cada nível precisa de um nome e de um peso maior que zero.</p>
+          {GOAL_TYPES.filter((type) => !computed.conversionOk[type]).map((type) => (
+            <p key={type} className={styles.error}>
+              A conversão de {TYPE_NAMES[type]} precisa ser maior que 0 e no máximo 100%.
+            </p>
+          ))}
+          {black.active && (
+            <>
+              <div className={styles.fields}>
+                <ReadOnlyField label={`Meta black do ${label}`} value={formatCurrency(black.sectorGoal)} />
+                <MoneyField
+                  label="Meta black Farmer (R$)"
+                  value={draft.farmBlack}
+                  onChange={(farmBlack) => update({ farmBlack })}
+                />
+                <ReadOnlyField label="Meta black Venda (o resto)" value={formatCurrency(computed.byType.sales.black)} />
+              </div>
+              <p className={styles.hint}>
+                Mês da campanha com Meta black: a do setor é a meta da campanha (Cadastro de campanhas) e não muda aqui.
+                Digite quanto dela é de Farmer; Venda fica com o resto.
+              </p>
+              {!computed.sectorBlackOk && (
+                <p className={styles.error}>
+                  {black.sectorGoal > 0
+                    ? `A Meta black Farmer não pode passar da Meta black do setor (${formatCurrency(black.sectorGoal)}).`
+                    : `A meta ${label} da campanha não está cadastrada.`}
+                </p>
+              )}
+              {GOAL_TYPES.filter((type) => !computed.blackOk[type]).map((type) => (
+                <p key={type} className={styles.error}>
+                  {TYPE_NAMES[type]}: a Meta black precisa ser maior que a Super meta (
+                  {formatCurrency(computed.byType[type].super)}).
+                </p>
+              ))}
+            </>
           )}
         </div>
       </section>
 
+      {GOAL_TYPES.map((type) => (
+        <LevelsTable
+          key={type}
+          type={type}
+          levels={computed.levels.filter((level) => level.type === type)}
+          ticket={draft.tickets[type]}
+          conversion={draft.conversion[type]}
+          onChange={(key, changes) => updateLevel(type, key, changes)}
+          onAdd={() => addLevel(type)}
+          onRemove={(key) => removeLevel(type, key)}
+        />
+      ))}
+
       <section className="widget" aria-label="Metas por vendedor">
         <header className="header">
           <h2 className="title">Metas por vendedor</h2>
-          <button className={styles.secondaryButton} type="button" onClick={redistribute}>
-            Redistribuir pelos pesos
+          <button className={styles.secondaryButton} type="button" onClick={backToLevels}>
+            Voltar todos ao nível
           </button>
         </header>
         <div className={styles.body}>
-          <ul className={styles.totals} aria-label="Distribuição">
-            {["farm", "sales"].map((type) => (
-              <li key={type} className={computed.partsOk[type] ? styles.ok : styles.missing}>
-                {TYPE_LABELS[type]}: distribuído {formatCurrency(computed.distributed[type])} de{" "}
-                {formatCurrency(computed.parts[type])}
-              </li>
-            ))}
-            {tierKeys
-              .filter((tier) => tier !== "goal")
-              .flatMap((tier) =>
-                ["farm", "sales"].map((type) => (
-                  <li key={`${tier}-${type}`} className={computed.tiersOk[tier][type] ? styles.ok : styles.missing}>
-                    {TIER_LABELS[tier]} {TYPE_LABELS[type]}: distribuído{" "}
-                    {formatCurrency(computed.tierDistributed[tier][type])} de{" "}
-                    {formatCurrency(computed.byType[type][tier])}
-                  </li>
-                )),
-              )}
-          </ul>
+          {black.active && (
+            <ul className={styles.totals} aria-label="Distribuição da Meta black">
+              {GOAL_TYPES.map((type) => (
+                <li key={type} className={computed.blackTiersOk[type] ? styles.ok : styles.missing}>
+                  Meta black {TYPE_NAMES[type]}: distribuído {formatCurrency(computed.blackDistributed[type])} de{" "}
+                  {formatCurrency(computed.byType[type].black)}
+                </li>
+              ))}
+            </ul>
+          )}
           <p className={styles.hint}>
-            A Super meta e a Meta black de cada vendedor começam na proporção da Meta do mês dele e podem ser editadas.
-            O que sobra vai para quem não foi editado.
+            A Meta e a Super de cada vendedor vêm do nível dele e podem ser ajustadas à mão.
+            {black.active &&
+              " A Meta black começa na proporção da Meta de cada um; o que sobra vai para quem não foi editado."}
           </p>
           {draft.people.length === 0 ? (
             <p className={styles.empty}>Nenhum vendedor com cargo {label}</p>
@@ -267,14 +258,6 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                         Meta black
                       </th>
                     )}
-                    {weeks.map((week) => (
-                      <th key={week.start} scope="col" className={styles.number}>
-                        Sem. {week.index + 1}
-                        <span className={styles.weekDays}>
-                          {formatShortDay(week.start)} a {formatShortDay(week.end)}
-                        </span>
-                      </th>
-                    ))}
                   </tr>
                 </thead>
                 <tbody>
@@ -297,18 +280,18 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                           </span>
                         </span>
                       </th>
-                      <td>{TYPE_LABELS[person.type]}</td>
+                      <td>{TYPE_NAMES[person.type]}</td>
                       <td>
                         <select
                           className={styles.input}
                           value={person.level}
                           disabled={!person.included}
                           aria-label={`Nível de ${person.name}`}
-                          onChange={(event) =>
-                            updatePerson(person.vendorId, { level: event.target.value, manualWeeks: null })
-                          }
+                          aria-invalid={!person.levelOk || undefined}
+                          onChange={(event) => updatePerson(person.vendorId, { level: event.target.value })}
                         >
-                          {draft.levels.map((level) => (
+                          {!person.levelOk && <option value={person.level}>Escolha</option>}
+                          {levelsOfType(draft.levels, person.type).map((level) => (
                             <option key={level.key} value={level.key}>
                               {level.name || "Sem nome"}
                             </option>
@@ -317,26 +300,13 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                       </td>
                       <td>
                         {person.included ? (
-                          <span className={styles.goalCell}>
-                            <MoneyInput
-                              plain
-                              className={styles.money}
-                              value={person.manualGoal ?? person.goal}
-                              label={`Meta do mês de ${person.name}`}
-                              onChange={(manualGoal) =>
-                                updatePerson(person.vendorId, { manualGoal, manualWeeks: null })
-                              }
-                            />
-                            {person.manualGoal !== null && (
-                              <button
-                                className={styles.linkButton}
-                                type="button"
-                                onClick={() => updatePerson(person.vendorId, { manualGoal: null, manualWeeks: null })}
-                              >
-                                Voltar ao peso
-                              </button>
-                            )}
-                          </span>
+                          <TierInput
+                            label={`Meta do mês de ${person.name}`}
+                            value={person.manualGoal ?? person.tiers.goal}
+                            manual={person.manualGoal !== null}
+                            resetText="Voltar ao nível"
+                            onChange={(manualGoal) => updatePerson(person.vendorId, { manualGoal })}
+                          />
                         ) : (
                           <span className={styles.muted}>Sem meta</span>
                         )}
@@ -348,6 +318,7 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                             value={person.manualSuper ?? person.tiers.super}
                             manual={person.manualSuper !== null}
                             invalid={!person.superOk}
+                            resetText="Voltar ao nível"
                             onChange={(manualSuper) => updatePerson(person.vendorId, { manualSuper })}
                           />
                         )}
@@ -360,35 +331,20 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
                               value={person.manualBlack ?? person.tiers.black}
                               manual={person.manualBlack !== null}
                               invalid={!person.blackOk}
+                              resetText="Voltar ao automático"
                               onChange={(manualBlack) => updatePerson(person.vendorId, { manualBlack })}
                             />
                           )}
                         </td>
                       )}
-                      {weeks.map((week, index) => (
-                        <td key={week.start}>
-                          {person.included && (
-                            <MoneyInput
-                              plain
-                              className={styles.money}
-                              invalid={!person.weeksOk}
-                              value={person.weeks[index]}
-                              label={`Semana ${index + 1} de ${person.name}`}
-                              onChange={(value) => changeWeek(person, index, value)}
-                            />
-                          )}
-                        </td>
-                      ))}
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           )}
-          {computed.people.some((person) => !person.weeksOk) && (
-            <p className={styles.error}>
-              A soma das semanas precisa dar a meta do mês em cada vendedor (campos em vermelho).
-            </p>
+          {computed.people.some((person) => !person.levelOk) && (
+            <p className={styles.error}>Escolha um nível para cada vendedor com meta.</p>
           )}
           {computed.people.some((person) => !person.superOk) && (
             <p className={styles.error}>A Super meta de cada vendedor não pode ser menor que a Meta do mês dele.</p>
@@ -430,6 +386,134 @@ export default function GoalSetupForm({ month, segment, weeks, segmentData, blac
   );
 }
 
+function LevelsTable({ type, levels, ticket, conversion, onChange, onAdd, onRemove }) {
+  const title = `Níveis · ${TYPE_NAMES[type]}`;
+
+  return (
+    <section className="widget" aria-label={title}>
+      <header className="header">
+        <h2 className="title">{title}</h2>
+        <button className={styles.secondaryButton} type="button" onClick={onAdd}>
+          Adicionar nível
+        </button>
+      </header>
+      <div className={styles.body}>
+        <p className={styles.hint}>
+          Meta e Super em R$ de cada nível; o vendedor recebe as do nível dele. A divisão por origem mostra quanto da
+          meta vem de antecipação, up-sell e churn.
+        </p>
+        <div className={styles.scroll}>
+          <table className={styles.table} aria-label={title}>
+            <thead>
+              <tr>
+                <th scope="col">Nível</th>
+                <th scope="col" className={styles.number}>
+                  Meta
+                </th>
+                <th scope="col" className={styles.number}>
+                  Super meta
+                </th>
+                {ORIGINS.map((origin) => (
+                  <th key={origin.key} scope="col" className={styles.number}>
+                    {origin.label} (%)
+                  </th>
+                ))}
+                <th scope="col" className={styles.number}>
+                  Vendas necessárias
+                </th>
+                <th scope="col" className={styles.number}>
+                  Leads necessários
+                </th>
+                <th scope="col">
+                  <span className={styles.srOnly}>Ações</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {levels.map((level, index) => {
+                const name = level.name || `Nível ${index + 1}`;
+                const needed = salesNeeded(level.goal, ticket);
+                const leads = leadsNeeded(level.goal, ticket, conversion);
+                return (
+                  <tr key={level.key}>
+                    <th scope="row">
+                      <input
+                        className={styles.input}
+                        value={level.name}
+                        aria-label={`Nome do nível ${index + 1} de ${TYPE_NAMES[type]}`}
+                        aria-invalid={level.problems.includes("name") || undefined}
+                        onChange={(event) => onChange(level.key, { name: event.target.value })}
+                      />
+                    </th>
+                    <td>
+                      <MoneyInput
+                        plain
+                        className={styles.money}
+                        invalid={level.problems.includes("goal")}
+                        value={level.goal}
+                        label={`Meta do nível ${name} de ${TYPE_NAMES[type]}`}
+                        onChange={(goal) => onChange(level.key, { goal })}
+                      />
+                    </td>
+                    <td>
+                      <MoneyInput
+                        plain
+                        className={styles.money}
+                        invalid={level.problems.includes("super")}
+                        value={level.superGoal}
+                        label={`Super meta do nível ${name} de ${TYPE_NAMES[type]}`}
+                        onChange={(superGoal) => onChange(level.key, { superGoal })}
+                      />
+                    </td>
+                    {ORIGINS.map((origin) => (
+                      <td key={origin.key}>
+                        <input
+                          className={`${styles.input} ${styles.small}`}
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="1"
+                          value={level[origin.key]}
+                          aria-label={`${origin.label} do nível ${name} de ${TYPE_NAMES[type]} (%)`}
+                          aria-invalid={level.problems.includes("origins") || undefined}
+                          onChange={(event) => onChange(level.key, { [origin.key]: event.target.value })}
+                        />
+                      </td>
+                    ))}
+                    <td className={styles.number}>{needed ?? "—"}</td>
+                    <td className={styles.number}>{leads ?? "—"}</td>
+                    <td>
+                      <button
+                        className={styles.dangerButton}
+                        type="button"
+                        disabled={levels.length === 1}
+                        aria-label={`Remover o nível ${name} de ${TYPE_NAMES[type]}`}
+                        onClick={() => onRemove(level.key)}
+                      >
+                        Remover
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+        {levels.map(
+          (level, index) =>
+            level.problems.length > 0 && (
+              <p key={level.key} className={styles.error}>
+                {level.name.trim() || `Nível ${index + 1}`}:{" "}
+                {level.problems.map((problem) => PROBLEM_TEXT[problem]).join("; ")}
+                {level.problems.includes("origins") ? ` (hoje ${originsTotal(level)}%)` : ""}.
+              </p>
+            ),
+        )}
+      </div>
+    </section>
+  );
+}
+
 function MoneyField({ label, value, onChange }) {
   return (
     <label className={styles.field}>
@@ -439,13 +523,13 @@ function MoneyField({ label, value, onChange }) {
   );
 }
 
-function TierInput({ label, value, manual, invalid, onChange }) {
+function TierInput({ label, value, manual, invalid = false, resetText, onChange }) {
   return (
     <span className={styles.goalCell}>
       <MoneyInput plain className={styles.money} invalid={invalid} value={value} label={label} onChange={onChange} />
       {manual && (
         <button className={styles.linkButton} type="button" onClick={() => onChange(null)}>
-          Voltar ao automático
+          {resetText}
         </button>
       )}
     </span>

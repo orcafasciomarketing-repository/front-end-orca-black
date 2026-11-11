@@ -8,6 +8,7 @@ import { formatCurrency } from "../../../shared/utils/formatCurrency";
 import PageHeader from "../../admin/components/PageHeader/PageHeader";
 import { ChartCard } from "../../admin/components/SalesChartWidgets/SalesChartWidgets";
 import WidgetFallback from "../../admin/components/WidgetFallback/WidgetFallback";
+import GoalBreakdown from "../../goals/components/GoalBreakdown/GoalBreakdown";
 import GoalEvolution from "../../goals/components/GoalEvolution/GoalEvolution";
 import GoalForecastCard from "../../goals/components/GoalForecastCard/GoalForecastCard";
 import MonthComparison from "../../goals/components/MonthComparison/MonthComparison";
@@ -88,6 +89,8 @@ function MyGoalsContent({ month }) {
           />
         </Suspense>
       </section>
+
+      <GoalBreakdown person={person} week={week} />
 
       {week && (
         <section className={styles.segmentBlock} aria-label="Minha semana atual">
@@ -212,7 +215,7 @@ function WeeksTable({ weeks, weekIndex, hasBlack }) {
                 {hasBlack && <td className={styles.number}>{formatCurrency(item.tiers.black)}</td>}
                 <td className={styles.number}>{formatCurrency(item.realized)}</td>
                 <td className={styles.number}>
-                  {item.pace.status === "done" || item.pace.remainingDays === 0
+                  {item.pace.status === "done" || item.pace.daysToGo === 0
                     ? "—"
                     : formatCurrency(item.pace.neededPerDay)}
                 </td>

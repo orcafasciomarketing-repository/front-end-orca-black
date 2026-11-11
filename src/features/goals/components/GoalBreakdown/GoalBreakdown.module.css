@@ -1,0 +1,60 @@
+.card {
+  gap: 16px;
+  padding: 20px;
+}
+
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.title {
+  color: var(--color-text);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.description {
+  color: var(--color-muted);
+  font-size: 13px;
+}
+
+.subtitle {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.fact {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--color-background);
+}
+
+.fact dt {
+  color: var(--color-muted);
+  font-size: 12px;
+}
+
+.fact dd {
+  color: var(--color-text);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.note {
+  color: var(--color-muted);
+  font-size: 12px;
+}

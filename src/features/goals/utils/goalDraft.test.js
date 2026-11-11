@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { buildDraft, computeDraft, toPayload } from "./goalDraft";
-import { monthWeeks, paceOf, peopleTiers, segmentTiers, tierProgress, typeTiers, weekTiers } from "./goalMath";
+import { buildDraft, computeDraft, levelsOfType, newLevel, toPayload } from "./goalDraft";
+import { dynamicWeekTiers, monthWeeks, paceOf, peopleTiers, segmentTiers, tierProgress, typeTiers } from "./goalMath";
 
 const vendors = [
   { vendorId: "v1", name: "Ana", job: "B2B Venda", type: "sales" },
@@ -9,17 +9,26 @@ const vendors = [
   { vendorId: "v3", name: "Caio", job: "B2B Farmer", type: "farm" },
 ];
 
-const newDraft = (changes = {}) => {
-  const draft = buildDraft({ config: null, previous: null, vendors }, 4);
+const VALUES = {
+  sales: { junior: [3000, 3600], pleno: [4000, 4800], senior: [5000, 6000] },
+  farm: { junior: [2000, 2500], pleno: [3000, 3600], senior: [4000, 4400] },
+};
+
+const filledDraft = (changes = {}) => {
+  const draft = buildDraft({ config: null, previous: null, vendors });
   return {
     ...draft,
-    farmGoal: 3000,
-    salesGoal: 7000,
-    superPercent: 120,
-    farmBlack: 4500,
+    levels: draft.levels.map((level) => ({
+      ...level,
+      goal: VALUES[level.type][level.key][0],
+      superGoal: VALUES[level.type][level.key][1],
+    })),
+    people: draft.people.map((person) => (person.vendorId === "v2" ? { ...person, level: "pleno" } : person)),
     ...changes,
   };
 };
+
+const BLACK = { active: true, sectorGoal: 15000 };
 
 describe("goalMath (mesmas regras do backend)", () => {
   it("semanas que começam no mês, de segunda a domingo", () => {
@@ -32,270 +41,273 @@ describe("goalMath (mesmas regras do backend)", () => {
     ]);
   });
 
-  it("partes do setor; Super e Black descem para as pessoas na proporção da Meta e para as semanas", () => {
+  it("Super da parte: a soma das pessoas (farmSuper/salesSuper) ou, no modelo antigo, Meta × %", () => {
     const byType = typeTiers(
-      { farmGoal: 3000, salesGoal: 7000, superPercent: 120, farmBlack: 4500, salesBlack: 10500 },
+      { farmGoal: 3000, salesGoal: 7000, farmSuper: 3300, salesSuper: 9000, farmBlack: 4500, salesBlack: 10500 },
       true,
     );
     expect(byType).toEqual({
-      farm: { goal: 3000, super: 3600, black: 4500 },
-      sales: { goal: 7000, super: 8400, black: 10500 },
+      farm: { goal: 3000, super: 3300, black: 4500 },
+      sales: { goal: 7000, super: 9000, black: 10500 },
     });
-    expect(segmentTiers(byType)).toEqual({ goal: 10000, super: 12000, black: 15000 });
+    expect(segmentTiers(byType)).toEqual({ goal: 10000, super: 12300, black: 15000 });
+    expect(typeTiers({ farmGoal: 3000, salesGoal: 7000, superPercent: 120 }).sales.super).toBe(8400);
+  });
 
+  it("Black desce para as pessoas na proporção da Meta", () => {
     const people = [
-      { vendorId: "jr", type: "sales", goal: 1000 },
-      { vendorId: "sr", type: "sales", goal: 2000 },
-      { vendorId: "fa", type: "farm", goal: 1000 },
+      { vendorId: "jr", type: "sales", goal: 1000, superGoal: 1500 },
+      { vendorId: "sr", type: "sales", goal: 2000, superGoal: 3000 },
     ];
     const byPerson = peopleTiers(people, {
       sales: { goal: 3000, super: 4500, black: 9000 },
-      farm: { goal: 1000, super: 1500, black: 3000 },
+      farm: { goal: 0, super: 0, black: 0 },
     });
     expect(byPerson.get("sr")).toEqual({ goal: 2000, super: 3000, black: 6000 });
-    expect(weekTiers(byPerson.get("jr"), [400, 600])).toEqual([
-      { goal: 400, super: 600, black: 1200 },
-      { goal: 600, super: 900, black: 1800 },
-    ]);
   });
 
-  it("sem Meta black (fora do mês da campanha), bateu a Super o resto é excedente", () => {
+  it("semana recalculada: o que falta para o mês ÷ semanas que faltam; semana futura usa o vendido até hoje", () => {
+    const weeks = monthWeeks("2026-11");
+    const days = weeks.flatMap((week) => Array.from({ length: 7 }, (_, i) => addDay(week.start, i)));
+    const daily = days.map((day) => (day === "2026-11-03" ? 100000 : day === "2026-11-10" ? 50000 : 0));
+    const tiers = dynamicWeekTiers({
+      personTiers: { goal: 5000, super: 6000, black: 0 },
+      daily,
+      days,
+      weeks,
+      today: "2026-11-11",
+    });
+    expect(tiers[0]).toEqual({ goal: 1000, super: 1200, black: 0 });
+    expect(tiers[1]).toEqual({ goal: 1000, super: 1250, black: 0 });
+    expect(tiers[2]).toEqual({ goal: 1166.67, super: 1500, black: 0 });
+  });
+
+  it("sem Meta black, bateu a Super o resto é excedente; a faixa atual sobe de Meta para Super e Black", () => {
     expect(tierProgress(1300, { goal: 1000, super: 1200, black: 0 })).toMatchObject({
       available: ["goal", "super"],
       current: "super",
       excess: 100,
     });
-  });
-
-  it("faixa atual sobe de Meta para Super e Black; o que passa da Black é excedente", () => {
     const tiers = { goal: 1000, super: 1200, black: 1500 };
-    expect(tierProgress(999, tiers).current).toBe("goal");
     expect(tierProgress(1000, tiers).current).toBe("super");
-    expect(tierProgress(1200, tiers).current).toBe("black");
     expect(tierProgress(1800, tiers)).toMatchObject({ current: "black", excess: 300, percent: 120 });
   });
 
-  it("ritmo: atrasado, no ritmo e batida", () => {
+  it("ritmo em dias úteis (segunda a sexta, sem feriado), com hoje nos dias que faltam", () => {
     const base = { goal: 700, start: "2026-11-02", end: "2026-11-08", today: "2026-11-05" };
-    expect(paceOf({ ...base, realized: 100 }).status).toBe("behind");
-    expect(paceOf({ ...base, realized: 400 }).status).toBe("ahead");
+    const behind = paceOf({ ...base, realized: 100 });
+    expect([behind.totalDays, behind.elapsedDays, behind.daysToGo]).toEqual([4, 3, 2]);
+    expect(behind.status).toBe("behind");
+    expect(behind.neededPerDay).toBe(300);
+    expect(paceOf({ ...base, realized: 600 }).status).toBe("ahead");
     expect(paceOf({ ...base, realized: 700 }).status).toBe("done");
   });
 });
 
+function addDay(day, amount) {
+  return new Date(new Date(`${day}T00:00:00Z`).getTime() + amount * 86400000).toISOString().slice(0, 10);
+}
+
 describe("goalDraft (rascunho da tela de cadastro)", () => {
-  it("divide cada parte pelos pesos e cada pessoa igualmente nas semanas; tudo fecha", () => {
-    const draft = newDraft();
-    draft.people = draft.people.map((person) => ({ ...person, level: person.vendorId === "v2" ? "senior" : "junior" }));
+  it("mês novo: níveis Júnior, Pleno e Sênior para Farmer e para Venda, em branco, e ticket de R$ 2.000", () => {
+    const draft = buildDraft({ config: null, previous: null, vendors });
+    expect(levelsOfType(draft.levels, "farm").map((level) => level.name)).toEqual(["Júnior", "Pleno", "Sênior"]);
+    expect(levelsOfType(draft.levels, "sales").map((level) => level.key)).toEqual(["junior", "pleno", "senior"]);
+    expect(draft.tickets).toEqual({ farm: 2000, sales: 2000 });
+    expect(draft.conversion).toEqual({ farm: "", sales: 30 });
+    expect(draft.people.map((person) => person.level)).toEqual(["junior", "junior", "junior"]);
+    expect(computeDraft(draft).canSave).toBe(false);
+  });
 
-    const computed = computeDraft(draft, 4);
-    const goals = Object.fromEntries(computed.people.map((person) => [person.vendorId, person.goal]));
-
-    expect(goals).toEqual({ v1: 2333.33, v2: 4666.67, v3: 3000 });
-    expect(computed.people.find((person) => person.vendorId === "v1").weeks).toEqual([583.34, 583.33, 583.33, 583.33]);
-    expect(computed.partsOk).toEqual({ farm: true, sales: true });
+  it("cada pessoa recebe a Meta e a Super do nível dela; o setor é a soma", () => {
+    const computed = computeDraft(filledDraft());
+    expect(computed.people.map((person) => person.tiers)).toEqual([
+      { goal: 3000, super: 3600, black: 0 },
+      { goal: 4000, super: 4800, black: 0 },
+      { goal: 2000, super: 2500, black: 0 },
+    ]);
+    expect(computed.byType.sales).toEqual({ goal: 7000, super: 8400, black: 0 });
+    expect(computed.tiers).toEqual({ goal: 9000, super: 10900, black: 0 });
     expect(computed.canSave).toBe(true);
   });
 
-  it("ajuste à mão em uma pessoa: o resto da parte vai para as outras pelos pesos", () => {
-    const draft = newDraft();
-    draft.people = draft.people.map((person) =>
-      person.vendorId === "v1" ? { ...person, manualGoal: "5000" } : person,
-    );
-
-    const computed = computeDraft(draft, 4);
-
-    expect(computed.people.find((person) => person.vendorId === "v2").goal).toBe(2000);
-    expect(computed.canSave).toBe(true);
-  });
-
-  it("não deixa salvar quando a soma das semanas não bate ou a parte não fecha", () => {
-    const draft = newDraft();
-    draft.people = draft.people.map((person) =>
-      person.vendorId === "v3" ? { ...person, manualWeeks: ["1000", "1000", "1000", "1"] } : person,
-    );
-    expect(computeDraft(draft, 4).canSave).toBe(false);
-
-    const allManual = newDraft();
-    allManual.people = allManual.people.map((person) => ({ ...person, manualGoal: "1" }));
-    const computed = computeDraft(allManual, 4);
-    expect(computed.partsOk).toEqual({ farm: false, sales: false });
+  it("Meta e Super ajustadas à mão valem só para a pessoa; Super menor que a Meta trava o salvar", () => {
+    const draft = filledDraft();
+    const adjusted = {
+      ...draft,
+      people: draft.people.map((person) =>
+        person.vendorId === "v1" ? { ...person, manualGoal: 3500, manualSuper: 3400 } : person,
+      ),
+    };
+    const computed = computeDraft(adjusted);
+    expect(computed.people[0].tiers).toMatchObject({ goal: 3500, super: 3400 });
+    expect(computed.people[0].superOk).toBe(false);
     expect(computed.canSave).toBe(false);
   });
 
-  it("Super acima de 100% da Meta; no mês da campanha, a Black de cada parte maior que a Super dela", () => {
-    const black = { active: true, sectorGoal: 15000 };
-    expect(computeDraft(newDraft({ superPercent: 100 }), 4).canSave).toBe(false);
-    expect(computeDraft(newDraft({ farmBlack: 3000 }), 4, black).canSave).toBe(false);
-    expect(computeDraft(newDraft({ farmBlack: 7000 }), 4, black).canSave).toBe(false);
-    expect(computeDraft(newDraft({ farmBlack: 3000 }), 4).canSave).toBe(true);
-    expect(computeDraft(newDraft(), 4, black).canSave).toBe(true);
+  it("nível com problema trava o salvar: sem nome, Super menor que a Meta ou origens passando de 100%", () => {
+    const draft = filledDraft();
+    const withProblems = {
+      ...draft,
+      levels: draft.levels.map((level, index) =>
+        index === 0 ? { ...level, name: " ", superGoal: 100, anticipation: 60, upsell: 30, churn: 20 } : level,
+      ),
+    };
+    const computed = computeDraft(withProblems);
+    expect(computed.levels[0].problems).toEqual(["name", "super", "origins"]);
+    expect(computed.levelsOk).toBe(false);
+    expect(computed.canSave).toBe(false);
   });
 
-  it("a Black do setor vem do backend: Farmer é o que o gestor digita e Venda fica com o resto", () => {
-    const computed = computeDraft(newDraft(), 4, { active: true, sectorGoal: 15000 });
-    expect(computed.byType.sales.black).toBe(10500);
+  it("mês com Meta black: Farmer é o que o gestor digita, Venda o resto; cada pessoa na proporção da Meta", () => {
+    const computed = computeDraft(filledDraft({ farmBlack: 4000 }), BLACK);
+    expect(computed.byType.farm.black).toBe(4000);
+    expect(computed.byType.sales.black).toBe(11000);
+    expect(computed.people.map((person) => person.tiers.black)).toEqual([4714.29, 6285.71, 4000]);
+    expect(computed.canSave).toBe(true);
 
-    const tooMuch = computeDraft(newDraft({ farmBlack: 16000 }), 4, { active: true, sectorGoal: 15000 });
-    expect(tooMuch.sectorBlackOk).toBe(false);
-    expect(computeDraft(newDraft(), 4, { active: true, sectorGoal: 0 }).canSave).toBe(false);
+    const tooHigh = computeDraft(filledDraft({ farmBlack: 16000 }), BLACK);
+    expect(tooHigh.sectorBlackOk).toBe(false);
+    const belowSuper = computeDraft(filledDraft({ farmBlack: 2000 }), BLACK);
+    expect(belowSuper.blackOk.farm).toBe(false);
+    expect(belowSuper.canSave).toBe(false);
   });
 
-  it("mostra a Super e a Black de cada pessoa e só manda a Black no mês da campanha", () => {
-    const draft = newDraft();
-    const black = { active: true, sectorGoal: 15000 };
-    const computed = computeDraft(draft, 4, black);
-    const v3 = computed.people.find((person) => person.vendorId === "v3");
+  it("Black editada à mão: o resto vai para os outros; Black menor que a Super da pessoa trava", () => {
+    const draft = filledDraft({ farmBlack: 4000 });
+    const edited = {
+      ...draft,
+      people: draft.people.map((person) => (person.vendorId === "v1" ? { ...person, manualBlack: 5000 } : person)),
+    };
+    const computed = computeDraft(edited, BLACK);
+    expect(computed.people.map((person) => person.tiers.black)).toEqual([5000, 6000, 4000]);
+    expect(computed.blackTiersOk).toEqual({ farm: true, sales: true });
 
-    expect(v3.tiers).toEqual({ goal: 3000, super: 3600, black: 4500 });
-    expect(toPayload(draft, computed, black)).toMatchObject({
-      farmGoal: 3000,
-      salesGoal: 7000,
-      superPercent: 120,
-      farmBlack: 4500,
+    const low = computeDraft(
+      {
+        ...draft,
+        people: draft.people.map((person) => (person.vendorId === "v1" ? { ...person, manualBlack: 1000 } : person)),
+      },
+      BLACK,
+    );
+    expect(low.people[0].blackOk).toBe(false);
+    expect(low.canSave).toBe(false);
+  });
+
+  it("envio: níveis com Meta, Super e origens, tickets e a Meta e a Super finais de cada pessoa; quem fica sem meta não vai", () => {
+    const draft = filledDraft({ tickets: { farm: 2000, sales: "" } });
+    const withoutBia = {
+      ...draft,
+      people: draft.people.map((person) => (person.vendorId === "v2" ? { ...person, included: false } : person)),
+    };
+    const payload = toPayload(withoutBia, computeDraft(withoutBia));
+    expect(payload.levels[0]).toEqual({
+      key: "junior",
+      name: "Júnior",
+      type: "farm",
+      goal: 2000,
+      superGoal: 2500,
+      anticipation: 0,
+      upsell: 0,
+      churn: 0,
     });
-    expect(toPayload(draft, computed, black)).not.toHaveProperty("salesBlack");
-    expect(toPayload(draft, computeDraft(draft, 4)).farmBlack).toBeNull();
+    expect(payload.tickets).toEqual({ farm: 2000, sales: null });
+    expect(payload.conversion).toEqual({ farm: null, sales: 30 });
+    expect(payload.farmBlack).toBeNull();
+    expect(payload.people).toEqual([
+      { vendorId: "v1", level: "junior", goal: 3000, superGoal: 3600, blackGoal: null },
+      { vendorId: "v3", level: "junior", goal: 2000, superGoal: 2500, blackGoal: null },
+    ]);
   });
 
-  it("quem fica sem meta não entra na divisão nem no envio", () => {
-    const draft = newDraft();
-    draft.people = draft.people.map((person) => (person.vendorId === "v2" ? { ...person, included: false } : person));
-
-    const computed = computeDraft(draft, 4);
-    const payload = toPayload(draft, computed);
-
-    expect(computed.people.find((person) => person.vendorId === "v1").goal).toBe(7000);
-    expect(payload.people.map((person) => person.vendorId)).toEqual(["v1", "v3"]);
-  });
-
-  it("mês salvo volta exatamente como foi salvo, inclusive ajustes à mão", () => {
+  it("mês salvo volta exatamente como foi salvo, inclusive os ajustes à mão", () => {
+    const draft = filledDraft({ farmBlack: 4000 });
+    const adjusted = {
+      ...draft,
+      people: draft.people.map((person) =>
+        person.vendorId === "v1" ? { ...person, manualGoal: 3500, manualSuper: 4000, manualBlack: 5000 } : person,
+      ),
+    };
+    const payload = toPayload(adjusted, computeDraft(adjusted, BLACK), BLACK);
     const config = {
       month: "2026-11",
-      farmGoal: 3000,
-      salesGoal: 7000,
+      model: "levels",
+      ...payload,
+      people: payload.people.map((person) => ({
+        ...person,
+        type: vendors.find((v) => v.vendorId === person.vendorId).type,
+      })),
+    };
+
+    const reopened = buildDraft({ config, previous: null, vendors }, BLACK);
+    expect(reopened.source).toBe("saved");
+    expect(reopened.legacy).toBe(false);
+    expect(reopened.people[0]).toMatchObject({ manualGoal: 3500, manualSuper: 4000, manualBlack: 5000 });
+    expect(reopened.people[1]).toMatchObject({ manualGoal: null, manualSuper: null });
+    expect(toPayload(reopened, computeDraft(reopened, BLACK), BLACK)).toEqual(payload);
+  });
+
+  it("mês salvo no modelo antigo: os níveis vêm das metas salvas e cada pessoa continua com a mesma Meta e Super", () => {
+    const legacy = {
+      month: "2026-11",
+      model: "weights",
       superPercent: 120,
       farmBlack: null,
-      salesBlack: null,
-      levels: [{ key: "junior", name: "Júnior", weight: 1 }],
+      levels: [
+        { key: "jr", name: "Júnior", weight: 1 },
+        { key: "sr", name: "Sênior", weight: 2 },
+      ],
       people: [
-        {
-          vendorId: "v1",
-          type: "sales",
-          level: "junior",
-          goal: 6000,
-          superGoal: 7000,
-          blackGoal: null,
-          weeks: [3000, 1000, 1000, 1000],
-        },
-        {
-          vendorId: "v2",
-          type: "sales",
-          level: "junior",
-          goal: 1000,
-          superGoal: 1400,
-          blackGoal: null,
-          weeks: [250, 250, 250, 250],
-        },
-        {
-          vendorId: "v3",
-          type: "farm",
-          level: "junior",
-          goal: 3000,
-          superGoal: 3600,
-          blackGoal: null,
-          weeks: [750, 750, 750, 750],
-        },
+        { vendorId: "v1", type: "sales", level: "jr", goal: 3000, superGoal: 3600, blackGoal: null, weeks: [] },
+        { vendorId: "v2", type: "sales", level: "jr", goal: 3200, superGoal: 3840, blackGoal: null, weeks: [] },
+        { vendorId: "v3", type: "farm", level: "sr", goal: 6000, superGoal: null, blackGoal: null, weeks: [] },
       ],
     };
-
-    const draft = buildDraft({ config, previous: null, vendors }, 4);
-    const computed = computeDraft(draft, 4);
-
-    expect(draft.source).toBe("saved");
-    expect(toPayload(draft, computed).people).toEqual(
-      config.people.map(({ vendorId, level, goal, superGoal, blackGoal, weeks }) => ({
-        vendorId,
-        level,
-        goal,
-        superGoal,
-        blackGoal,
-        weeks,
-      })),
-    );
-    expect(draft.people.find((person) => person.vendorId === "v3").manualSuper).toBeNull();
-    expect(draft.people.find((person) => person.vendorId === "v1").manualSuper).toBe(7000);
-    expect(computed.canSave).toBe(true);
-  });
-
-  it("Super e Black de cada pessoa podem ser editadas: o resto da parte vai para as outras na proporção da Meta", () => {
-    const black = { active: true, sectorGoal: 15000 };
-    const draft = newDraft();
-    draft.people = draft.people.map((person) =>
-      person.vendorId === "v1" ? { ...person, manualSuper: "5000", manualBlack: "6000" } : person,
-    );
-
-    const computed = computeDraft(draft, 4, black);
-    const v2 = computed.people.find((person) => person.vendorId === "v2");
-
-    expect(v2.tiers).toEqual({ goal: 3500, super: 3400, black: 4500 });
-    expect(v2.superOk).toBe(false);
-    expect(computed.tiersOk.super).toEqual({ farm: true, sales: true });
-    expect(computed.canSave).toBe(false);
-
-    draft.people = draft.people.map((person) =>
-      person.vendorId === "v1" ? { ...person, manualSuper: "4400" } : person,
-    );
-    const fixed = computeDraft(draft, 4, black);
-    expect(fixed.people.find((person) => person.vendorId === "v2").tiers.super).toBe(4000);
-    expect(fixed.canSave).toBe(true);
-    expect(toPayload(draft, fixed, black).people.find((person) => person.vendorId === "v1")).toMatchObject({
-      superGoal: 4400,
-      blackGoal: 6000,
+    const draft = buildDraft({ config: legacy, previous: null, vendors });
+    expect(draft.legacy).toBe(true);
+    expect(levelsOfType(draft.levels, "sales").map((level) => [level.key, level.goal, level.superGoal])).toEqual([
+      ["jr", 3000, 3600],
+      ["sr", 0, 0],
+    ]);
+    expect(levelsOfType(draft.levels, "farm").find((level) => level.key === "sr")).toMatchObject({
+      goal: 6000,
+      superGoal: 7200,
     });
+    const computed = computeDraft(draft);
+    expect(computed.people.map((person) => person.tiers.goal)).toEqual([3000, 3200, 6000]);
+    expect(computed.people[1]).toMatchObject({ manualGoal: 3200, manualSuper: 3840 });
   });
 
-  it("Super ou Black editada em todas as pessoas de uma parte precisa fechar com a parte; Black menor que a Super não salva", () => {
-    const black = { active: true, sectorGoal: 15000 };
-    const draft = newDraft();
-    draft.people = draft.people.map((person) =>
-      person.vendorId === "v3" ? { ...person, manualSuper: "3500" } : person,
-    );
-    const computed = computeDraft(draft, 4, black);
-    expect(computed.tiersOk.super.farm).toBe(false);
-    expect(computed.tierDistributed.super.farm).toBe(3500);
-    expect(computed.canSave).toBe(false);
-
-    const lowBlack = newDraft();
-    lowBlack.people = lowBlack.people.map((person) =>
-      person.vendorId === "v1" ? { ...person, manualBlack: "1000" } : person,
-    );
-    const lowComputed = computeDraft(lowBlack, 4, black);
-    expect(lowComputed.people.find((person) => person.vendorId === "v1").blackOk).toBe(false);
-    expect(lowComputed.canSave).toBe(false);
-    expect(computeDraft(lowBlack, 4).canSave).toBe(true);
-  });
-
-  it("mês novo copia do anterior os percentuais, níveis e o nível de cada pessoa, e redistribui", () => {
+  it("mês novo copia do anterior os níveis, os tickets e o nível de cada pessoa, sem ajustes à mão", () => {
+    const draft = filledDraft();
+    const payload = toPayload(draft, computeDraft(draft));
     const previous = {
       month: "2026-10",
-      farmGoal: 4000,
-      salesGoal: 4000,
-      superPercent: 125,
-      farmBlack: null,
-      salesBlack: null,
-      levels: [
-        { key: "a", name: "A", weight: 1 },
-        { key: "b", name: "B", weight: 3 },
-      ],
-      people: [{ vendorId: "v2", type: "sales", level: "b", goal: 1, weeks: [1] }],
+      model: "levels",
+      ...payload,
+      tickets: { farm: 1500, sales: 2500 },
+      people: payload.people.map((person) => ({ ...person, goal: person.goal + 1, type: "sales" })),
     };
+    const copied = buildDraft({ config: null, previous, vendors });
+    expect(copied.source).toBe("previous");
+    expect(copied.tickets).toEqual({ farm: 1500, sales: 2500 });
+    expect(copied.people.map((person) => [person.level, person.manualGoal])).toEqual([
+      ["junior", null],
+      ["pleno", null],
+      ["junior", null],
+    ]);
+  });
 
-    const draft = buildDraft({ config: null, previous, vendors }, 4);
+  it("conversão de leads: vazia ou de 1 a 100%; fora disso trava o salvar", () => {
+    expect(computeDraft(filledDraft({ conversion: { farm: "", sales: 30 } })).canSave).toBe(true);
+    const invalid = computeDraft(filledDraft({ conversion: { farm: "", sales: 150 } }));
+    expect(invalid.conversionOk).toEqual({ farm: true, sales: false });
+    expect(invalid.canSave).toBe(false);
+    expect(computeDraft(filledDraft({ conversion: { farm: 0, sales: 30 } })).conversionOk.farm).toBe(false);
+  });
 
-    expect(draft).toMatchObject({ source: "previous", sourceMonth: "2026-10", superPercent: 125, farmGoal: 4000 });
-    expect(draft.people.find((person) => person.vendorId === "v2").level).toBe("b");
-    expect(draft.people.every((person) => person.manualGoal === null)).toBe(true);
-    expect(computeDraft(draft, 4).canSave).toBe(true);
+  it("nível novo ganha uma chave que não repete no tipo", () => {
+    const draft = buildDraft({ config: null, previous: null, vendors });
+    expect(newLevel(draft.levels, "farm")).toMatchObject({ key: "nivel-4", type: "farm", name: "" });
   });
 });

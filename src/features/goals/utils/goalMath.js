@@ -14,13 +14,19 @@ export const STATUS_LABELS = {
   upcoming: "Não começou",
 };
 
-export const DEFAULT_LEVELS = [
-  { key: "junior", name: "Júnior", weight: 1 },
-  { key: "pleno", name: "Pleno", weight: 1.5 },
-  { key: "senior", name: "Sênior", weight: 2 },
+export const DEFAULT_LEVEL_NAMES = ["Júnior", "Pleno", "Sênior"];
+
+export const DEFAULT_TICKET = 2000;
+
+export const DEFAULT_CONVERSION = { farm: "", sales: 30 };
+
+export const ORIGINS = [
+  { key: "anticipation", label: "Antecipação" },
+  { key: "upsell", label: "Up-sell" },
+  { key: "churn", label: "Churn" },
 ];
 
-export const DEFAULT_SUPER_PERCENT = 120;
+export const HOLIDAYS = ["2026-10-12", "2026-11-02", "2026-11-20", "2026-12-25"];
 
 export const GOAL_TYPES = ["farm", "sales"];
 
@@ -30,6 +36,19 @@ export const addDays = (day, amount) =>
   new Date(new Date(`${day}T00:00:00Z`).getTime() + amount * DAY_MS).toISOString().slice(0, 10);
 
 const daysBetween = (from, to) => Math.round((new Date(`${to}T00:00:00Z`) - new Date(`${from}T00:00:00Z`)) / DAY_MS);
+
+export const isWorkday = (day) => {
+  const weekDay = new Date(`${day}T00:00:00Z`).getUTCDay();
+  return weekDay >= 1 && weekDay <= 5 && !HOLIDAYS.includes(day);
+};
+
+export function workdaysBetween(from, to) {
+  let count = 0;
+  for (let day = from; day <= to; day = addDays(day, 1)) {
+    if (isWorkday(day)) count += 1;
+  }
+  return count;
+}
 
 export const toCents = (value) => Math.round(Number(value || 0) * 100);
 export const fromCents = (cents) => cents / 100;
@@ -121,12 +140,16 @@ export function segmentParts({ farmGoal, salesGoal }) {
 export function typeTiers(config, withBlack = false) {
   const parts = segmentParts(config);
   const black = { farm: withBlack ? config.farmBlack : 0, sales: withBlack ? config.salesBlack : 0 };
+  const superOf = (type) =>
+    config[`${type}Super`] != null
+      ? fromCents(toCents(config[`${type}Super`]))
+      : fromCents(Math.round((toCents(parts[type]) * Number(config.superPercent || 0)) / 100));
   return Object.fromEntries(
     GOAL_TYPES.map((type) => [
       type,
       {
         goal: parts[type],
-        super: fromCents(Math.round((toCents(parts[type]) * Number(config.superPercent || 0)) / 100)),
+        super: superOf(type),
         black: fromCents(toCents(black[type])),
       },
     ]),
@@ -185,6 +208,20 @@ export function weekTiers(personTiers, weekGoals) {
   }));
 }
 
+export function dynamicWeekTiers({ personTiers, daily, days, weeks, today }) {
+  return weeks.map((week, index) => {
+    const cutoff = week.start <= today ? week.start : addDays(today, 1);
+    const before = days.reduce((sum, day, dayIndex) => (day < cutoff ? sum + daily[dayIndex] : sum), 0);
+    const left = weeks.length - index;
+    return Object.fromEntries(
+      TIERS.map((tier) => {
+        const target = toCents(personTiers[tier] ?? 0);
+        return [tier, target > 0 ? fromCents(Math.round(Math.max(target - before, 0) / left)) : 0];
+      }),
+    );
+  });
+}
+
 export function sumTiers(list) {
   return list.reduce(
     (sum, tiers) => ({
@@ -219,9 +256,10 @@ export function tierProgress(realized, tiers) {
 }
 
 export function paceOf({ realized, goal, start, end, today }) {
-  const totalDays = daysBetween(start, end) + 1;
-  const elapsedDays = today < start ? 0 : today > end ? totalDays : daysBetween(start, today) + 1;
+  const totalDays = Math.max(workdaysBetween(start, end), 1);
+  const elapsedDays = today < start ? 0 : today > end ? totalDays : workdaysBetween(start, today);
   const remainingDays = totalDays - elapsedDays;
+  const daysToGo = today > end ? 0 : workdaysBetween(today < start ? start : today, end);
   const expected = fromCents(Math.round((toCents(goal) * elapsedDays) / totalDays));
   const missing = Math.max(toCents(goal) - toCents(realized), 0);
 
@@ -236,7 +274,8 @@ export function paceOf({ realized, goal, start, end, today }) {
     remainingDays,
     expected,
     status,
-    neededPerDay: remainingDays > 0 ? fromCents(Math.ceil(missing / remainingDays)) : fromCents(missing),
+    daysToGo,
+    neededPerDay: daysToGo > 0 ? fromCents(Math.ceil(missing / daysToGo)) : fromCents(missing),
     projection: elapsedDays > 0 ? fromCents(Math.round((toCents(realized) / elapsedDays) * totalDays)) : 0,
   };
 }

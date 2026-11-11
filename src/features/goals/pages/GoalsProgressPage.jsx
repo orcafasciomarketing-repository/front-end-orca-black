@@ -11,6 +11,7 @@ import WidgetFallback from "../../admin/components/WidgetFallback/WidgetFallback
 import { CHART_COLORS } from "../../admin/utils/chartColors";
 import GoalAlerts from "../components/GoalAlerts/GoalAlerts";
 import GoalEvolution from "../components/GoalEvolution/GoalEvolution";
+import GoalBreakdown from "../components/GoalBreakdown/GoalBreakdown";
 import GoalForecastCard from "../components/GoalForecastCard/GoalForecastCard";
 import MonthComparison from "../components/MonthComparison/MonthComparison";
 import TierProgressCard from "../components/TierProgressCard/TierProgressCard";
@@ -314,6 +315,8 @@ function VendorView({ person, progress, weekIndex }) {
         month={progress.month}
         pickHistory={pickHistory}
       />
+
+      <GoalBreakdown person={person} week={weekIndex >= 0 ? person.weeks[weekIndex] : null} />
 
       <GoalEvolution label={label} scope={person} progress={progress} pickHistory={pickHistory} />
 
