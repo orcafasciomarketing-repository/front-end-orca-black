@@ -188,6 +188,49 @@
   overflow-y: auto;
 }
 
+.impersonation {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 32px;
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  font-size: 14px;
+}
+
+.impersonationButton {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.impersonationButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.impersonationButton:focus-visible {
+  outline-color: var(--color-on-primary);
+  outline-offset: 2px;
+}
+
+@media print {
+  .impersonation {
+    display: none;
+  }
+}
+
 @media print {
   .layout {
     display: block;

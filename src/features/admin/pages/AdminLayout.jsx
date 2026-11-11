@@ -1,7 +1,7 @@
 import styles from "./AdminLayout.module.css";
 
 import { useContext, useState } from "react";
-import { NavLink, Outlet } from "react-router";
+import { NavLink, Outlet, useNavigate } from "react-router";
 
 import useTheme from "../../../shared/hooks/useTheme";
 import ChangePasswordDialog from "../../auth/components/ChangePasswordDialog/ChangePasswordDialog";
@@ -9,6 +9,7 @@ import CampaignSelect from "../../campaigns/components/CampaignSelect/CampaignSe
 import { campaignKey, useSelectedCampaign } from "../../campaigns/utils/campaignSelection";
 import { AuthContext } from "../../auth/context/AuthContext";
 import usePermissions from "../../auth/hooks/usePermissions";
+import { ROLE_LABELS } from "../../auth/utils/permissions";
 import {
   AlertIcon,
   ChartIcon,
@@ -88,6 +89,16 @@ export default function AdminLayout() {
   const { theme, isDark, toggleTheme } = useTheme();
   const auth = useContext(AuthContext);
   const isLoggedIn = Boolean(auth?.state.user);
+  const impersonatedBy = auth?.state.impersonatedBy ?? null;
+  const navigate = useNavigate();
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  const leaveImpersonation = async () => {
+    setIsLeaving(true);
+    await auth.stopImpersonation();
+    setIsLeaving(false);
+    navigate("/admin/usuarios");
+  };
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const selectedCampaign = useSelectedCampaign();
 
@@ -118,7 +129,7 @@ export default function AdminLayout() {
           ))}
         </nav>
         <div className={styles.sidebarFooter}>
-          {isLoggedIn && (
+          {isLoggedIn && !impersonatedBy && (
             <button
               className={styles.footerButton}
               type="button"
@@ -139,7 +150,7 @@ export default function AdminLayout() {
           >
             {isDark ? <SunIcon /> : <MoonIcon />}
           </button>
-          {isLoggedIn && (
+          {isLoggedIn && !impersonatedBy && (
             <button
               className={styles.footerButton}
               type="button"
@@ -153,6 +164,22 @@ export default function AdminLayout() {
         </div>
       </aside>
       <main className={styles.main}>
+        {impersonatedBy && (
+          <div className={styles.impersonation} role="status">
+            <span>
+              Você está vendo como <strong>{auth.state.user.email}</strong> (
+              {ROLE_LABELS[auth.state.user.role] ?? auth.state.user.role}). É só para ver: nada pode ser alterado.
+            </span>
+            <button
+              className={styles.impersonationButton}
+              type="button"
+              disabled={isLeaving}
+              onClick={leaveImpersonation}
+            >
+              {isLeaving ? "Voltando..." : "Voltar para minha conta"}
+            </button>
+          </div>
+        )}
         <Outlet key={permissions.canSeeAdmin ? campaignKey(selectedCampaign) : "pessoal"} />
       </main>
       <SaleToasts spreadMs={permissions.isPerson ? PERSON_REFRESH_SPREAD_MS : 0} />

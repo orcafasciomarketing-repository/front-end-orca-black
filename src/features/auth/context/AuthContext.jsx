@@ -2,12 +2,13 @@ import { createContext, useReducer, useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import authReducer from "./authReducer";
-import { logoutUser } from "../api/authApi";
-import { refreshSession, setAuthInterceptor } from "../../../shared/apiClient";
+import { impersonateUser, logoutUser } from "../api/authApi";
+import { refreshSession, setAccessToken, setAuthInterceptor, setImpersonating } from "../../../shared/apiClient";
 
 const initialValue = {
   user: null,
   token: null,
+  impersonatedBy: null,
   isLoading: true,
 };
 
@@ -49,10 +50,33 @@ export default function AuthContextProvider({ children }) {
     }
   }
 
+  async function startImpersonation(userId) {
+    const data = await impersonateUser(userId);
+    const impersonatedBy = authState.user;
+    setAccessToken(data.token);
+    setImpersonating(true);
+    queryClient.clear();
+    authDispatch({ type: "START_IMPERSONATION", payload: { user: data.user, token: data.token, impersonatedBy } });
+  }
+
+  async function stopImpersonation() {
+    setImpersonating(false);
+    queryClient.clear();
+    try {
+      const data = await refreshSession();
+      authDispatch({ type: "END_IMPERSONATION", payload: { user: data.user, token: data.token } });
+    } catch {
+      setAccessToken(null);
+      authDispatch({ type: "REVOKE_DATA" });
+    }
+  }
+
   const ctxValue = {
     state: authState,
     dispatch: authDispatch,
     logout,
+    startImpersonation,
+    stopImpersonation,
   };
 
   return <AuthContext value={ctxValue}>{children}</AuthContext>;

@@ -59,3 +59,40 @@ describe("AdminLayout: sair e trocar senha", () => {
     expect(screen.queryByRole("button", { name: "Trocar senha" })).not.toBeInTheDocument();
   });
 });
+
+describe("AdminLayout: acessar como", () => {
+  const impersonatingAuth = () => ({
+    state: {
+      user: { _id: "u-brenda", email: "brenda@empresa.com", role: "vendor" },
+      token: "t",
+      impersonatedBy: { _id: "u-master", email: "master@empresa.com", role: "master" },
+    },
+    dispatch: vi.fn(),
+    logout: vi.fn(),
+    stopImpersonation: vi.fn(async () => {}),
+  });
+
+  it("mostra a faixa de quem está sendo visto, sem Sair nem Trocar senha", () => {
+    renderLayout(impersonatingAuth());
+
+    const banner = screen.getByRole("status");
+    expect(banner).toHaveTextContent("Você está vendo como brenda@empresa.com (Vendedor). É só para ver");
+    expect(screen.queryByRole("button", { name: "Sair" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Trocar senha" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Modo escuro" })).toBeInTheDocument();
+  });
+
+  it("Voltar para minha conta encerra o acesso", async () => {
+    const auth = impersonatingAuth();
+    renderLayout(auth);
+
+    fireEvent.click(screen.getByRole("button", { name: "Voltar para minha conta" }));
+
+    await vi.waitFor(() => expect(auth.stopImpersonation).toHaveBeenCalled());
+  });
+
+  it("sem acessar como, não há faixa", () => {
+    renderLayout(loggedAuth());
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  });
+});

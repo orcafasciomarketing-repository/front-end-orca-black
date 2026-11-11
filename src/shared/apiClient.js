@@ -13,6 +13,11 @@ const AUTH_ROUTES = ["auth/login", "auth/refresh"];
 
 let accessToken = null;
 let refreshPromise = null;
+let impersonating = false;
+
+export const setImpersonating = (value) => {
+  impersonating = value;
+};
 
 export const setAccessToken = (token) => {
   accessToken = token;
@@ -39,6 +44,12 @@ export const setAuthInterceptor = (dispatch) => {
 
         try {
           const refreshData = await refreshSession();
+
+          if (impersonating) {
+            impersonating = false;
+            dispatch({ type: "END_IMPERSONATION", payload: { user: refreshData.user, token: refreshData.token } });
+            return Promise.reject(error);
+          }
 
           originalRequest.headers.Authorization = `Bearer ${refreshData.token}`;
           dispatch({ type: "ALTER_TOKEN", payload: { token: refreshData.token } });

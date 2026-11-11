@@ -5,6 +5,23 @@ const authReducer = (state, action) => {
         ...state,
         user: action.payload.user,
         token: action.payload.token,
+        impersonatedBy: null,
+      };
+    }
+    case "START_IMPERSONATION": {
+      return {
+        ...state,
+        user: action.payload.user,
+        token: action.payload.token,
+        impersonatedBy: action.payload.impersonatedBy,
+      };
+    }
+    case "END_IMPERSONATION": {
+      return {
+        ...state,
+        user: action.payload.user,
+        token: action.payload.token,
+        impersonatedBy: null,
       };
     }
     case "ALTER_TOKEN": {
@@ -17,6 +34,7 @@ const authReducer = (state, action) => {
       return {
         user: null,
         token: null,
+        impersonatedBy: null,
         isLoading: false,
       };
     }

@@ -1,7 +1,9 @@
 import styles from "./UsersWidget.module.css";
 
-import { useState } from "react";
+import { useContext, useState } from "react";
 
+import { getAuthErrorMessage } from "../../../auth/api/authApi";
+import { AuthContext } from "../../../auth/context/AuthContext";
 import usePermissions from "../../../auth/hooks/usePermissions";
 import { PERSON_FIELDS, PERSON_ROLE_OPTIONS, ROLE_LABELS, ROLE_OPTIONS } from "../../../auth/utils/permissions";
 import { getUserErrorMessage } from "../../api/usersApi";
@@ -33,6 +35,18 @@ export default function UsersWidget() {
   const { create, update, remove } = useUserMutations();
   const { userId, isMaster } = usePermissions();
   const peopleOptions = usePeopleOptions();
+  const auth = useContext(AuthContext);
+  const [impersonation, setImpersonation] = useState({ pendingId: null, error: "" });
+  const canImpersonate = isMaster && Boolean(auth?.startImpersonation);
+
+  const impersonate = async (user) => {
+    setImpersonation({ pendingId: user._id, error: "" });
+    try {
+      await auth.startImpersonation(user._id);
+    } catch (error) {
+      setImpersonation({ pendingId: null, error: getAuthErrorMessage(error) });
+    }
+  };
 
   return (
     <section className="widget">
@@ -51,6 +65,9 @@ export default function UsersWidget() {
 
         {update.isError && <p className={styles.error}>Não foi possível alterar: {getUserErrorMessage(update.error)}</p>}
         {remove.isError && <p className={styles.error}>Não foi possível excluir: {getUserErrorMessage(remove.error)}</p>}
+        {impersonation.error && (
+          <p className={styles.error}>Não foi possível acessar como a pessoa: {impersonation.error}</p>
+        )}
 
         {users.length === 0 ? (
           <p className={styles.muted}>Nenhum usuário cadastrado</p>
@@ -65,6 +82,8 @@ export default function UsersWidget() {
                 personName={personNameOf(user, peopleOptions)}
                 update={update}
                 remove={remove}
+                onImpersonate={canImpersonate ? () => impersonate(user) : null}
+                isImpersonating={impersonation.pendingId === user._id}
               />
             ))}
           </ul>
@@ -177,7 +196,7 @@ function CreateUserForm({ create, peopleOptions }) {
 }
 
 // canEdit: só o master troca perfil e senha e exclui. O perfil do master nunca muda pela tela
-function UserItem({ user, isMe, canEdit, personName, update, remove }) {
+function UserItem({ user, isMe, canEdit, personName, update, remove, onImpersonate, isImpersonating }) {
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const isBusy = update.isPending || remove.isPending;
   const role = user.role ?? "admin";
@@ -231,6 +250,18 @@ function UserItem({ user, isMe, canEdit, personName, update, remove }) {
               onClick={() => setIsChangingPassword(!isChangingPassword)}
             >
               Trocar senha
+            </button>
+          )}
+          {onImpersonate && isPerson && (
+            <button
+              className={styles.secondaryButton}
+              type="button"
+              disabled={isImpersonating}
+              aria-label={`Acessar como ${user.email}`}
+              title="Ver o sistema como esta pessoa vê (só para ver)"
+              onClick={onImpersonate}
+            >
+              {isImpersonating ? "Entrando..." : "Acessar como"}
             </button>
           )}
           {canDelete && (

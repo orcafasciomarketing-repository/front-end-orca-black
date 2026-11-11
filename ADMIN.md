@@ -823,6 +823,15 @@ Tela `/minha-area` ([PersonPage](src/features/person/pages/PersonPage.jsx)), par
 
 **Contas criadas pelo seed do backend** (`node seed.js --contas`, rodado à mão uma vez; não roda no deploy): uma para cada vendedor e pessoa de passagem do `seed.js`, com e-mail `nome.sobrenome@orcafascio.com` e senha `Nome123` (primeiro nome com inicial maiúscula, sem acento; ex.: `vinicius.pereira@orcafascio.com` / `Vinicius123`). O seed só cria o que falta: nunca troca senha nem perfil de quem já tem conta.
 
+## Acessar como (só o master)
+
+Na tela **Usuários**, o master vê o botão **Acessar como** em cada conta de **vendedor** ou **passagem**. Clicar entra na área daquela pessoa, exatamente como ela vê (Minha área e, para vendedor, Minhas metas), para conferir os gráficos e as metas dela.
+
+- No topo da tela aparece uma faixa roxa: "Você está vendo como fulano@... (Vendedor). É só para ver: nada pode ser alterado", com o botão **Voltar para minha conta** (volta para a tela Usuários). Enquanto isso, Trocar senha e Sair somem do pé do menu.
+- **Só para ver:** o backend recusa qualquer gravação feita nesse modo (`POST /auth/impersonate/:id`, ver o ROTAS.md do backend).
+- Como funciona no front ([AuthContext](src/features/auth/context/AuthContext.jsx)): `startImpersonation(id)` pede o token da pessoa, guarda quem abriu em `state.impersonatedBy` (`START_IMPERSONATION` no [authReducer](src/features/auth/context/authReducer.js)), limpa o cache das consultas e troca o token do `apiClient`; as rotas levam sozinhas para `/minha-area`. `stopImpersonation()` usa a sessão do master (`/auth/refresh`, o cookie dele não muda) e volta (`END_IMPERSONATION`).
+- O acesso vale 60 minutos. Se vencer, o [apiClient](src/shared/apiClient.js) (`setImpersonating`) não tenta continuar como a pessoa: volta direto para a conta do master. Recarregar a página também volta para a conta do master.
+
 ## Sair e trocar a própria senha
 
 No pé do menu lateral ficam, lado a lado e só com o símbolo (chave, lua/sol e porta), nessa ordem: **Trocar senha**, **Modo escuro** e **Sair**. O nome de cada um aparece ao passar o mouse (`title`) e é lido pelos leitores de tela (`aria-label`). Valem para todos os perfis, inclusive na Minha área. Sem usuário logado (ex.: teste de componente solto, fora do `AuthContext`), só o Modo escuro aparece, como antes.
@@ -850,7 +859,10 @@ No pé do menu lateral ficam, lado a lado e só com o símbolo (chave, lua/sol e
 | `utils/companyLink.test.js` | Link com https, http e sem protocolo; nome comum continua texto; recusa `javascript:`, `mailto:`, `data:` e endereço sem domínio |
 | `utils/vendorProfile.test.js` | Sequência de dias vendendo; perfil com totais, posição, semanas, evolução e últimas vendas; vendedor sem vendas |
 | `utils/teamPoints.test.js` | Pontos por equipe somados por tipo e por período; evolução acumulada |
-| `pages/AdminLayoutAccount.test.jsx` | Logado: Trocar senha, Modo escuro e Sair no pé do menu; Sair chama o logout; Trocar senha abre e fecha o diálogo; sem login, só o Modo escuro |
+| `pages/AdminLayoutAccount.test.jsx` | Logado: Trocar senha, Modo escuro e Sair no pé do menu; Sair chama o logout; Trocar senha abre e fecha o diálogo; sem login, só o Modo escuro; acessando como outra pessoa: faixa com quem está sendo visto, sem Sair nem Trocar senha, e Voltar para minha conta |
+| `components/UsersWidget/UsersImpersonate.test.jsx` | Master vê "Acessar como" só em vendedor e passagem e clicar entra na conta; admin não vê; mensagem do backend quando não consegue |
+| `auth/context/authReducer.test.js` | Entrar como outra pessoa guardando quem abriu e voltar; sair ou entrar de novo limpa |
+| `shared/apiClient.test.js` | Token vencido vendo como outra pessoa volta para a conta do master sem repetir o pedido; na própria conta renova e repete |
 | `auth/components/ChangePasswordDialog/ChangePasswordDialog.test.jsx` | Troca a senha e devolve usuário e token novos; senha curta ou diferente não chama o backend; mostra o erro do backend; Cancelar, Esc e clicar fora fecham |
 | `app/GoalsRoutes.test.jsx` | Master, admin e usuário antigo abrem as duas telas de metas e veem os itens no menu; as telas têm endereços separados; b2b/b2g não veem os itens e voltam para o Dashboard; vendedor e passagem vão para a própria área |
 | `goals/utils/goalAlerts.test.js` | Chance baixa da Meta, sem vendas há 5 dias ou mais (ou nenhuma) e perto da próxima faixa; nada fora do mês em andamento |
