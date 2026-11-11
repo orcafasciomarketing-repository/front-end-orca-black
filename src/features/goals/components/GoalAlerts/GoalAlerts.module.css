@@ -80,12 +80,13 @@
 
 .name {
   composes: nameButton from "../../../admin/components/charts/BarChart.module.css";
+  flex-shrink: 0;
   color: var(--color-text);
   font-size: 13px;
 }
 
 .detail {
+  min-width: 0;
   color: var(--color-muted);
   text-align: right;
-  white-space: nowrap;
 }

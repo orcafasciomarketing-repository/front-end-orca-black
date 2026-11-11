@@ -1,0 +1,59 @@
+.wrapper {
+  display: contents;
+}
+
+.popover {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--color-sidebar-hover);
+  border-radius: 10px;
+  background: var(--color-sidebar);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.title {
+  padding: 4px 8px 6px;
+  color: var(--color-sidebar-text);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border-radius: 8px;
+  outline: 2px solid transparent;
+  color: var(--color-sidebar-text);
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.item:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-sidebar-text-strong);
+}
+
+.item:focus-visible {
+  outline-color: var(--color-primary);
+}
+
+.itemActive,
+.itemActive:hover {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}

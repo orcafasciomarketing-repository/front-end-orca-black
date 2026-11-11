@@ -19,6 +19,8 @@ import GoalsSetupPage from "../features/goals/pages/GoalsSetupPage";
 import CampaignsPage from "../features/campaigns/pages/CampaignsPage";
 import MyGoalsPage from "../features/person/pages/MyGoalsPage";
 import PersonPage from "../features/person/pages/PersonPage";
+import CampaignReportsPage from "../features/reports/pages/CampaignReportsPage";
+import GoalReportsPage from "../features/reports/pages/GoalReportsPage";
 
 const router = createBrowserRouter([
   {
@@ -41,6 +43,7 @@ const router = createBrowserRouter([
               { path: "graficos", element: <ChartsPage /> },
               { path: "previsao", element: <ForecastPage /> },
               { path: "premios", element: <PrizesPage /> },
+              { path: "relatorios", element: <CampaignReportsPage /> },
               {
                 element: <RestrictedRoute allow="isMaster" />,
                 children: [
@@ -61,6 +64,7 @@ const router = createBrowserRouter([
                 children: [
                   { path: "metas", element: <GoalsSetupPage /> },
                   { path: "metas/vendedores", element: <GoalsProgressPage /> },
+                  { path: "metas/relatorios", element: <GoalReportsPage /> },
                 ],
               },
             ],

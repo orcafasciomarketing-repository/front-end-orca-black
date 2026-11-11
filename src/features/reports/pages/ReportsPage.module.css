@@ -1,0 +1,65 @@
+.page {
+  container-type: inline-size;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 32px;
+}
+
+.controls {
+  composes: controls from "../../admin/pages/ChartsPage.module.css";
+}
+
+.field {
+  composes: field from "../../admin/components/SalesFilters/SalesFilters.module.css";
+}
+
+.label {
+  composes: label from "../../admin/components/SalesFilters/SalesFilters.module.css";
+}
+
+.select {
+  composes: select from "../../admin/components/SalesFilters/SalesFilters.module.css";
+  min-width: 140px;
+}
+
+.input {
+  composes: input from "../../admin/components/UsersWidget/UsersWidget.module.css";
+}
+
+.context {
+  color: var(--color-muted);
+  font-size: 14px;
+}
+
+.context strong {
+  color: var(--color-text);
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .page {
+    padding: 16px;
+  }
+}
+
+@media print {
+  .page {
+    padding: 0;
+  }
+
+  .page > :not(:global(.report-print-area)) {
+    display: none;
+  }
+}
+
+.tierCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}

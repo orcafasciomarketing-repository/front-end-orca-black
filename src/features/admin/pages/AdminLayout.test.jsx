@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { createMemoryRouter, RouterProvider } from "react-router";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { AuthContext } from "../../auth/context/AuthContext";
 import ThemeContextProvider from "../../../shared/context/ThemeContext";
@@ -26,25 +26,46 @@ const renderAt = (path) => {
 };
 
 describe("AdminLayout", () => {
-  it("mostra o menu com Dashboard e Erros e abre no dashboard", () => {
+  beforeEach(() => window.localStorage.clear());
+
+  const openAdminMenu = () => fireEvent.click(screen.getByRole("button", { name: "Administração" }));
+
+  it("mostra o menu com Dashboard, abre no dashboard e as telas de administração ficam na engrenagem", () => {
     renderAt("/admin");
 
     const menu = screen.getByRole("navigation", { name: "Menu principal" });
     expect(menu).toHaveTextContent("Dashboard");
-    expect(menu).toHaveTextContent("Erros");
+    expect(menu).not.toHaveTextContent("Erros");
     expect(screen.getByText("Página dashboard")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).toHaveAttribute("aria-current", "page");
+
+    openAdminMenu();
+    expect(screen.getByRole("menu", { name: "Administração" })).toHaveTextContent("Erros");
   });
 
-  it("troca para a aba Erros sem recarregar a página", () => {
+  it("troca para a aba Erros pela engrenagem, sem recarregar a página, e o menu da engrenagem fecha", () => {
     renderAt("/admin");
 
-    fireEvent.click(screen.getByRole("link", { name: "Erros" }));
+    openAdminMenu();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Erros" }));
 
     expect(screen.getByText("Página erros")).toBeInTheDocument();
     expect(screen.queryByText("Página dashboard")).not.toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Erros" })).toHaveAttribute("aria-current", "page");
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
+  });
+
+  it("o menu da engrenagem fecha no Esc e clicando fora", () => {
+    renderAt("/admin");
+
+    openAdminMenu();
+    expect(screen.getByRole("button", { name: "Administração" })).toHaveAttribute("aria-expanded", "true");
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
+
+    openAdminMenu();
+    fireEvent.mouseDown(screen.getByText("Página dashboard"));
+    expect(screen.queryByRole("menu")).not.toBeInTheDocument();
   });
 
   it("abrindo direto em /admin/erros, só Erros fica marcado", () => {
@@ -64,9 +85,31 @@ describe("AdminLayout", () => {
     expect(screen.getByRole("link", { name: "Dashboard" })).not.toHaveAttribute("aria-current");
   });
 
+  it("as seções Campanha e Metas do mês abrem e fecham, e a escolha fica salva", () => {
+    renderAt("/admin");
+
+    const campaign = screen.getByRole("button", { name: "Campanha" });
+    expect(campaign).toHaveAttribute("aria-expanded", "true");
+
+    fireEvent.click(campaign);
+
+    expect(campaign).toHaveAttribute("aria-expanded", "false");
+    expect(screen.queryByRole("link", { name: "Gráficos" })).not.toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("admin-menu-sections"))).toEqual({ campanha: false });
+
+    fireEvent.click(campaign);
+    expect(screen.getByRole("link", { name: "Gráficos" })).toBeInTheDocument();
+  });
+
   describe("perfis", () => {
     const menuLinks = () =>
-      screen.getAllByRole("link").map((link) => link.textContent);
+      [...screen.getByRole("navigation", { name: "Menu principal" }).querySelectorAll("a")].map(
+        (link) => link.textContent,
+      );
+    const adminMenuItems = () => {
+      fireEvent.click(screen.getByRole("button", { name: "Administração" }));
+      return screen.getAllByRole("menuitem").map((item) => item.textContent);
+    };
 
     const renderAs = (role) => {
       const router = createMemoryRouter(
@@ -81,63 +124,48 @@ describe("AdminLayout", () => {
       );
     };
 
-    it("master vê todas as telas, inclusive Importação, Erros e Usuários", () => {
+    const FULL_MENU = [
+      "Dashboard",
+      "Gráficos",
+      "Previsão",
+      "Prêmios",
+      "Relatórios",
+      "Painel de metas",
+      "Cadastro de metas",
+      "Relatórios",
+    ];
+
+    it("master vê Campanha e Metas do mês, e na engrenagem campanhas, Importação, Erros e Usuários", () => {
       renderAs("master");
 
-      const groups = [...document.querySelectorAll("nav p")].map((label) => label.textContent);
-      expect(groups).toEqual(["Campanha", "Metas do mês", "Administração"]);
-
-      expect(menuLinks()).toEqual([
-        "Dashboard",
-        "Gráficos",
-        "Previsão",
-        "Prêmios",
-        "Cadastro de campanhas",
-        "Metas por vendedor",
-        "Cadastro de metas",
-        "Importação",
-        "Erros",
-        "Usuários",
+      expect(screen.getAllByRole("button", { expanded: true }).map((button) => button.textContent)).toEqual([
+        "Campanha",
+        "Metas do mês",
       ]);
+      expect(menuLinks()).toEqual(FULL_MENU);
+      expect(adminMenuItems()).toEqual(["Cadastro de campanhas", "Importação", "Erros", "Usuários"]);
     });
 
-    it("admin vê Usuários, mas não Importação nem Erros", () => {
+    it("admin vê o mesmo menu; na engrenagem, campanhas e Usuários, sem Importação nem Erros", () => {
       renderAs("admin");
 
-      expect(menuLinks()).toEqual([
-        "Dashboard",
-        "Gráficos",
-        "Previsão",
-        "Prêmios",
-        "Cadastro de campanhas",
-        "Metas por vendedor",
-        "Cadastro de metas",
-        "Usuários",
-      ]);
+      expect(menuLinks()).toEqual(FULL_MENU);
+      expect(adminMenuItems()).toEqual(["Cadastro de campanhas", "Usuários"]);
     });
 
     it("sem perfil (backend antigo) continua vendo tudo", () => {
       renderAs(undefined);
 
-      expect(menuLinks()).toEqual([
-        "Dashboard",
-        "Gráficos",
-        "Previsão",
-        "Prêmios",
-        "Cadastro de campanhas",
-        "Metas por vendedor",
-        "Cadastro de metas",
-        "Importação",
-        "Erros",
-        "Usuários",
-      ]);
+      expect(menuLinks()).toEqual(FULL_MENU);
+      expect(adminMenuItems()).toEqual(["Cadastro de campanhas", "Importação", "Erros", "Usuários"]);
     });
 
     for (const role of ["b2b", "b2g"]) {
-      it(`${role} só vê Dashboard e Gráficos`, () => {
+      it(`${role} só vê a Campanha (com Relatórios), sem Metas nem engrenagem`, () => {
         renderAs(role);
 
-        expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Previsão", "Prêmios"]);
+        expect(menuLinks()).toEqual(["Dashboard", "Gráficos", "Previsão", "Prêmios", "Relatórios"]);
+        expect(screen.queryByRole("button", { name: "Administração" })).not.toBeInTheDocument();
       });
     }
   });

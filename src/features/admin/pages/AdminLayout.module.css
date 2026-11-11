@@ -91,14 +91,53 @@
   gap: 6px;
 }
 
-.navGroupLabel {
-  padding: 0 12px;
+.sectionToggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  outline: 2px solid transparent;
+  background: none;
   color: var(--color-sidebar-text);
+  font: inherit;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  opacity: 0.7;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.sectionToggle:hover {
+  background: var(--color-sidebar-hover);
+  color: var(--color-sidebar-text-strong);
+}
+
+.sectionToggle:focus-visible {
+  outline-color: var(--color-primary);
+}
+
+.sectionToggle svg {
+  width: 14px;
+  height: 14px;
+  transform: rotate(-90deg);
+  transition: transform 0.2s ease;
+}
+
+.sectionOpen svg {
+  transform: rotate(0deg);
+}
+
+.sectionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .nav {
@@ -138,6 +177,7 @@
 }
 
 .sidebarFooter {
+  position: relative;
   display: flex;
   justify-content: center;
   gap: 8px;
@@ -176,6 +216,12 @@
 .footerButton:focus-visible {
   outline-color: var(--color-primary);
   outline-offset: 2px;
+}
+
+.footerButtonActive,
+.footerButtonActive:hover {
+  border-color: var(--color-primary);
+  color: var(--color-sidebar-text-strong);
 }
 
 .themeToggle[aria-pressed="true"] {

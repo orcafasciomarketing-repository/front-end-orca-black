@@ -53,7 +53,7 @@ describe("Telas de metas nas rotas (fase de teste: só master e admin)", () => {
     it(`${role ?? "usuário antigo sem perfil"} abre as duas telas e vê os dois itens no menu`, () => {
       renderAt("/admin/metas", role);
       expect(screen.getByText("Página cadastro de metas")).toBeInTheDocument();
-      expect(menuItems()).toEqual(expect.arrayContaining(["Cadastro de metas", "Metas por vendedor"]));
+      expect(menuItems()).toEqual(expect.arrayContaining(["Cadastro de metas", "Painel de metas"]));
     });
   }
 
@@ -68,7 +68,7 @@ describe("Telas de metas nas rotas (fase de teste: só master e admin)", () => {
       renderAt("/admin/metas/vendedores", role);
       expect(screen.getByText("Página dashboard")).toBeInTheDocument();
       expect(menuItems()).not.toContain("Cadastro de metas");
-      expect(menuItems()).not.toContain("Metas por vendedor");
+      expect(menuItems()).not.toContain("Painel de metas");
     });
   }
 

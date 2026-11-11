@@ -67,8 +67,8 @@ Seis perfis, que vêm do backend em `user.role` (login e refresh):
 
 | Perfil | Menu | Filtro de setor | Vendas que chegam do backend | Tela Usuários |
 |---|---|---|---|---|
-| `master` | Dashboard, Gráficos, Previsão, Prêmios, Cadastro de metas, Metas por vendedor, Importação, Erros, Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
-| `admin` | Dashboard, Gráficos, Previsão, Prêmios, Cadastro de metas, Metas por vendedor, Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
+| `master` | Dashboard, Gráficos, Previsão, Prêmios, Relatórios, Painel de metas, Cadastro de metas, Relatórios de metas e, na engrenagem, Cadastro de campanhas, Importação, Erros e Usuários | Todos, B2B e B2G | todas | cadastra, troca perfil e senha, exclui |
+| `admin` | Dashboard, Gráficos, Previsão, Prêmios, Relatórios, Painel de metas, Cadastro de metas, Relatórios de metas e, na engrenagem, Cadastro de campanhas e Usuários | Todos, B2B e B2G | todas | só vê e cadastra |
 | `b2b` | Dashboard, Gráficos, Previsão e Prêmios | travado em B2B | só B2B | — |
 | `b2g` | Dashboard, Gráficos, Previsão e Prêmios | travado em B2G | só B2G | — |
 | `vendor` | só **Minha área** | — | só as dele (`/me/sales`) | — |
@@ -77,7 +77,7 @@ Seis perfis, que vêm do backend em `user.role` (login e refresh):
 - O `master` é definido no backend pela variável `MASTER_EMAIL`. Sem ela, o backend manda todo admin como `master` (como era antes).
 - `getPermissions(role)` ([auth/utils/permissions.js](src/features/auth/utils/permissions.js)) devolve `{ role, isMaster, canSeeUsers, segment, isPerson, canSeeAdmin, canSeeGoals }`. `isPerson` é `true` só para `vendor` e `sdr`; `canSeeAdmin` é o contrário. `canSeeGoals` (telas de metas) é `true` só para `master` e `admin`, durante o teste com o gestor. Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
 - `usePermissions()` ([auth/hooks/usePermissions.js](src/features/auth/hooks/usePermissions.js)) lê o usuário do `AuthContext` e soma o `userId`. Fora do provider (teste de componente solto) vale como admin.
-- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários, `allow="canSeeGoals"` em Cadastro de metas e Metas por vendedor. Sem a permissão, abrir pelo endereço volta para `/admin` (ou para o `redirectTo` passado). O `/admin` inteiro fica dentro de `RestrictedRoute allow="canSeeAdmin" redirectTo="/minha-area"`, e `/minha-area` dentro de `allow="isPerson"`: colaborador que abre o admin vai para a própria área, e os outros perfis que abrem `/minha-area` voltam para o Dashboard.
+- `RestrictedRoute({ allow })` ([app/RestrictedRoute.jsx](src/app/RestrictedRoute.jsx)) envolve as rotas restritas: `allow="isMaster"` em Importação e Erros, `allow="canSeeUsers"` em Usuários, `allow="canSeeGoals"` em Cadastro de metas, Painel de metas e Relatórios de metas. Sem a permissão, abrir pelo endereço volta para `/admin` (ou para o `redirectTo` passado). O `/admin` inteiro fica dentro de `RestrictedRoute allow="canSeeAdmin" redirectTo="/minha-area"`, e `/minha-area` dentro de `allow="isPerson"`: colaborador que abre o admin vai para a própria área, e os outros perfis que abrem `/minha-area` voltam para o Dashboard.
 - **A segurança de verdade é do backend**: ele filtra as vendas pelo setor e responde 403 nas rotas do admin. O front só esconde o que a pessoa não pode usar.
 - As TVs (`/`) não usam login e continuam públicas.
 
@@ -233,7 +233,11 @@ Se der erro, o `onError` registra o log em `Admin › exportação de vendas` (a
 [src/features/admin/pages/AdminLayout.jsx](src/features/admin/pages/AdminLayout.jsx)
 
 A moldura de todas as páginas do admin: menu lateral à esquerda e a página atual à direita (`<Outlet />`).
-- `NAV_GROUPS` organiza o menu em grupos, cada um com um título pequeno: **Campanha** (o seletor de campanha e Dashboard, Gráficos, Previsão, Prêmios e, para master e admin, Cadastro de campanhas), **Metas do mês** (Metas por vendedor, Cadastro de metas) e **Administração** (Importação, Erros, Usuários); a Minha área e Minhas metas (só vendedor) ficam sem título. O grupo com `campaignSelect: true` mostra o `CampaignSelect` embaixo do título. Cada item tem `to` (rota), `label`, `end`, `Icon` e `allow` (permissão de `getPermissions` que mostra o item). Grupo sem nenhum item permitido não aparece (b2b/b2g veem só Campanha). Para criar uma aba nova, acrescente o item no grupo certo e a rota filha em `app/Router.jsx`. O menu rola sozinho se não couber na altura da tela.
+- **Menu** (`AdminLayout`):
+  - **Minha área** e **Minhas metas** (colaboradores) ficam soltas no topo.
+  - Duas **seções que abrem e fecham** (`NAV_SECTIONS`; botão com a seta, `aria-expanded`): **Campanha** (o seletor de campanha, Dashboard, Gráficos, Previsão, Prêmios e Relatórios) e **Metas do mês** (Painel de metas, Cadastro de metas e Relatórios). Começam abertas; fechar ou abrir fica salvo no navegador (`localStorage`, chave `admin-menu-sections`, com `try/catch`).
+  - **Administração** fica na **engrenagem** do pé do menu ([AdminMenu](src/features/admin/components/AdminMenu/AdminMenu.jsx), `ADMIN_ITEMS`): clicar abre um menu flutuante com Cadastro de campanhas, Importação, Erros e Usuários (cada um só para quem tem a permissão; sem nenhum, a engrenagem não aparece). Fecha ao escolher, no Esc ou clicando fora; a engrenagem fica destacada quando a tela aberta é uma delas. No "acessar como" ela some.
+  - Cada item tem `to`, `label`, `end`, `Icon` e `allow` (permissão de `getPermissions`). Seção sem nenhum item permitido não aparece (b2b/b2g veem só a Campanha). Para criar uma tela nova, acrescente o item na seção certa (ou em `ADMIN_ITEMS`) e a rota em `app/Router.jsx`. O menu rola sozinho se não couber na altura da tela.
 - Cada item é um `NavLink`. O React Router marca o item da rota atual com `aria-current="page"`, e `navLinkClass` aplica `.navLinkActive` nele.
 - `end: true` no Dashboard: sem isso, `/admin` também ficaria marcado em `/admin/erros`, porque `/admin` é o começo do caminho.
 
@@ -341,7 +345,7 @@ Com `VITE_USE_MOCKS=true`, `/analytics/forecast` usa [mocks/mockForecast.js](src
 - API em [api/prizesApi.js](src/features/admin/api/prizesApi.js) e hooks em [hooks/usePrizes.js](src/features/admin/hooks/usePrizes.js) (chave `["admin-prizes", ...]`; registrar ou excluir recarrega o saldo e o histórico).
 - Com `VITE_USE_MOCKS=true`, `/prizes` usa uma cópia das regras em [mocks/mockBackend.js](src/shared/mocks/mockBackend.js) (`getPrizes`, com uma retirada de exemplo) e gravar mostra "O registro de prêmios não funciona com os dados de demonstração". **Se mudar a regra no backend, mude a cópia também.**
 
-### Metas mensais: `GoalsSetupPage()` (Cadastro de metas) e `GoalsProgressPage()` (Metas por vendedor)
+### Metas mensais: `GoalsSetupPage()` (Cadastro de metas) e `GoalsProgressPage()` (Painel de metas)
 
 Pasta [src/features/goals/](src/features/goals/). Duas telas separadas, fora do Dashboard e das abas que já existiam, porque o gestor vai testar antes de liberar para todo mundo. **Por enquanto só master e admin** veem (`canSeeGoals`); o backend também responde 403 para os outros perfis. A meta das TVs não muda. Regras completas no `projeto.md` do backend (RN-69 a RN-73).
 
@@ -366,7 +370,7 @@ Pasta [src/features/goals/](src/features/goals/). Duas telas separadas, fora do 
 - **Excluir metas do mês** (com confirmação) apaga só aquele mês e setor.
 - Os valores são comparados em centavos ([utils/goalMath.js](src/features/goals/utils/goalMath.js), cópia das regras de `goalCalculator.js` do backend, inclusive os dias úteis e a semana recalculada usados nos mocks), então a soma sempre fecha. **Se mudar a regra no backend, mude a cópia também.**
 
-**Metas por vendedor** (`/admin/metas/vendedores`, [GoalsProgressPage.jsx](src/features/goals/pages/GoalsProgressPage.jsx)), com mês e filtro de setor (Todos, B2B, B2G):
+**Painel de metas** (antes "Metas por vendedor"; `/admin/metas/vendedores`, [GoalsProgressPage.jsx](src/features/goals/pages/GoalsProgressPage.jsx)), com mês e filtro de setor (Todos, B2B, B2G):
 - No topo da tela, **Total** ou **Por vendedor**. Total mostra o total dos dois setores com "Todos" ou o setor escolhido no filtro. Por vendedor mostra uma pessoa, escolhida na lista ou clicando no nome dela no gráfico ou na tabela.
 - **As três faixas separadas** ([TierProgressCard](src/features/goals/components/TierProgressCard/TierProgressCard.jsx)): um card para a Meta, um para a Super meta e, no mês da campanha, um para a Meta black, cada um com a própria barra, quanto falta ou quanto passou, e o selo "Batida", "Buscando agora" ou "Próxima faixa". No mês, cada card traz também quanto precisa por dia útil, a chance de bater e a previsão realista. Na semana atual, aparecem os mesmos três cards, sem o forecast.
 - **Previsão do mês** ([GoalForecastCard](src/features/goals/components/GoalForecastCard/GoalForecastCard.jsx)): cenários pessimista, realista e otimista para o fim do mês, ritmo atual e dias produtivos. O cálculo é feito no backend, com o mesmo modelo do Forecast (`monthForecast` no `goalCalculator.js`).
@@ -792,6 +796,29 @@ A campanha deixou de ser fixa ("Campanha Black"). O backend guarda as campanhas 
 
 **Tela Cadastro de campanhas** ([CampaignsPage](src/features/campaigns/pages/CampaignsPage.jsx), master e admin, `allow="canManageCampaigns"`): tabela com nome, etiquetas **Ativa** e **Meta black**, período, metas e quantas vendas (e quanto) cada campanha tem; botões Editar, Tornar ativa (pede confirmação) e Excluir (pede confirmação; a ativa e a que tem retirada de prêmio não excluem, o backend explica). Embaixo, o formulário ([CampaignForm](src/features/campaigns/components/CampaignForm/CampaignForm.jsx)) de nova campanha ou de edição, com as metas no `MoneyInput` e a meta total somada. A ativa não pode ser desmarcada: para trocar, marca-se outra. API em [campaignsApi.js](src/features/campaigns/api/campaignsApi.js) (`GET/POST /campaigns`, `PUT/DELETE /campaigns/:id`) e hooks em [useCampaigns.js](src/features/campaigns/hooks/useCampaigns.js); salvar recarrega todas as consultas `admin-`. Nos mocks há uma campanha só e salvar mostra o aviso de demonstração.
 
+## Relatórios
+
+Duas telas, uma em cada seção do menu, pasta [src/features/reports/](src/features/reports/). Cada relatório é um card ([ReportCard](src/features/reports/components/ReportCard/ReportCard.jsx)) com **Baixar Excel** e/ou **Gerar PDF**.
+
+- **Excel (.xlsx de verdade)** ([utils/xlsx.js](src/features/reports/utils/xlsx.js)): a biblioteca [ExcelJS](https://github.com/exceljs/exceljs) (versão fixa 4.4.0) só é carregada quando alguém gera um relatório (`import()` em um arquivo separado do build), então o sistema não fica mais pesado. Cada aba tem o cabeçalho em negrito e fixo, filtro, R$ e % formatados como número (dá para somar e filtrar no Excel) e largura das colunas ajustada. O nome do arquivo leva o relatório, a campanha ou o mês, o setor e a data, sem acento (ex.: `vendas-campanha-black-b2b-2026-11-11.xlsx`). As linhas de cada aba saem de funções puras ([campaignReports.js](src/features/reports/utils/campaignReports.js), [goalReports.js](src/features/reports/utils/goalReports.js)).
+- **PDF pela impressão** ([ReportPreview](src/features/reports/components/ReportPreview/ReportPreview.jsx)): **Gerar PDF** mostra o relatório na própria tela, como um documento (logo, título, detalhes e "Gerado em"), com **Salvar PDF** (abre a janela de impressão: escolha "Salvar como PDF") e **Fechar**. Na impressão só o documento aparece (o menu, os filtros e os cards somem), sempre no tema claro.
+
+**Relatórios da campanha** (`/admin/relatorios`, todos os perfis do admin; b2b/b2g presos no próprio setor), na campanha escolhida no menu, com filtro de **período** e **setor**:
+
+| Relatório | Excel | PDF |
+|---|---|---|
+| Vendas | Aba "Vendas": negociação, status, valor, tipo, setor, vendedor, passagem, data e ID; última linha com o total das ativas | — |
+| Pontos e ranking | Abas "Pontos por pessoa" (posição, tipo, cargo, time, pontos de venda, renovação, passagem e total) e "Times" (placar da campanha toda) | — |
+| Prêmios | Abas "Saldo de prêmios" e "Retiradas" | — |
+| Resumo da campanha | Aba "Resumo" com os números | Meta, vendido, % e falta; previsão (cenários, ritmo atual e necessário, chance); metas por setor; placar dos times; as 10 pessoas com mais pontos; totais de prêmios |
+
+**Relatórios de metas** (`/admin/metas/relatorios`, master e admin), com **mês** e **setor**. O Painel de metas tem o botão **Relatórios**, que abre esta tela no mês que está sendo visto (`?mes=AAAA-MM`):
+
+| Relatório | Excel | PDF |
+|---|---|---|
+| Metas do mês | Abas "Vendedores" (setor, conta, nível, time, faixas, realizado, % da Meta, faixa atual, falta, excedente, situação, por dia útil, vendas e leads que faltam, chance e previsão realista), "Semanas", "Setores" (Total, Farmer e Venda) e "Times" | Resumo do mês, setores e vendedores |
+| Relatório de um vendedor | — | Faixas do mês (os mesmos cards do painel), previsão, "Como chegar na meta" e as semanas, do vendedor escolhido |
+
 ## Minhas metas (vendedor)
 
 Tela `/minha-area/metas` ([MyGoalsPage](src/features/person/pages/MyGoalsPage.jsx)), só para o perfil `vendor` (`allow="isVendor"`; passagem volta para a Minha área). Mostra a meta do mês do próprio vendedor, vinda de `GET /me/goals?month=` (`useMyGoals`): a mesma conta da tela "Metas por vendedor", só com a parte dele.
@@ -888,7 +915,9 @@ No pé do menu lateral ficam, lado a lado e só com o símbolo (chave, lua/sol e
 | `components/GoalWidget/GoalWidget.test.jsx` | Mostra o vendido, a meta, o percentual e quanto falta, com a barra na largura do percentual; acima da meta a barra fica em 100%, o percentual real aparece e mostra "Meta batida!"; lista vendas, passagens e renovações por setor, sem as canceladas; avisa em cada coluna quando não tem nada |
 | `utils/sectorCounts.test.js` | Vendas e renovações por segmento em ordem alfabética; uma passagem por pessoa, pelo cargo, em vendas e renovações; ignora canceladas; aceita `sdrId` antigo e agrupa sem segmento ou cargo em "Sem setor" |
 | `components/SdrRankWidget/SdrRankWidget.test.jsx` | Mostra o ranking de passagens vindo do backend; avisa quando ninguém fez passagem; com um setor, conta só as passagens das vendas do setor |
-| `pages/AdminLayout.test.jsx` | Menu agrupado em Campanha, Metas do mês e Administração (Cadastro de campanhas no grupo Campanha, para master e admin), com a ordem dos itens por perfil; menu com Dashboard e Erros, abrindo no dashboard marcado; clicar em Erros troca a página sem recarregar e muda o item marcado; abrir direto em `/admin/erros` marca só Erros; clicar em Gráficos abre a aba e marca só ela; modo escuro: o botão fica no menu lateral, começa no claro e liga/desliga o tema do admin inteiro, a escolha fica salva e volta ao abrir de novo, aproveita a escolha do antigo botão dos Gráficos e, sem o provider, fica no claro sem quebrar |
+| `pages/AdminLayout.test.jsx` | Menu com as seções Campanha e Metas do mês, que abrem e fecham e ficam salvas; a ordem dos itens por perfil (master, admin, usuário antigo, b2b/b2g sem Metas nem engrenagem); a engrenagem com as telas de administração de cada perfil, que fecha no Esc e clicando fora e leva à tela sem recarregar; abrir direto numa tela marca só ela; modo escuro |
+| `reports/utils/reports.test.js` | Abas de vendas (com o total das ativas), pontos, times, prêmios e metas do mês (com setor, só as pessoas dele); o .xlsx gerado de verdade com cabeçalho em negrito, filtro, R$ e % formatados e a linha de total; nome do arquivo e da aba |
+| `reports/pages/ReportsPages.mocks.test.jsx` | Com os dados falsos: os relatórios da campanha e o Excel de vendas, pontos e prêmios baixados como .xlsx; o resumo em PDF na pré-visualização, Salvar PDF abre a impressão e Fechar some; metas no mês do endereço, Excel e PDF do mês e o PDF de um vendedor; mês sem metas avisa |
 | `pages/ErrorsPage.test.jsx` | Título "Erros" e os widgets de logs de erro e de teste |
 | `pages/AdminPanel.test.jsx` | Opções de vendedor em ordem alfabética e de semana com todas as semanas do mês; filtra por uma semana de duas semanas atrás; vendedor sem nome aparece como "Vendedor sem nome" sem esvaziar a lista; avisa quando os vendedores não carregam; sem filtros lista e exporta tudo; só vendedor; só semana; semana + vendedor; semana sem vendas do vendedor mostra lista vazia; voltar para "Todas" e "Todos" mostra e exporta tudo; avisa quando a exportação falha e não baixa nada; setor começa em "Todos" e, com B2G, mostra e exporta só B2G; nome da venda com link vira link em nova aba e nome comum continua texto; últimos 3 dias e período específico (escolhido clicando duas vezes no calendário) filtram a lista e a exportação. Em cada caso confere a lista na tela, o conteúdo do CSV e o nome do arquivo |
 

@@ -1,6 +1,7 @@
 import styles from "./GoalsPages.module.css";
 
 import { Suspense, useState } from "react";
+import { Link, useInRouterContext } from "react-router";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
 import { formatCurrency } from "../../../shared/utils/formatCurrency";
@@ -57,9 +58,10 @@ export default function GoalsProgressPage() {
   return (
     <div className={styles.page}>
       <PageHeader
-        title="Metas por vendedor"
+        title="Painel de metas"
         description="Quão perto cada vendedor, setor e time está da Meta, da Super meta e da Meta black"
       >
+        <ReportsLink month={month} />
         <label className={styles.field}>
           <span className={styles.label}>Mês</span>
           <input
@@ -92,6 +94,16 @@ export default function GoalsProgressPage() {
         </Suspense>
       </ErrorBoundary>
     </div>
+  );
+}
+
+function ReportsLink({ month }) {
+  const inRouter = useInRouterContext();
+  if (!inRouter) return null;
+  return (
+    <Link className={styles.reportsLink} to={`/admin/metas/relatorios?mes=${month}`}>
+      Relatórios
+    </Link>
   );
 }
 

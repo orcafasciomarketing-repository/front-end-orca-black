@@ -13,6 +13,7 @@ import { ROLE_LABELS } from "../../auth/utils/permissions";
 import {
   AlertIcon,
   ChartIcon,
+  ChevronIcon,
   DashboardIcon,
   FlagIcon,
   ForecastIcon,
@@ -20,23 +21,23 @@ import {
   KeyIcon,
   LogoutIcon,
   MoonIcon,
+  ReportIcon,
   SunIcon,
   TargetIcon,
   UploadIcon,
   UsersIcon,
 } from "../components/Icons/Icons";
+import AdminMenu from "../components/AdminMenu/AdminMenu";
 import SaleToasts from "../components/SaleToasts/SaleToasts";
 
-// allow: permissão de getPermissions que mostra o item (sem ela, a rota também manda de volta para o dashboard)
-const NAV_GROUPS = [
+const PERSON_ITEMS = [
+  { to: "/minha-area", label: "Minha área", end: true, Icon: DashboardIcon, allow: "isPerson" },
+  { to: "/minha-area/metas", label: "Minhas metas", end: false, Icon: TargetIcon, allow: "isVendor" },
+];
+
+const NAV_SECTIONS = [
   {
-    label: null,
-    items: [
-      { to: "/minha-area", label: "Minha área", end: true, Icon: DashboardIcon, allow: "isPerson" },
-      { to: "/minha-area/metas", label: "Minhas metas", end: false, Icon: TargetIcon, allow: "isVendor" },
-    ],
-  },
-  {
+    key: "campanha",
     label: "Campanha",
     campaignSelect: true,
     items: [
@@ -44,37 +45,44 @@ const NAV_GROUPS = [
       { to: "/admin/graficos", label: "Gráficos", end: false, Icon: ChartIcon, allow: "canSeeAdmin" },
       { to: "/admin/previsao", label: "Previsão", end: false, Icon: ForecastIcon, allow: "canSeeAdmin" },
       { to: "/admin/premios", label: "Prêmios", end: false, Icon: GiftIcon, allow: "canSeeAdmin" },
-      {
-        to: "/admin/campanhas",
-        label: "Cadastro de campanhas",
-        end: false,
-        Icon: FlagIcon,
-        allow: "canManageCampaigns",
-      },
+      { to: "/admin/relatorios", label: "Relatórios", end: false, Icon: ReportIcon, allow: "canSeeAdmin" },
     ],
   },
   {
+    key: "metas",
     label: "Metas do mês",
     items: [
-      {
-        to: "/admin/metas/vendedores",
-        label: "Metas por vendedor",
-        end: false,
-        Icon: TargetIcon,
-        allow: "canSeeGoals",
-      },
+      { to: "/admin/metas/vendedores", label: "Painel de metas", end: false, Icon: TargetIcon, allow: "canSeeGoals" },
       { to: "/admin/metas", label: "Cadastro de metas", end: true, Icon: TargetIcon, allow: "canSeeGoals" },
-    ],
-  },
-  {
-    label: "Administração",
-    items: [
-      { to: "/admin/importacao", label: "Importação", end: false, Icon: UploadIcon, allow: "isMaster" },
-      { to: "/admin/erros", label: "Erros", end: false, Icon: AlertIcon, allow: "isMaster" },
-      { to: "/admin/usuarios", label: "Usuários", end: false, Icon: UsersIcon, allow: "canSeeUsers" },
+      { to: "/admin/metas/relatorios", label: "Relatórios", end: false, Icon: ReportIcon, allow: "canSeeGoals" },
     ],
   },
 ];
+
+const ADMIN_ITEMS = [
+  { to: "/admin/campanhas", label: "Cadastro de campanhas", Icon: FlagIcon, allow: "canManageCampaigns" },
+  { to: "/admin/importacao", label: "Importação", Icon: UploadIcon, allow: "isMaster" },
+  { to: "/admin/erros", label: "Erros", Icon: AlertIcon, allow: "isMaster" },
+  { to: "/admin/usuarios", label: "Usuários", Icon: UsersIcon, allow: "canSeeUsers" },
+];
+
+const SECTIONS_STORAGE_KEY = "admin-menu-sections";
+
+const readOpenSections = () => {
+  try {
+    return JSON.parse(window.localStorage.getItem(SECTIONS_STORAGE_KEY)) ?? {};
+  } catch {
+    return {};
+  }
+};
+
+const saveOpenSections = (value) => {
+  try {
+    window.localStorage.setItem(SECTIONS_STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // sem armazenamento: o menu abre como padrão na próxima vez
+  }
+};
 
 const PERSON_REFRESH_SPREAD_MS = 3000;
 
@@ -82,10 +90,20 @@ const navLinkClass = ({ isActive }) => `${styles.navLink} ${isActive ? styles.na
 
 export default function AdminLayout() {
   const permissions = usePermissions();
-  const navGroups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => !item.allow || permissions[item.allow]),
-  })).filter((group) => group.items.length > 0);
+  const allowed = (item) => !item.allow || permissions[item.allow];
+  const personItems = PERSON_ITEMS.filter(allowed);
+  const sections = NAV_SECTIONS.map((section) => ({ ...section, items: section.items.filter(allowed) })).filter(
+    (section) => section.items.length > 0,
+  );
+  const adminItems = ADMIN_ITEMS.filter(allowed);
+  const [openSections, setOpenSections] = useState(readOpenSections);
+  const isOpen = (key) => openSections[key] !== false;
+
+  const toggleSection = (key) => {
+    const next = { ...openSections, [key]: !isOpen(key) };
+    setOpenSections(next);
+    saveOpenSections(next);
+  };
   const { theme, isDark, toggleTheme } = useTheme();
   const auth = useContext(AuthContext);
   const isLoggedIn = Boolean(auth?.state.user);
@@ -111,24 +129,40 @@ export default function AdminLayout() {
       <aside className={styles.sidebar}>
         <img className={styles.logo} src="/orca-black-logo.png" alt="Orça Black" />
         <nav className={styles.navGroups} aria-label="Menu principal">
-          {navGroups.map((group) => (
-            <div key={group.label ?? "pessoal"} className={styles.navGroup}>
-              {group.label && <p className={styles.navGroupLabel}>{group.label}</p>}
-              {group.campaignSelect && <CampaignSelect />}
-              <ul className={styles.nav}>
-                {group.items.map(({ to, label, end, Icon }) => (
-                  <li key={to}>
-                    <NavLink to={to} end={end} className={navLinkClass}>
-                      <Icon />
-                      <span>{label}</span>
-                    </NavLink>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {personItems.length > 0 && <NavItems items={personItems} />}
+          {sections.map((section) => {
+            const open = isOpen(section.key);
+            const listId = `menu-${section.key}`;
+            return (
+              <div key={section.key} className={styles.navGroup}>
+                <button
+                  className={`${styles.sectionToggle} ${open ? styles.sectionOpen : ""}`}
+                  type="button"
+                  aria-expanded={open}
+                  aria-controls={listId}
+                  onClick={() => toggleSection(section.key)}
+                >
+                  <span>{section.label}</span>
+                  <ChevronIcon />
+                </button>
+                {open && (
+                  <div id={listId} className={styles.sectionBody}>
+                    {section.campaignSelect && <CampaignSelect />}
+                    <NavItems items={section.items} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </nav>
         <div className={styles.sidebarFooter}>
+          {!impersonatedBy && (
+            <AdminMenu
+              items={adminItems}
+              buttonClassName={styles.footerButton}
+              activeClassName={styles.footerButtonActive}
+            />
+          )}
           {isLoggedIn && !impersonatedBy && (
             <button
               className={styles.footerButton}
@@ -187,5 +221,20 @@ export default function AdminLayout() {
         <ChangePasswordDialog onClose={() => setIsChangingPassword(false)} onChanged={handlePasswordChanged} />
       )}
     </div>
+  );
+}
+
+function NavItems({ items }) {
+  return (
+    <ul className={styles.nav}>
+      {items.map(({ to, label, end, Icon }) => (
+        <li key={to}>
+          <NavLink to={to} end={end} className={navLinkClass}>
+            <Icon />
+            <span>{label}</span>
+          </NavLink>
+        </li>
+      ))}
+    </ul>
   );
 }
