@@ -16,6 +16,14 @@ export const PERSON_ROLE_OPTIONS = [
   { value: "sdr", label: "Passagem" },
 ];
 
+export const GOAL_SEGMENTS = ["b2b", "b2g"];
+
+export const MANAGE_SEGMENT_OPTIONS = [
+  { value: "", label: "Todos os setores" },
+  { value: "b2b", label: "B2B" },
+  { value: "b2g", label: "B2G" },
+];
+
 export const ROLE_LABELS = {
   master: "Master admin",
   admin: "Admin",
@@ -27,7 +35,15 @@ export const ROLE_LABELS = {
 
 // Sem perfil (backend antigo, sem perfis) = acesso total, como era antes.
 // A segurança de verdade fica no backend: aqui é só o que aparece na tela
-export function getPermissions(role) {
+const goalSegmentsOf = (role, manageSegment) => {
+  if (role === "master") return GOAL_SEGMENTS;
+  if (role !== "admin") return [];
+  return GOAL_SEGMENTS.includes(manageSegment)
+    ? [manageSegment]
+    : GOAL_SEGMENTS;
+};
+
+export function getPermissions(role, manageSegment = null) {
   const knownRole = KNOWN_ROLES.includes(role) ? role : "master";
   const isMaster = knownRole === "master";
   const isPerson = Object.hasOwn(PERSON_FIELDS, knownRole);
@@ -43,6 +59,7 @@ export function getPermissions(role) {
     isPerson,
     canSeeAdmin: !isPerson,
     canSeeGoals: isMaster || knownRole === "admin",
+    goalSegments: goalSegmentsOf(knownRole, manageSegment),
     canManageCampaigns: isMaster || knownRole === "admin",
     isVendor: knownRole === "vendor",
   };

@@ -110,6 +110,7 @@ function demoConfig(db, month, segment) {
       type: vendors.find((vendor) => vendor.vendorId === person.vendorId).type,
       weeks: [],
     })),
+    visibility: { open: true, hidden: [] },
     updatedBy: "master@demo.com",
     updatedAt: `${month}-01T12:00:00.000Z`,
   };
@@ -439,6 +440,29 @@ export function getGoalProgress(db, month, now = new Date()) {
   };
 }
 
+export function getGoalList(db, now = new Date()) {
+  const month = currentMonthKey(now);
+  const black = blackInfo(month, now);
+  return demoConfigs(db, month, now).map((config) => {
+    const byType = typeTiers(
+      black.active ? withSectorBlack(config, SECTOR_BLACK[config.segment]) : config,
+      black.active,
+    );
+    return {
+      month,
+      segment: config.segment,
+      model: "levels",
+      tiers: segmentTiers(byType),
+      parts: byType,
+      people: config.people.length,
+      levels: config.levels.length,
+      visibility: config.visibility,
+      updatedBy: config.updatedBy,
+      updatedAt: config.updatedAt,
+    };
+  });
+}
+
 export function getMonthTiers(db, month, segment, now = new Date()) {
   const configs = demoConfigs(db, month, now).filter((config) => !segment || config.segment === segment);
   if (!configs.length) return null;
@@ -541,6 +565,8 @@ export function getMyGoals(db, month, now = new Date(), vendorId = "vendor-brend
     weeks: progress.weeks,
     days: progress.days,
     black: progress.black,
+    visibility: { open: true, hidden: [] },
+    closed: false,
     person: mine(progress.people)[0] ?? null,
     history: {
       month: history.month,

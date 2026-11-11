@@ -10,5 +10,8 @@ export default function usePermissions() {
   const user = context?.state.user;
 
   // userId: para a tela de usuários não deixar o admin mexer no próprio perfil
-  return { ...getPermissions(user?.role), userId: user?._id ?? null };
+  return {
+    ...getPermissions(user?.role, user?.manageSegment),
+    userId: user?._id ?? null,
+  };
 }

@@ -65,6 +65,23 @@ describe("AdminLayout: sair e trocar senha", () => {
   });
 });
 
+describe("AdminLayout: pé do menu do vendedor", () => {
+  it("vendedor logado vê Trocar senha, Modo escuro e Sair (sem a engrenagem da administração)", () => {
+    renderLayout({
+      state: { user: { _id: "2", email: "vendedor@teste.com", role: "vendor" }, token: "t" },
+      dispatch: vi.fn(),
+      logout: vi.fn(),
+    });
+
+    const buttons = screen.getByRole("complementary").querySelectorAll("button[title]");
+    expect([...buttons].map((button) => button.getAttribute("aria-label"))).toEqual([
+      "Trocar senha",
+      "Modo escuro",
+      "Sair",
+    ]);
+  });
+});
+
 describe("AdminLayout: acessar como", () => {
   const impersonatingAuth = () => ({
     state: {
@@ -77,13 +94,17 @@ describe("AdminLayout: acessar como", () => {
     stopImpersonation: vi.fn(async () => {}),
   });
 
-  it("mostra a faixa de quem está sendo visto, sem Sair nem Trocar senha", () => {
+  it("mostra a faixa de quem está sendo visto; Sair e Trocar senha aparecem como na tela da pessoa, mas desativados", () => {
     renderLayout(impersonatingAuth());
 
     const banner = screen.getByRole("status");
     expect(banner).toHaveTextContent("Você está vendo como brenda@empresa.com (Vendedor). É só para ver");
-    expect(screen.queryByRole("button", { name: "Sair" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Trocar senha" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Sair" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Trocar senha" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Sair" })).toHaveAttribute(
+      "title",
+      expect.stringContaining("Voltar para minha conta"),
+    );
     expect(screen.getByRole("button", { name: "Modo escuro" })).toBeInTheDocument();
   });
 

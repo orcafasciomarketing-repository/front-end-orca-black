@@ -125,6 +125,19 @@ describe("mockApi", () => {
     expect(progress.people[0].forecast.trajectory.realistic).toHaveLength(progress.days.length);
   });
 
+  it("/goals lista as metas cadastradas (só o mês atual, B2B e B2G), liberadas e com tudo à mostra", () => {
+    const list = get("/goals").data.data;
+    const progress = get("/goals/2026-10/progress").data.data;
+
+    expect(list.map((item) => [item.month, item.segment])).toEqual([
+      ["2026-10", "b2b"],
+      ["2026-10", "b2g"],
+    ]);
+    expect(list[0].tiers).toEqual(progress.segments[0].month.tiers);
+    expect(list[0].visibility).toEqual({ open: true, hidden: [] });
+    expect(list.reduce((sum, item) => sum + item.people, 0)).toBe(progress.people.length);
+  });
+
   it("/goals/:mes/history traz os 6 meses até o escolhido; só o mês atual tem faixas", () => {
     const history = get("/goals/2026-10/history").data.data;
 

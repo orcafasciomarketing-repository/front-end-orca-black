@@ -12,6 +12,7 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: true,
+      goalSegments: ["b2b", "b2g"],
       canManageCampaigns: true,
       isVendor: false,
     });
@@ -26,6 +27,7 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: true,
+      goalSegments: ["b2b", "b2g"],
       canManageCampaigns: true,
       isVendor: false,
     });
@@ -40,6 +42,7 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: false,
+      goalSegments: [],
       canManageCampaigns: false,
       isVendor: false,
     });
@@ -51,6 +54,7 @@ describe("getPermissions", () => {
       isPerson: false,
       canSeeAdmin: true,
       canSeeGoals: false,
+      goalSegments: [],
       canManageCampaigns: false,
       isVendor: false,
     });
@@ -66,10 +70,19 @@ describe("getPermissions", () => {
         isPerson: true,
         canSeeAdmin: false,
         canSeeGoals: false,
+        goalSegments: [],
         canManageCampaigns: false,
         isVendor: role === "vendor",
       });
     }
+  });
+
+  it("admin com setor que gerencia: vê tudo, mas cadastra metas e escolhe o que os vendedores veem só no setor dele", () => {
+    expect(getPermissions("admin", "b2b")).toMatchObject({ canSeeGoals: true, goalSegments: ["b2b"] });
+    expect(getPermissions("admin", "b2g")).toMatchObject({ canSeeGoals: true, goalSegments: ["b2g"] });
+    expect(getPermissions("admin", null).goalSegments).toEqual(["b2b", "b2g"]);
+    expect(getPermissions("master", "b2g").goalSegments).toEqual(["b2b", "b2g"]);
+    expect(getPermissions("b2b", "b2b").goalSegments).toEqual([]);
   });
 
   it("sem perfil (backend antigo, sem perfis) tem acesso total, como antes", () => {

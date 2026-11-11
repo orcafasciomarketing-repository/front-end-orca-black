@@ -14,6 +14,7 @@ import ImportPage from "../features/admin/pages/ImportPage";
 import PrizesPage from "../features/admin/pages/PrizesPage";
 import UsersPage from "../features/admin/pages/UsersPage";
 import DashboardPage from "../features/dashboard/pages/DashboardPage";
+import GoalsListPage from "../features/goals/pages/GoalsListPage";
 import GoalsProgressPage from "../features/goals/pages/GoalsProgressPage";
 import GoalsSetupPage from "../features/goals/pages/GoalsSetupPage";
 import CampaignsPage from "../features/campaigns/pages/CampaignsPage";
@@ -64,6 +65,7 @@ const router = createBrowserRouter([
                 children: [
                   { path: "metas", element: <GoalsSetupPage /> },
                   { path: "metas/vendedores", element: <GoalsProgressPage /> },
+                  { path: "metas/cadastradas", element: <GoalsListPage /> },
                   { path: "metas/relatorios", element: <GoalReportsPage /> },
                 ],
               },

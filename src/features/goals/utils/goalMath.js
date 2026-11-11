@@ -206,10 +206,15 @@ export function weekTiers(personTiers, weekGoals) {
 }
 
 export function dynamicWeekTiers({ personTiers, daily, days, weeks, today }) {
+  if (!weeks.length) return [];
+  const soldBefore = (day) => days.reduce((sum, item, index) => (item < day ? sum + daily[index] : sum), 0);
+  const currentIndex = weeks.findIndex((week) => week.start <= today && today <= week.end);
+  const anchor = currentIndex >= 0 ? currentIndex : today < weeks[0].start ? 0 : weeks.length - 1;
+
   return weeks.map((week, index) => {
-    const cutoff = week.start <= today ? week.start : addDays(today, 1);
-    const before = days.reduce((sum, day, dayIndex) => (day < cutoff ? sum + daily[dayIndex] : sum), 0);
-    const left = weeks.length - index;
+    const base = week.start <= today ? index : anchor;
+    const before = soldBefore(weeks[base].start);
+    const left = weeks.length - base;
     return Object.fromEntries(
       TIERS.map((tier) => {
         const target = toCents(personTiers[tier] ?? 0);
@@ -218,6 +223,9 @@ export function dynamicWeekTiers({ personTiers, daily, days, weeks, today }) {
     );
   });
 }
+
+export const goalPerWorkday = (week) =>
+  fromCents(Math.round(toCents(week.tiers.goal) / Math.max(week.pace?.totalDays ?? 1, 1)));
 
 export function sumTiers(list) {
   return list.reduce(

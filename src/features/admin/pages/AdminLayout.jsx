@@ -53,6 +53,7 @@ const NAV_SECTIONS = [
     label: "Metas do mês",
     items: [
       { to: "/admin/metas/vendedores", label: "Painel de metas", end: false, Icon: TargetIcon, allow: "canSeeGoals" },
+      { to: "/admin/metas/cadastradas", label: "Metas cadastradas", end: false, Icon: TargetIcon, allow: "canSeeGoals" },
       { to: "/admin/metas", label: "Cadastro de metas", end: true, Icon: TargetIcon, allow: "canSeeGoals" },
       { to: "/admin/metas/relatorios", label: "Relatórios", end: false, Icon: ReportIcon, allow: "canSeeGoals" },
     ],
@@ -85,6 +86,8 @@ const saveOpenSections = (value) => {
 };
 
 const PERSON_REFRESH_SPREAD_MS = 3000;
+
+const IMPERSONATION_HINT = "Indisponível no modo acessar como. Use “Voltar para minha conta” no topo";
 
 const navLinkClass = ({ isActive }) => `${styles.navLink} ${isActive ? styles.navLinkActive : ""}`;
 
@@ -163,12 +166,13 @@ export default function AdminLayout() {
               activeClassName={styles.footerButtonActive}
             />
           )}
-          {isLoggedIn && !impersonatedBy && (
+          {isLoggedIn && (
             <button
               className={styles.footerButton}
               type="button"
               aria-label="Trocar senha"
-              title="Trocar senha"
+              title={impersonatedBy ? IMPERSONATION_HINT : "Trocar senha"}
+              disabled={Boolean(impersonatedBy)}
               onClick={() => setIsChangingPassword(true)}
             >
               <KeyIcon />
@@ -184,12 +188,13 @@ export default function AdminLayout() {
           >
             {isDark ? <SunIcon /> : <MoonIcon />}
           </button>
-          {isLoggedIn && !impersonatedBy && (
+          {isLoggedIn && (
             <button
               className={styles.footerButton}
               type="button"
               aria-label="Sair"
-              title="Sair"
+              title={impersonatedBy ? IMPERSONATION_HINT : "Sair"}
+              disabled={Boolean(impersonatedBy)}
               onClick={() => auth.logout()}
             >
               <LogoutIcon />

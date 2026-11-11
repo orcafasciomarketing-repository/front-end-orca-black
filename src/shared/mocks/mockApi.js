@@ -20,7 +20,13 @@ import {
 } from "./mockBackend";
 import { buildMockDatabase } from "./mockDatabase";
 import { currentMonthKey } from "../../features/goals/utils/goalMath";
-import { getGoalHistory, getGoalMonth, getGoalProgress as getMonthlyGoalProgress, getMyGoals } from "./mockGoals";
+import {
+  getGoalHistory,
+  getGoalList,
+  getGoalMonth,
+  getGoalProgress as getMonthlyGoalProgress,
+  getMyGoals,
+} from "./mockGoals";
 
 const MOCK_DELAY = 300;
 
@@ -85,6 +91,7 @@ const ROUTES = [
     pattern: /^\/goals\/(\d{4}-\d{2})\/history$/,
     handle: ({ db, now, match }) => getGoalHistory(db, match[1], now),
   },
+  { pattern: /^\/goals$/, handle: ({ db, now }) => getGoalList(db, now) },
   { pattern: /^\/goals\/(\d{4}-\d{2})$/, handle: ({ db, now, match }) => getGoalMonth(db, match[1], now) },
   { pattern: /^\/me$/, handle: ({ db }) => getMe(db) },
   { pattern: /^\/me\/sales$/, handle: ({ db }) => getMySales(db) },

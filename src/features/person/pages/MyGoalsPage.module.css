@@ -3,3 +3,7 @@
   font-size: 12px;
   line-height: 1.4;
 }
+
+.tilesFit {
+  grid-template-columns: repeat(auto-fit, minmax(min(200px, 100%), 1fr));
+}

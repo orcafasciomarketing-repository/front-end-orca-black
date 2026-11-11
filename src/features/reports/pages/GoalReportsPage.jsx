@@ -11,7 +11,14 @@ import { getGoalProgress } from "../../goals/api/goalsApi";
 import GoalBreakdown from "../../goals/components/GoalBreakdown/GoalBreakdown";
 import TierProgressCard from "../../goals/components/TierProgressCard/TierProgressCard";
 import { useGoalProgress } from "../../goals/hooks/useGoals";
-import { currentMonthKey, formatMonth, formatShortDay, STATUS_LABELS, TIER_LABELS } from "../../goals/utils/goalMath";
+import {
+  currentMonthKey,
+  formatMonth,
+  formatShortDay,
+  goalPerWorkday,
+  STATUS_LABELS,
+  TIER_LABELS,
+} from "../../goals/utils/goalMath";
 import ReportCard from "../components/ReportCard/ReportCard";
 import ReportPreview, { ReportSection, ReportTable, ReportTiles } from "../components/ReportPreview/ReportPreview";
 import { goalSheets, peopleOfSegment } from "../utils/goalReports";
@@ -302,6 +309,7 @@ function VendorReport({ progress, person, onClose }) {
             { key: "goal", header: "Meta", number: true },
             { key: "super", header: "Super", number: true },
             ...(hasBlack ? [{ key: "black", header: "Black", number: true }] : []),
+            { key: "perDay", header: "Meta por dia útil", number: true },
             { key: "realized", header: "Realizado", number: true },
             { key: "current", header: "Faixa atual" },
             { key: "status", header: "Situação" },
@@ -312,6 +320,7 @@ function VendorReport({ progress, person, onClose }) {
             goal: formatCurrency(item.tiers.goal),
             super: formatCurrency(item.tiers.super),
             black: formatCurrency(item.tiers.black),
+            perDay: formatCurrency(goalPerWorkday(item)),
             realized: formatCurrency(item.realized),
             current: TIER_LABELS[item.current],
             status: STATUS_LABELS[item.pace.status],

@@ -10,6 +10,11 @@ const assertMockDisabled = () => {
 
 export const getGoalErrorMessage = (error) => error.response?.data?.error ?? error.message;
 
+export const getGoalList = async () => {
+  const response = await http.get("/goals");
+  return response.data.data;
+};
+
 export const getGoalMonth = async (month) => {
   const response = await http.get(`/goals/${month}`);
   return response.data.data;
@@ -29,6 +34,13 @@ export const saveGoalMonth = async (month, segment, payload) => {
   assertMockDisabled();
 
   const response = await api.put(`/goals/${month}/${segment}`, payload);
+  return response.data.data;
+};
+
+export const saveGoalVisibility = async (month, segment, visibility) => {
+  assertMockDisabled();
+
+  const response = await api.put(`/goals/${month}/${segment}/visibility`, visibility);
   return response.data.data;
 };
 

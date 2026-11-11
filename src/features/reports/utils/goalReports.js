@@ -1,4 +1,4 @@
-import { formatShortDay, STATUS_LABELS, TIER_LABELS } from "../../goals/utils/goalMath";
+import { formatShortDay, goalPerWorkday, STATUS_LABELS, TIER_LABELS } from "../../goals/utils/goalMath";
 
 const PART_LABELS = { farm: "Farmer", sales: "Venda" };
 const ratio = (realized, target) => (target > 0 ? realized / target : 0);
@@ -71,6 +71,7 @@ export function goalWeeksSheet(progress, segment) {
       { header: "Vendedor", key: "name" },
       { header: "Semana", key: "week", width: 24 },
       ...tierColumns(hasBlack),
+      { header: "Meta por dia útil", key: "perDay", type: "money" },
       { header: "Realizado", key: "realized", type: "money" },
       { header: "Faixa atual", key: "current" },
       { header: "Situação", key: "status" },
@@ -80,6 +81,7 @@ export function goalWeeksSheet(progress, segment) {
         name: person.name,
         week: `Semana ${week.index + 1} · ${formatShortDay(week.start)} a ${formatShortDay(week.end)}`,
         ...tierValues(week.tiers),
+        perDay: goalPerWorkday(week),
         realized: week.realized,
         current: TIER_LABELS[week.current],
         status: STATUS_LABELS[week.pace.status],

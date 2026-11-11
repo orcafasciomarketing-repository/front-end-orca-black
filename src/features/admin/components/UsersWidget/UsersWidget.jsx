@@ -5,13 +5,21 @@ import { useContext, useState } from "react";
 import { getAuthErrorMessage } from "../../../auth/api/authApi";
 import { AuthContext } from "../../../auth/context/AuthContext";
 import usePermissions from "../../../auth/hooks/usePermissions";
-import { PERSON_FIELDS, PERSON_ROLE_OPTIONS, ROLE_LABELS, ROLE_OPTIONS } from "../../../auth/utils/permissions";
+import {
+  MANAGE_SEGMENT_OPTIONS,
+  PERSON_FIELDS,
+  PERSON_ROLE_OPTIONS,
+  ROLE_LABELS,
+  ROLE_OPTIONS,
+} from "../../../auth/utils/permissions";
 import { getUserErrorMessage } from "../../api/usersApi";
 import { useSdrs } from "../../hooks/useSdrs";
 import { useUserMutations, useUsers } from "../../hooks/useUsers";
 import { getVendorLabel, useVendors } from "../../hooks/useVendors";
 
-const EMPTY_FORM = { email: "", password: "", passwordConfirmation: "", role: "b2b", personId: "" };
+const EMPTY_FORM = { email: "", password: "", passwordConfirmation: "", role: "b2b", personId: "", manageSegment: "" };
+
+const SEGMENT_NAMES = { b2b: "B2B", b2g: "B2G" };
 
 const CREATE_ROLE_OPTIONS = [...ROLE_OPTIONS, ...PERSON_ROLE_OPTIONS];
 
@@ -25,9 +33,10 @@ function usePeopleOptions() {
   };
 }
 
-const toCreatePayload = ({ personId, ...form }) => {
+const toCreatePayload = ({ personId, manageSegment, ...form }, isMaster) => {
   const field = PERSON_FIELDS[form.role];
-  return field ? { ...form, [field]: personId } : form;
+  if (field) return { ...form, [field]: personId };
+  return isMaster && form.role === "admin" ? { ...form, manageSegment: manageSegment || null } : form;
 };
 
 export default function UsersWidget() {
@@ -57,11 +66,12 @@ export default function UsersWidget() {
       <div className={styles.body}>
         <p className={styles.help}>
           Master admin faz tudo. Admin vê todos os setores e cadastra usuários, mas não troca perfil, senha nem exclui.
+          Admin com setor das metas vê tudo, mas cadastra metas e escolhe o que os vendedores veem só no setor dele.
           B2B e B2G veem só as vendas do próprio setor, no Dashboard e nos Gráficos. Vendedor e Passagem entram só na
           própria área, com as vendas deles e os pontos do time. As telas das TVs continuam públicas.
         </p>
 
-        <CreateUserForm create={create} peopleOptions={peopleOptions} />
+        <CreateUserForm create={create} peopleOptions={peopleOptions} isMaster={isMaster} />
 
         {update.isError && <p className={styles.error}>Não foi possível alterar: {getUserErrorMessage(update.error)}</p>}
         {remove.isError && <p className={styles.error}>Não foi possível excluir: {getUserErrorMessage(remove.error)}</p>}
@@ -99,7 +109,7 @@ const personNameOf = (user, peopleOptions) => {
   return peopleOptions[field].find((person) => person.id === String(user[field]))?.name ?? "";
 };
 
-function CreateUserForm({ create, peopleOptions }) {
+function CreateUserForm({ create, peopleOptions, isMaster }) {
   const [form, setForm] = useState(EMPTY_FORM);
   const [formError, setFormError] = useState("");
 
@@ -126,7 +136,7 @@ function CreateUserForm({ create, peopleOptions }) {
       return;
     }
 
-    create.mutate(toCreatePayload(form), { onSuccess: () => setForm(EMPTY_FORM) });
+    create.mutate(toCreatePayload(form, isMaster), { onSuccess: () => setForm(EMPTY_FORM) });
   };
 
   const personField = PERSON_FIELDS[form.role];
@@ -157,6 +167,18 @@ function CreateUserForm({ create, peopleOptions }) {
               {peopleOptions[personField].map((person) => (
                 <option key={person.id} value={person.id}>
                   {person.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        {isMaster && form.role === "admin" && (
+          <label className={styles.field}>
+            <span className={styles.label}>Setor das metas</span>
+            <select className={styles.input} value={form.manageSegment} onChange={changeField("manageSegment")}>
+              {MANAGE_SEGMENT_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
                 </option>
               ))}
             </select>
@@ -203,9 +225,15 @@ function UserItem({ user, isMe, canEdit, personName, update, remove, onImpersona
   const isPerson = Boolean(PERSON_FIELDS[role]);
   const canChangeRole = canEdit && !isMe && role !== "master" && !isPerson;
   const canDelete = canEdit && !isMe && role !== "master";
+  const isAdmin = role === "admin";
+  const manageSegment = user.manageSegment ?? "";
 
   const handleRoleChange = (event) => {
     update.mutate({ id: user._id, changes: { role: event.target.value } });
+  };
+
+  const handleSegmentChange = (event) => {
+    update.mutate({ id: user._id, changes: { manageSegment: event.target.value || null } });
   };
 
   const handleDelete = () => {
@@ -242,6 +270,29 @@ function UserItem({ user, isMe, canEdit, personName, update, remove, onImpersona
               {personName && ` · ${personName}`}
             </span>
           )}
+          {isAdmin &&
+            (canEdit ? (
+              <select
+                className={styles.input}
+                aria-label={`Setor das metas de ${user.email}`}
+                title="Setor cujas metas este admin cadastra e libera para os vendedores"
+                value={manageSegment}
+                disabled={isBusy}
+                onChange={handleSegmentChange}
+              >
+                {MANAGE_SEGMENT_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.value ? `Metas do ${option.label}` : "Metas de todos os setores"}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              manageSegment && (
+                <span className={styles.role} aria-label={`Setor das metas de ${user.email}`}>
+                  Metas do {SEGMENT_NAMES[manageSegment]}
+                </span>
+              )
+            ))}
           {canEdit && (
             <button
               className={styles.secondaryButton}

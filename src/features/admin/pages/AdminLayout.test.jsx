@@ -131,6 +131,7 @@ describe("AdminLayout", () => {
       "Prêmios",
       "Relatórios",
       "Painel de metas",
+      "Metas cadastradas",
       "Cadastro de metas",
       "Relatórios",
     ];

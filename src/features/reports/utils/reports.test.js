@@ -54,6 +54,8 @@ describe("planilhas dos relatórios", () => {
     expect(all[0].rows).toHaveLength(progress.people.length);
     expect(all[0].columns.map((column) => column.header)).toContain("Meta black");
     expect(all[1].rows).toHaveLength(progress.people.length * progress.weeks.length);
+    const week = progress.people[0].weeks[0];
+    expect(all[1].rows[0].perDay).toBeCloseTo(week.tiers.goal / week.pace.totalDays, 2);
     expect(all[2].rows.at(-1)).toMatchObject({ segment: "Todos", part: "Total" });
 
     const b2b = goalSheets(progress, "b2b");

@@ -57,6 +57,7 @@ describe("Minhas metas com os dados falsos (Brenda Lima, quarta 21/10/2026)", ()
     const weeks = screen.getByRole("table", { name: "Minhas metas por semana" });
     expect(within(weeks).getAllByRole("row")).toHaveLength(5);
     expect(textOf(weeks)).toContain("Semana 3 · 19/10 a 25/10");
+    expect(within(weeks).getByRole("columnheader", { name: "Meta por dia útil" })).toBeInTheDocument();
   });
 
   it("a evolução mensal usa só o histórico dela", async () => {

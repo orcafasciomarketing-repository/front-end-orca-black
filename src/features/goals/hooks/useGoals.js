@@ -1,13 +1,30 @@
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 
 import { reportError } from "../../../shared/errorLogger";
-import { deleteGoalMonth, getGoalHistory, getGoalMonth, getGoalProgress, saveGoalMonth } from "../api/goalsApi";
+import {
+  deleteGoalMonth,
+  getGoalHistory,
+  getGoalList,
+  getGoalMonth,
+  getGoalProgress,
+  saveGoalMonth,
+  saveGoalVisibility,
+} from "../api/goalsApi";
 
 const GOALS_KEY = ["admin-goals"];
 
 const reportUnexpected = (location) => (error) => {
   if (!error.response || error.response.status >= 500) reportError(error, { location });
 };
+
+export function useGoalList() {
+  const { data } = useSuspenseQuery({
+    queryKey: [...GOALS_KEY, "list"],
+    queryFn: getGoalList,
+  });
+
+  return { goals: data };
+}
 
 export function useGoalMonth(month) {
   const { data } = useSuspenseQuery({
@@ -52,5 +69,11 @@ export function useGoalMutations() {
     onError: reportUnexpected("Admin › exclusão de metas"),
   });
 
-  return { save, remove };
+  const visibility = useMutation({
+    mutationFn: ({ month, segment, visibility: value }) => saveGoalVisibility(month, segment, value),
+    onSuccess: refreshGoals,
+    onError: reportUnexpected("Admin › o que os vendedores veem"),
+  });
+
+  return { save, remove, visibility };
 }

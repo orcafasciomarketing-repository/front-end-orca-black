@@ -272,3 +272,66 @@ describe("UsersWidget", () => {
     });
   });
 });
+
+describe("UsersWidget · setor das metas do admin", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    getUsers.mockResolvedValue([...USERS, { _id: "u-tony", email: "tony@empresa.com", role: "admin", manageSegment: "b2b" }]);
+  });
+
+  it("master escolhe o setor das metas de cada admin; os outros perfis não têm", async () => {
+    updateUser.mockResolvedValue({});
+    renderWidget();
+    await screen.findByText("tony@empresa.com");
+
+    expect(screen.getByRole("combobox", { name: "Setor das metas de tony@empresa.com" })).toHaveValue("b2b");
+    expect(screen.getByRole("combobox", { name: "Setor das metas de admin@empresa.com" })).toHaveValue("");
+    expect(screen.queryByRole("combobox", { name: "Setor das metas de b2b@empresa.com" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox", { name: "Setor das metas de master@empresa.com" })).not.toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Setor das metas de admin@empresa.com" }), {
+      target: { value: "b2g" },
+    });
+    await waitFor(() =>
+      expect(updateUser).toHaveBeenCalledWith({ id: "u-admin", changes: { manageSegment: "b2g" } }),
+    );
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Setor das metas de tony@empresa.com" }), {
+      target: { value: "" },
+    });
+    await waitFor(() => expect(updateUser).toHaveBeenCalledWith({ id: "u-tony", changes: { manageSegment: null } }));
+  });
+
+  it("master cadastra admin já com o setor das metas; o campo só aparece no perfil Admin", async () => {
+    createUser.mockResolvedValue({ _id: "novo", email: "george@empresa.com", role: "admin" });
+    renderWidget();
+    await screen.findByText("tony@empresa.com");
+
+    fillCreateForm({ email: "george@empresa.com", role: "b2b", password: "123456" });
+    expect(within(createForm()).queryByLabelText("Setor das metas")).not.toBeInTheDocument();
+
+    fillCreateForm({ email: "george@empresa.com", role: "admin", password: "123456" });
+    fireEvent.change(within(createForm()).getByLabelText("Setor das metas"), { target: { value: "b2g" } });
+    fireEvent.click(within(createForm()).getByRole("button", { name: "Cadastrar" }));
+
+    await waitFor(() =>
+      expect(createUser).toHaveBeenCalledWith({
+        email: "george@empresa.com",
+        role: "admin",
+        password: "123456",
+        passwordConfirmation: "123456",
+        manageSegment: "b2g",
+      }),
+    );
+  });
+
+  it("admin vê o setor dos outros admins, mas não troca, e não escolhe setor no cadastro", async () => {
+    renderWidget(USERS[1]);
+    await screen.findByText("tony@empresa.com");
+
+    expect(screen.queryAllByRole("combobox", { name: /^Setor das metas de/ })).toHaveLength(0);
+    expect(itemOf("tony@empresa.com")).toHaveTextContent("Metas do B2B");
+    fillCreateForm({ email: "x@empresa.com", role: "admin", password: "123456" });
+    expect(within(createForm()).queryByLabelText("Setor das metas")).not.toBeInTheDocument();
+  });
+});

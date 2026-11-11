@@ -4,6 +4,7 @@ import { Suspense, useState } from "react";
 
 import ErrorBoundary from "../../../shared/components/ErrorBoundary/ErrorBoundary";
 import PageHeader from "../../admin/components/PageHeader/PageHeader";
+import usePermissions from "../../auth/hooks/usePermissions";
 import WidgetFallback from "../../admin/components/WidgetFallback/WidgetFallback";
 import GoalSetupForm from "../components/GoalSetupForm/GoalSetupForm";
 import { useGoalMonth, useGoalMutations } from "../hooks/useGoals";
@@ -16,9 +17,22 @@ const SEGMENTS = [
   { value: "b2g", label: "B2G" },
 ];
 
+const initialFromUrl = (goalSegments) => {
+  const params = new URLSearchParams(window.location.search);
+  const month = params.get("mes") ?? "";
+  const segment = params.get("setor") ?? "";
+  return {
+    month: /^\d{4}-(0[1-9]|1[0-2])$/.test(month) ? month : currentMonthKey(),
+    segment: goalSegments.includes(segment) ? segment : (goalSegments[0] ?? "b2b"),
+  };
+};
+
 export default function GoalsSetupPage() {
-  const [month, setMonth] = useState(() => currentMonthKey());
-  const [segment, setSegment] = useState("b2b");
+  const { goalSegments } = usePermissions();
+  const [initial] = useState(() => initialFromUrl(goalSegments));
+  const [month, setMonth] = useState(initial.month);
+  const [segment, setSegment] = useState(initial.segment);
+  const segmentOptions = SEGMENTS.filter((option) => goalSegments.includes(option.value));
   const { save, remove } = useGoalMutations();
 
   const changeMonth = (value) => {
@@ -58,7 +72,7 @@ export default function GoalsSetupPage() {
             aria-label="Setor das metas"
             onChange={(event) => changeSegment(event.target.value)}
           >
-            {SEGMENTS.map((option) => (
+            {segmentOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>

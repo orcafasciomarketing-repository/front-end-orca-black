@@ -21,6 +21,7 @@ import {
   currentMonthKey,
   formatMonth,
   formatShortDay,
+  goalPerWorkday,
   STATUS_LABELS,
   TIER_LABELS,
   TYPE_LABELS,
@@ -410,6 +411,9 @@ function VendorView({ person, progress, weekIndex, show }) {
                     </th>
                   )}
                   <th scope="col" className={styles.number}>
+                    Meta por dia útil
+                  </th>
+                  <th scope="col" className={styles.number}>
                     Realizado
                   </th>
                   <th scope="col">Faixa atual</th>
@@ -423,6 +427,7 @@ function VendorView({ person, progress, weekIndex, show }) {
                     <td className={styles.number}>{formatCurrency(item.tiers.goal)}</td>
                     <td className={styles.number}>{formatCurrency(item.tiers.super)}</td>
                     {hasBlack && <td className={styles.number}>{formatCurrency(item.tiers.black)}</td>}
+                    <td className={styles.number}>{formatCurrency(goalPerWorkday(item))}</td>
                     <td className={styles.number}>{formatCurrency(item.realized)}</td>
                     <td>
                       <span className={`${styles.tier} ${styles[TIER_CLASS[item.current]]}`}>

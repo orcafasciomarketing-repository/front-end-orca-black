@@ -66,7 +66,7 @@ describe("goalMath (mesmas regras do backend)", () => {
     expect(byPerson.get("sr")).toEqual({ goal: 2000, super: 3000, black: 6000 });
   });
 
-  it("semana recalculada: o que falta para o mês ÷ semanas que faltam; semana futura usa o vendido até hoje", () => {
+  it("semana recalculada: o que falta para o mês ÷ semanas que faltam; as semanas futuras repetem a meta da semana atual", () => {
     const weeks = monthWeeks("2026-11");
     const days = weeks.flatMap((week) => Array.from({ length: 7 }, (_, i) => addDay(week.start, i)));
     const daily = days.map((day) => (day === "2026-11-03" ? 100000 : day === "2026-11-10" ? 50000 : 0));
@@ -79,7 +79,8 @@ describe("goalMath (mesmas regras do backend)", () => {
     });
     expect(tiers[0]).toEqual({ goal: 1000, super: 1200, black: 0 });
     expect(tiers[1]).toEqual({ goal: 1000, super: 1250, black: 0 });
-    expect(tiers[2]).toEqual({ goal: 1166.67, super: 1500, black: 0 });
+    expect(tiers[2]).toEqual({ goal: 1000, super: 1250, black: 0 });
+    expect(tiers[4]).toEqual({ goal: 1000, super: 1250, black: 0 });
   });
 
   it("sem Meta black, bateu a Super o resto é excedente; a faixa atual sobe de Meta para Super e Black", () => {
