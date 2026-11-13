@@ -5,7 +5,9 @@ import { useState } from "react";
 import { formatCurrency } from "../../../../shared/utils/formatCurrency";
 import { readCsvFile } from "../../api/importApi";
 import { useImportSales } from "../../hooks/useImportSales";
-import { UploadIcon } from "../Icons/Icons";
+import { DownloadIcon, UploadIcon } from "../Icons/Icons";
+
+const TEMPLATE_URL = `${import.meta.env.BASE_URL}modelo-importacao-vendas.csv`;
 
 const ISSUE_GROUPS = [
   { field: "errors", title: "Erros (impedem a importação)", tone: "error" },
@@ -53,20 +55,27 @@ export default function ImportSalesWidget() {
         <p className={styles.help}>
           O arquivo substitui todas as vendas importadas antes: para corrigir, adicionar ou remover, mude o arquivo e
           importe de novo. As vendas da planilha principal não são alteradas. Colunas obrigatórias: Setor, Valor da venda
-          e Data da venda. Sem Vendedor, a venda só conta na meta.
+          e Data da venda. Sem Vendedor, a venda só conta na meta. A planilha modelo traz todas as colunas com duas
+          linhas de exemplo: troque pelas vendas de verdade antes de importar.
         </p>
 
-        <label className={styles.fileButton}>
-          <UploadIcon />
-          <span>{file ? file.name : "Escolher arquivo CSV"}</span>
-          <input
-            className={styles.fileInput}
-            type="file"
-            accept=".csv,text/csv"
-            aria-label="Arquivo CSV"
-            onChange={handleFileChange}
-          />
-        </label>
+        <div className={styles.fileActions}>
+          <label className={styles.fileButton}>
+            <UploadIcon />
+            <span>{file ? file.name : "Escolher arquivo CSV"}</span>
+            <input
+              className={styles.fileInput}
+              type="file"
+              accept=".csv,text/csv"
+              aria-label="Arquivo CSV"
+              onChange={handleFileChange}
+            />
+          </label>
+          <a className={styles.templateLink} href={TEMPLATE_URL} download="modelo-importacao-vendas.csv">
+            <DownloadIcon />
+            <span>Baixar planilha modelo</span>
+          </a>
+        </div>
 
         {readFailed && <p className={styles.error}>Não foi possível ler o arquivo</p>}
         {preview.isPending && <p className={styles.muted}>Lendo o arquivo...</p>}

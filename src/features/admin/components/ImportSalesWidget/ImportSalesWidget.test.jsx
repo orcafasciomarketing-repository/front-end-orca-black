@@ -34,6 +34,14 @@ describe("ImportSalesWidget", () => {
     vi.clearAllMocks();
   });
 
+  it("tem a planilha modelo para baixar ao lado do botão de escolher o arquivo", () => {
+    renderWithQuery(<ImportSalesWidget />);
+
+    const link = screen.getByRole("link", { name: "Baixar planilha modelo" });
+    expect(link).toHaveAttribute("href", "/modelo-importacao-vendas.csv");
+    expect(link).toHaveAttribute("download", "modelo-importacao-vendas.csv");
+  });
+
   it("ao escolher o arquivo mostra a prévia: o que existe hoje e o que o arquivo traz", async () => {
     previewImport.mockResolvedValue(buildReport());
     renderWithQuery(<ImportSalesWidget />);

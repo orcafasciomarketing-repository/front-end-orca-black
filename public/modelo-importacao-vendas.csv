@@ -1,0 +1,3 @@
+﻿Setor;Valor da venda;Data da venda;Vendedor;Passagens;Classificação;Id da empresa;Status
+B2B;1.500,00;27/11/2026 14:30;Nome do vendedor como no cadastro;Nome da passagem;;Empresa Exemplo Ltda;Concluída
+B2G;2.000,00;28/11/2026;Nome do vendedor como no cadastro;;Renovação;Prefeitura Exemplo;Concluída

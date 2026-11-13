@@ -16,6 +16,13 @@
   line-height: 1.5;
 }
 
+.fileActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
 .fileButton {
   position: relative;
   align-self: flex-start;
@@ -46,6 +53,27 @@
 }
 
 .fileButton:focus-within {
+  outline: 3px solid var(--color-primary-field);
+  outline-offset: 1px;
+}
+
+.templateLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  color: var(--color-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.templateLink:hover {
+  text-decoration: underline;
+}
+
+.templateLink:focus-visible {
+  border-radius: 8px;
   outline: 3px solid var(--color-primary-field);
   outline-offset: 1px;
 }
